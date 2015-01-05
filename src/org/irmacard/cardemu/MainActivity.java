@@ -61,7 +61,7 @@ import com.loopj.android.http.AsyncHttpResponseHandler;
 
 
 public class MainActivity extends Activity implements PINDialogListener {
-	private String TAG = "CardProxyMainActivity";
+	private String TAG = "CardEmuMainActivity";
 	private NfcAdapter nfcA;
 	private PendingIntent mPendingIntent;
 	private IntentFilter[] mFilters;
@@ -73,6 +73,7 @@ public class MainActivity extends Activity implements PINDialogListener {
 	// State variables
 	private IsoDep lastTag = null;
     private IRMACard card = null;
+    private IdemixService is = null;
 	
 	private int activityState = STATE_IDLE;
 	
@@ -88,7 +89,7 @@ public class MainActivity extends Activity implements PINDialogListener {
 	Timer timer;
 	private static final int CARD_POLL_DELAY = 2000;
 	
-	// Timer for briefly displaying feedback messages on CardProxy
+	// Timer for briefly displaying feedback messages on CardEmu
 	CountDownTimer cdt;
 	private static final int FEEDBACK_SHOW_DELAY = 10000;
 	private boolean showingFeedback = false;
@@ -102,6 +103,8 @@ public class MainActivity extends Activity implements PINDialogListener {
     private void loadCard() {
         SharedPreferences settings = getSharedPreferences(SETTINGS, 0);
         String card_json = settings.getString(CARD_STORAGE, "");
+        // For now always reset the card to default state
+        card_json = "";
 
         Gson gson = new Gson();
         if(card_json == "") {
@@ -115,6 +118,7 @@ public class MainActivity extends Activity implements PINDialogListener {
         } else {
             card = gson.fromJson(card_json, IRMACard.class);
         }
+        is = new IdemixService(new SmartCardEmulatorService(card));
     }
 
     private void storeCard() {
@@ -260,12 +264,6 @@ public class MainActivity extends Activity implements PINDialogListener {
         Log.i(TAG, "Action: " + getIntent().getAction());
         if (NfcAdapter.ACTION_TECH_DISCOVERED.equals(getIntent().getAction())) {
             processIntent(getIntent());
-        } else if (Intent.ACTION_VIEW.equals(getIntent().getAction()) && "cardproxy".equals(getIntent().getScheme())) {
-        	// TODO: this is legacy code to have the cardproxy app respond to cardproxy:// urls. This doesn't
-        	// work anymore, should check whether we want te re-enable it.
-        	Uri uri = getIntent().getData();
-        	String startURL = "http://" + uri.getHost() + ":" + uri.getPort() + uri.getPath();
-        	gotoConnectingState(startURL);
         }
         if (nfcA != null) {
         	nfcA.enableForegroundDispatch(this, mPendingIntent, mFilters, mTechLists);
@@ -288,7 +286,7 @@ public class MainActivity extends Activity implements PINDialogListener {
 				Log.i(TAG,"MESSAGE_STARTGET received in handler!");
 				AsyncHttpClient client = new AsyncHttpClient();
 				client.setTimeout(50000); // timeout of 50 seconds
-				client.setUserAgent("org.irmacard.androidcardproxy");
+				client.setUserAgent("org.irmacard.cardemu");
 				
 				client.get(MainActivity.this, currentReaderURL, new AsyncHttpResponseHandler() {
 					@Override
@@ -558,12 +556,8 @@ public class MainActivity extends Activity implements PINDialogListener {
 				return new ReaderMessage(ReaderMessage.TYPE_EVENT, ReaderMessage.NAME_EVENT_CARDLOST, null);
 			}
 
-			// Make sure time-out is long enough (10 seconds)
-			tag.setTimeout(10000);
-			
-			// TODO: The current version of the cardproxy shouldn't depend on idemix terminal, but for now
+			// TODO: The current version of the cardemu shouldn't depend on idemix terminal, but for now
 			// it is convenient.
-			IdemixService is = new IdemixService(new SmartCardEmulatorService(card));
 			try {
 				if (!is.isOpen()) {
 					// TODO: this is dangerous, this call to IdemixService already does a "select applet"
@@ -592,8 +586,8 @@ public class MainActivity extends Activity implements PINDialogListener {
 					// FIXME: IRMA specific implementation,
 					// This command is not allowed in normal mode,
 					// so it will result in an exception.
-					Log.i("READER", "Processing idle command");
-					is.getCredentials();
+					//Log.i("READER", "Processing idle command");
+					//is.getCredentials();
 				}
 				
 			} catch (CardServiceException e) {
