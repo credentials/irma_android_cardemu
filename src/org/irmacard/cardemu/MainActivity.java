@@ -1,12 +1,14 @@
-package org.irmacard.androidcardproxy;
+package org.irmacard.cardemu;
 
+import java.io.BufferedReader;
+import java.io.IOException;
+import java.io.InputStreamReader;
 import java.io.StringReader;
 import java.io.UnsupportedEncodingException;
 import java.util.Timer;
 import java.util.TimerTask;
 
 import net.sourceforge.scuba.smartcards.CardServiceException;
-import net.sourceforge.scuba.smartcards.IsoDepCardService;
 import net.sourceforge.scuba.smartcards.ProtocolCommand;
 import net.sourceforge.scuba.smartcards.ProtocolResponse;
 import net.sourceforge.scuba.smartcards.ProtocolResponses;
@@ -14,12 +16,14 @@ import net.sourceforge.scuba.smartcards.ResponseAPDU;
 import org.apache.http.entity.StringEntity;
 import org.irmacard.android.util.pindialog.EnterPINDialogFragment;
 import org.irmacard.android.util.pindialog.EnterPINDialogFragment.PINDialogListener;
-import org.irmacard.androidcardproxy.messages.EventArguments;
-import org.irmacard.androidcardproxy.messages.PinResultArguments;
-import org.irmacard.androidcardproxy.messages.ReaderMessage;
-import org.irmacard.androidcardproxy.messages.ReaderMessageDeserializer;
-import org.irmacard.androidcardproxy.messages.ResponseArguments;
-import org.irmacard.androidcardproxy.messages.TransmitCommandSetArguments;
+import org.irmacard.cardemu.messages.EventArguments;
+import org.irmacard.cardemu.messages.PinResultArguments;
+import org.irmacard.cardemu.messages.ReaderMessage;
+import org.irmacard.cardemu.messages.ReaderMessageDeserializer;
+import org.irmacard.cardemu.messages.ResponseArguments;
+import org.irmacard.cardemu.messages.TransmitCommandSetArguments;
+import org.irmacard.credentials.idemix.smartcard.IRMACard;
+import org.irmacard.credentials.idemix.smartcard.SmartCardEmulatorService;
 import org.irmacard.idemix.IdemixService;
 
 import android.app.Activity;
@@ -30,6 +34,7 @@ import android.app.PendingIntent;
 import android.content.DialogInterface;
 import android.content.Intent;
 import android.content.IntentFilter;
+import android.content.SharedPreferences;
 import android.net.Uri;
 import android.nfc.NfcAdapter;
 import android.nfc.Tag;
@@ -44,7 +49,6 @@ import android.view.Menu;
 import android.view.View;
 import android.widget.ImageView;
 import android.widget.TextView;
-import android.widget.Toast;
 
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
@@ -68,6 +72,7 @@ public class MainActivity extends Activity implements PINDialogListener {
 	
 	// State variables
 	private IsoDep lastTag = null;
+    private IRMACard card = null;
 	
 	private int activityState = STATE_IDLE;
 	
@@ -91,6 +96,33 @@ public class MainActivity extends Activity implements PINDialogListener {
 	// Counter for number of connection tries
 	private static final int MAX_RETRIES = 3;
 	private int retry_counter = 0;
+
+    private final String CARD_STORAGE = "card";
+    private final String SETTINGS = "cardemu";
+    private void loadCard() {
+        SharedPreferences settings = getSharedPreferences(SETTINGS, 0);
+        String card_json = settings.getString(CARD_STORAGE, "");
+
+        Gson gson = new Gson();
+        if(card_json == "") {
+            // Default card content
+            try {
+                BufferedReader reader = new BufferedReader(new InputStreamReader(getAssets().open("card.json")));
+                card = gson.fromJson(reader, IRMACard.class);
+            } catch (IOException e) {
+                throw new RuntimeException("Couldn't find card initial content");
+            }
+        } else {
+            card = gson.fromJson(card_json, IRMACard.class);
+        }
+    }
+
+    private void storeCard() {
+        SharedPreferences settings = getSharedPreferences(SETTINGS, 0);
+        SharedPreferences.Editor editor = settings.edit();
+        Gson gson = new Gson();
+        editor.putString(CARD_STORAGE, gson.toJson(card));
+    }
 
 	private void setState(int state) {
     	Log.i(TAG,"Set state: " + state);
@@ -193,7 +225,8 @@ public class MainActivity extends Activity implements PINDialogListener {
 	protected void onCreate(Bundle savedInstanceState) {
 		super.onCreate(savedInstanceState);
 		setContentView(R.layout.activity_main);
-		
+        loadCard();
+
         // NFC stuff
         nfcA = NfcAdapter.getDefaultAdapter(getApplicationContext());
         mPendingIntent = PendingIntent.getActivity(this, 0,
@@ -326,11 +359,12 @@ public class MainActivity extends Activity implements PINDialogListener {
 			JsonParser p = new JsonParser();
 			String write_url = p.parse(data).getAsJsonObject().get("write_url").getAsString();
 			currentWriteURL = write_url;
-			setState(STATE_CONNECTED);
+			setState(STATE_READY);
 			// Signal to the other end that we we are ready accept commands
 			postMessage(
 					new ReaderMessage(ReaderMessage.TYPE_EVENT, ReaderMessage.NAME_EVENT_CARDREADERFOUND, null,
 							new EventArguments().withEntry("type", "phone")));
+            postMessage(new ReaderMessage(ReaderMessage.TYPE_EVENT, ReaderMessage.NAME_EVENT_CARDFOUND, null));
 		} else {
 			ReaderMessage rm;
 			try {
@@ -519,8 +553,8 @@ public class MainActivity extends Activity implements PINDialogListener {
 			ReaderMessage rm = input.message;
 
 			// It seems sometimes tag is null afterall
-			if(tag == null) {
-				Log.e("ReaderMessage", "tag is null, this should not happen!");
+			if(card == null) {
+				Log.e("ReaderMessage", "card is null, this should not happen!");
 				return new ReaderMessage(ReaderMessage.TYPE_EVENT, ReaderMessage.NAME_EVENT_CARDLOST, null);
 			}
 
@@ -529,7 +563,7 @@ public class MainActivity extends Activity implements PINDialogListener {
 			
 			// TODO: The current version of the cardproxy shouldn't depend on idemix terminal, but for now
 			// it is convenient.
-			IdemixService is = new IdemixService(new IsoDepCardService(tag));
+			IdemixService is = new IdemixService(new SmartCardEmulatorService(card));
 			try {
 				if (!is.isOpen()) {
 					// TODO: this is dangerous, this call to IdemixService already does a "select applet"

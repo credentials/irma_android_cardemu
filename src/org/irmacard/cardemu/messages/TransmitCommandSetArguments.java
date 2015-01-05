@@ -1,4 +1,4 @@
-package org.irmacard.androidcardproxy.messages;
+package org.irmacard.cardemu.messages;
 
 import net.sourceforge.scuba.smartcards.ProtocolCommands;
 

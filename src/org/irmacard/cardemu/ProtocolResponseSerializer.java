@@ -1,4 +1,4 @@
-package org.irmacard.androidcardproxy;
+package org.irmacard.cardemu;
 
 import java.lang.reflect.Type;
 

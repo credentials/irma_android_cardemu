@@ -1,4 +1,4 @@
-package org.irmacard.androidcardproxy.messages;
+package org.irmacard.cardemu.messages;
 
 import java.lang.reflect.Type;
 

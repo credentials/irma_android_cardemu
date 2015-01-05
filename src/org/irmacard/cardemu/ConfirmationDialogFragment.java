@@ -1,4 +1,4 @@
-package org.irmacard.androidcardproxy;
+package org.irmacard.cardemu;
 
 import android.app.Activity;
 import android.app.AlertDialog;

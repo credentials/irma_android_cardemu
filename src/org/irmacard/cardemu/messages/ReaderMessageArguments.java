@@ -1,4 +1,4 @@
-package org.irmacard.androidcardproxy.messages;
+package org.irmacard.cardemu.messages;
 
 public abstract class ReaderMessageArguments {
 
