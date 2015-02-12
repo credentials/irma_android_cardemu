@@ -12,8 +12,8 @@
 	
 	<string name="status_idle">Tap to scan QR</string>
 	<string name="status_connecting">Connecting...</string>
-	<string name="status_connected">Connected</string>
-	<string name="status_ready">Ready</string>
+	<string name="status_connected">Connected to server</string>
+	<string name="status_ready">Card ready</string>
 	<string name="status_communicating">Communicating...</string>
 	<string name="status_waitingforpin">Waiting for PIN</string>
 </resources>
