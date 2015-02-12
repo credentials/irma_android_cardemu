@@ -22,6 +22,10 @@ Gradle will take care of the transitive dependencies. However, you must make sur
 
 The build system depends on gradle version at least 2.1, which is why we've included the gradle wrapper, so you always have the right version.
 
+## irma_configure
+
+Make sure to link a version of irma_configuration into assets/
+
 ## Building
 
 Run
