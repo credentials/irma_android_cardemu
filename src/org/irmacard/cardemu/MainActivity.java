@@ -46,6 +46,7 @@ import android.os.Handler;
 import android.os.Message;
 import android.util.Log;
 import android.view.Menu;
+import android.view.MenuItem;
 import android.view.View;
 import android.widget.ImageView;
 import android.widget.TextView;
@@ -101,13 +102,18 @@ public class MainActivity extends Activity implements PINDialogListener {
     private final String CARD_STORAGE = "card";
     private final String SETTINGS = "cardemu";
     private void loadCard() {
+        Log.d(TAG,"started loadCard");
         SharedPreferences settings = getSharedPreferences(SETTINGS, 0);
+        Log.d(TAG,"got shared Preferences");
         String card_json = settings.getString(CARD_STORAGE, "");
+        Log.d(TAG,"card_json is retrieved: " + card_json);
         // For now always reset the card to default state
-        card_json = "";
+        //card_json = "";
+        //Log.d(TAG,"And now reset");
 
         Gson gson = new Gson();
         if(card_json == "") {
+            Log.d(TAG,"card appears to be empty");
             // Default card content
             try {
                 BufferedReader reader = new BufferedReader(new InputStreamReader(getAssets().open("card.json")));
@@ -117,15 +123,33 @@ public class MainActivity extends Activity implements PINDialogListener {
             }
         } else {
             card = gson.fromJson(card_json, IRMACard.class);
+            Log.d(TAG,"?? card wasn't empty?");
         }
+        Log.d(TAG,"ready to start IdemixService");
         is = new IdemixService(new SmartCardEmulatorService(card));
+        Log.d(TAG,"IdemixService created: " +is.toString());
     }
 
     private void storeCard() {
+        Log.d(TAG,"Storing card");
         SharedPreferences settings = getSharedPreferences(SETTINGS, 0);
         SharedPreferences.Editor editor = settings.edit();
         Gson gson = new Gson();
         editor.putString(CARD_STORAGE, gson.toJson(card));
+        editor.commit();
+    }
+
+    private void resetCard() {
+        Log.d(TAG,"Resetting card");
+        Gson gson = new Gson();
+        // Default card content
+        try {
+            BufferedReader reader = new BufferedReader(new InputStreamReader(getAssets().open("card.json")));
+            card = gson.fromJson(reader, IRMACard.class);
+        } catch (IOException e) {
+            throw new RuntimeException("Couldn't find card initial content");
+        }
+        storeCard();
     }
 
 	private void setState(int state) {
@@ -272,6 +296,7 @@ public class MainActivity extends Activity implements PINDialogListener {
 	
 	@Override
 	protected void onDestroy() {
+        storeCard();
 		super.onDestroy();
 	}
 	private static final int MESSAGE_STARTGET = 1;
@@ -401,6 +426,7 @@ public class MainActivity extends Activity implements PINDialogListener {
 				} else if(rm.name.equals(ReaderMessage.NAME_EVENT_TIMEOUT)) {
 					setState(STATE_IDLE);
 				} else if(rm.name.equals(ReaderMessage.NAME_EVENT_DONE)) {
+                    storeCard();
 					setState(STATE_IDLE);
 				}
 			}
@@ -701,4 +727,18 @@ public class MainActivity extends Activity implements PINDialogListener {
 			super.onBackPressed();
 		}
 	}
+
+    @Override
+    public boolean onOptionsItemSelected(MenuItem item) {
+        Log.d(TAG,"menu press registered");
+        // Handle item selection
+        switch (item.getItemId()) {
+            case R.id.menu_reset:
+                Log.d(TAG,"menu_reset pressed");
+                resetCard();
+                return true;
+            default:
+                return super.onOptionsItemSelected(item);
+        }
+    }
 }
