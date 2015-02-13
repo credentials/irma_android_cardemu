@@ -6,6 +6,7 @@ import java.io.InputStreamReader;
 import java.io.StringReader;
 import java.io.UnsupportedEncodingException;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Timer;
 import java.util.TimerTask;
@@ -26,9 +27,13 @@ import org.irmacard.cardemu.messages.ReaderMessage;
 import org.irmacard.cardemu.messages.ReaderMessageDeserializer;
 import org.irmacard.cardemu.messages.ResponseArguments;
 import org.irmacard.cardemu.messages.TransmitCommandSetArguments;
+import org.irmacard.credentials.Attributes;
+import org.irmacard.credentials.CredentialsException;
 import org.irmacard.credentials.idemix.IdemixCredentials;
+import org.irmacard.credentials.idemix.info.IdemixKeyStore;
 import org.irmacard.credentials.idemix.smartcard.IRMACard;
 import org.irmacard.credentials.idemix.smartcard.SmartCardEmulatorService;
+import org.irmacard.credentials.info.AttributeDescription;
 import org.irmacard.credentials.info.CredentialDescription;
 import org.irmacard.credentials.info.DescriptionStore;
 import org.irmacard.credentials.info.InfoException;
@@ -57,6 +62,7 @@ import android.view.Menu;
 import android.view.MenuItem;
 import android.view.View;
 import android.widget.ArrayAdapter;
+import android.widget.ExpandableListView;
 import android.widget.ImageView;
 import android.widget.ListView;
 import android.widget.TextView;
@@ -268,6 +274,7 @@ public class MainActivity extends Activity implements PINDialogListener {
         // Setup the DescriptionStore
         AndroidWalker aw = new AndroidWalker(getResources().getAssets());
         DescriptionStore.setTreeWalker(aw);
+        IdemixKeyStore.setTreeWalker(aw);
 
         // NFC stuff
         nfcA = NfcAdapter.getDefaultAdapter(getApplicationContext());
@@ -284,23 +291,37 @@ public class MainActivity extends Activity implements PINDialogListener {
         // Retrieve list of credentials from the card
         IdemixCredentials ic = new IdemixCredentials(is);
         List<CredentialDescription> credentialDescriptions = new ArrayList<CredentialDescription>();
+        HashMap<CredentialDescription,Attributes> credentialAttributes = new HashMap<CredentialDescription,Attributes>();
         try {
+            ic.connect();
+            is.sendCardPin("000000".getBytes());
             credentialDescriptions = ic.getCredentials();
+            for(CredentialDescription cd : credentialDescriptions) {
+                credentialAttributes.put(cd, ic.getAttributes(cd));
+            }
         } catch (CardServiceException e) {
             e.printStackTrace();
         } catch (InfoException e) {
+            e.printStackTrace();
+        } catch (CredentialsException e) {
             e.printStackTrace();
         }
 
         // Display a simple list
         ArrayList<String> credentialNames = new ArrayList<String>();
         for(CredentialDescription cd : credentialDescriptions) {
+            List<AttributeDescription> a = cd.getAttributes();
             credentialNames.add(cd.getName());
         }
         ArrayAdapter<String> credsAdapter = new ArrayAdapter<String>(this,
                 android.R.layout.simple_list_item_1, credentialNames);
-        ListView credentialList = (ListView) findViewById(R.id.listView);
-        credentialList.setAdapter(credsAdapter);
+        //ListView credentialList = (ExpListView) findViewById(R.id.listView);
+        //credentialList.setAdapter(credsAdapter);
+
+        // Display cool list
+        ExpandableListView credentialList = (ExpandableListView) findViewById(R.id.listView);
+        ExpandableCredentialsAdapter adapter = new ExpandableCredentialsAdapter(this, credentialDescriptions, credentialAttributes);
+        credentialList.setAdapter(adapter);
 
         setState(STATE_IDLE);
 
