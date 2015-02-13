@@ -66,7 +66,7 @@ public class ExpandableCredentialsAdapter extends BaseExpandableListAdapter {
 
     @Override
     public long getGroupId(int credential_idx) {
-        return credential_idx;
+        return credentials.get(credential_idx).getId();
     }
 
     @Override
@@ -76,7 +76,7 @@ public class ExpandableCredentialsAdapter extends BaseExpandableListAdapter {
 
     @Override
     public boolean hasStableIds() {
-        return false;
+        return true;
     }
 
     @Override
