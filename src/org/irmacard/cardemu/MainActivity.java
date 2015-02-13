@@ -164,11 +164,18 @@ public class MainActivity extends Activity implements PINDialogListener {
         // Default card content
         try {
             BufferedReader reader = new BufferedReader(new InputStreamReader(getAssets().open("card.json")));
-            card = gson.fromJson(reader, IRMACard.class);
+            SharedPreferences settings = getSharedPreferences(SETTINGS, 0);
+            SharedPreferences.Editor editor = settings.edit();
+
+            // FIXME: this is a bit of a hack, ideally we'd directly store the file as as a property
+            IRMACard tmp_card;
+            tmp_card = gson.fromJson(reader, IRMACard.class);
+            editor.putString(CARD_STORAGE, gson.toJson(tmp_card));
+            editor.commit();
         } catch (IOException e) {
             throw new RuntimeException("Couldn't find card initial content");
         }
-        storeCard();
+        loadCard();
         updateCardCredentials();
     }
 
