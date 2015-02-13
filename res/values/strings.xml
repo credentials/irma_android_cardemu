@@ -2,6 +2,7 @@
 <resources>
     <string name="app_name">IRMA CardEmu</string>
     <string name="menu_settings">Settings</string>
+    <string name="menu_reset">Reset card</string>
 	<string name="irmalogo">IRMA logo</string>
 	<string name="credential_info">Card Proxy</string>
 	<string name="feedback_waiting_for_card">Waiting for card</string>
