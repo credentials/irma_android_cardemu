@@ -809,4 +809,22 @@ public class MainActivity extends Activity implements PINDialogListener {
                 return super.onOptionsItemSelected(item);
         }
     }
+    @Override
+    public boolean onPrepareOptionsMenu(Menu menu) {
+
+        MenuItem item = menu.findItem(R.id.menu_reset);
+
+        if (activityState == STATE_IDLE) {
+            item.setEnabled(true);
+           // item.setVisible(true);
+            //item.getIcon().setAlpha(255);
+        } else {
+            // disabled
+            item.setEnabled(false);
+           // item.setVisible(false);
+            //item.getIcon().setAlpha(130);
+        }
+        return super.onPrepareOptionsMenu(menu);
+    }
+
 }
