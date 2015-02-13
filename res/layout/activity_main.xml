@@ -8,9 +8,8 @@
     <ImageView
         android:id="@+id/mainshape"
         android:layout_width="fill_parent"
-        android:layout_height="fill_parent"
+        android:layout_height="80dp"
         android:layout_alignParentLeft="true"
-        android:layout_marginBottom="50dp"
         android:layout_marginLeft="31dp"
         android:layout_marginRight="31dp"
         android:layout_marginTop="46dp"
@@ -31,34 +30,72 @@
         android:id="@+id/status_text"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:layout_alignLeft="@+id/statusimage"
-        android:layout_below="@+id/irmaLogo"
-        android:layout_marginTop="5dp"
+        android:layout_toLeftOf="@+id/statusimage"
+        android:layout_marginTop="60dp"
+        android:layout_marginRight="10dp"
         android:gravity="center"
         android:text="@string/credential_info"
         android:textAppearance="?android:attr/textAppearanceLarge"
         android:textColor="@color/irmadarkblue"
-        android:textSize="24sp" />
+        android:textSize="20sp" />
 
     <TextView
         android:id="@+id/feedback_text"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:layout_alignLeft="@+id/status_text"
+        android:layout_alignRight="@+id/status_text"
         android:layout_below="@+id/status_text"
         android:gravity="center"
+        android:layout_marginTop="5dp"
         android:textAppearance="?android:attr/textAppearanceLarge"
         android:textColor="@color/irmadarkblue"
-        android:textSize="20sp"
+        android:text="Status message"
+        android:textSize="16sp"
         android:textIsSelectable="true" />
 
     <ImageView
         android:id="@+id/statusimage"
-        android:layout_width="200dp"
-        android:layout_height="200dp"
-        android:layout_below="@+id/feedback_text"
-        android:layout_centerHorizontal="true"
-        android:layout_marginTop="23dp"
+        android:layout_width="50dp"
+        android:layout_height="50dp"
+        android:layout_alignParentTop="true"
+        android:layout_alignParentRight="true"
+        android:layout_marginTop="60dp"
+        android:layout_marginRight="40dp"
         android:src="@drawable/irma_icon_place_card_520px" />
+
+    <TextView
+        android:id="@+id/credential_list_header"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="Credentials"
+        android:textSize="16sp"
+        android:textColor="@color/zxing_status_text"
+        android:layout_marginTop="20dp"
+        android:layout_marginLeft="31dp"
+        android:layout_below="@id/mainshape"/>
+
+    <ImageView
+        android:id="@+id/listshape"
+        android:layout_width="fill_parent"
+        android:layout_height="match_parent"
+        android:layout_below="@id/credential_list_header"
+        android:layout_alignParentLeft="true"
+        android:layout_marginTop="2dp"
+        android:layout_marginLeft="31dp"
+        android:layout_marginRight="31dp"
+        android:layout_marginBottom="20dp"
+        android:src="@drawable/whiteshaperounded" />
+
+    <ListView
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:id="@+id/listView"
+        android:layout_alignTop="@+id/listshape"
+        android:layout_alignParentLeft="true"
+        android:layout_marginLeft="36dp"
+        android:layout_marginRight="36dp"
+        android:layout_marginTop="5dp"
+        android:layout_marginBottom="20dp"/>
+
 
 </RelativeLayout>

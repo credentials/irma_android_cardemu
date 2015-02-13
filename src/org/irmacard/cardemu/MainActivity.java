@@ -5,8 +5,11 @@ import java.io.IOException;
 import java.io.InputStreamReader;
 import java.io.StringReader;
 import java.io.UnsupportedEncodingException;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Timer;
 import java.util.TimerTask;
+import java.util.Vector;
 
 import net.sourceforge.scuba.smartcards.CardServiceException;
 import net.sourceforge.scuba.smartcards.ProtocolCommand;
@@ -14,6 +17,7 @@ import net.sourceforge.scuba.smartcards.ProtocolResponse;
 import net.sourceforge.scuba.smartcards.ProtocolResponses;
 import net.sourceforge.scuba.smartcards.ResponseAPDU;
 import org.apache.http.entity.StringEntity;
+import org.irmacard.android.util.credentials.AndroidWalker;
 import org.irmacard.android.util.pindialog.EnterPINDialogFragment;
 import org.irmacard.android.util.pindialog.EnterPINDialogFragment.PINDialogListener;
 import org.irmacard.cardemu.messages.EventArguments;
@@ -22,8 +26,12 @@ import org.irmacard.cardemu.messages.ReaderMessage;
 import org.irmacard.cardemu.messages.ReaderMessageDeserializer;
 import org.irmacard.cardemu.messages.ResponseArguments;
 import org.irmacard.cardemu.messages.TransmitCommandSetArguments;
+import org.irmacard.credentials.idemix.IdemixCredentials;
 import org.irmacard.credentials.idemix.smartcard.IRMACard;
 import org.irmacard.credentials.idemix.smartcard.SmartCardEmulatorService;
+import org.irmacard.credentials.info.CredentialDescription;
+import org.irmacard.credentials.info.DescriptionStore;
+import org.irmacard.credentials.info.InfoException;
 import org.irmacard.idemix.IdemixService;
 
 import android.app.Activity;
@@ -48,7 +56,9 @@ import android.util.Log;
 import android.view.Menu;
 import android.view.MenuItem;
 import android.view.View;
+import android.widget.ArrayAdapter;
 import android.widget.ImageView;
+import android.widget.ListView;
 import android.widget.TextView;
 
 import com.google.gson.Gson;
@@ -255,6 +265,10 @@ public class MainActivity extends Activity implements PINDialogListener {
 		setContentView(R.layout.activity_main);
         loadCard();
 
+        // Setup the DescriptionStore
+        AndroidWalker aw = new AndroidWalker(getResources().getAssets());
+        DescriptionStore.setTreeWalker(aw);
+
         // NFC stuff
         nfcA = NfcAdapter.getDefaultAdapter(getApplicationContext());
         mPendingIntent = PendingIntent.getActivity(this, 0,
@@ -267,7 +281,28 @@ public class MainActivity extends Activity implements PINDialogListener {
         // Setup a tech list for all IsoDep cards
         mTechLists = new String[][] { new String[] { IsoDep.class.getName() } };
 
-	    setState(STATE_IDLE);
+        // Retrieve list of credentials from the card
+        IdemixCredentials ic = new IdemixCredentials(is);
+        List<CredentialDescription> credentialDescriptions = new ArrayList<CredentialDescription>();
+        try {
+            credentialDescriptions = ic.getCredentials();
+        } catch (CardServiceException e) {
+            e.printStackTrace();
+        } catch (InfoException e) {
+            e.printStackTrace();
+        }
+
+        // Display a simple list
+        ArrayList<String> credentialNames = new ArrayList<String>();
+        for(CredentialDescription cd : credentialDescriptions) {
+            credentialNames.add(cd.getName());
+        }
+        ArrayAdapter<String> credsAdapter = new ArrayAdapter<String>(this,
+                android.R.layout.simple_list_item_1, credentialNames);
+        ListView credentialList = (ListView) findViewById(R.id.listView);
+        credentialList.setAdapter(credsAdapter);
+
+        setState(STATE_IDLE);
 
 	    timer = new Timer();
 	    timer.scheduleAtFixedRate(new CardPollerTask(), CARD_POLL_DELAY, CARD_POLL_DELAY);
