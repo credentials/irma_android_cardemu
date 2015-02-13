@@ -13,6 +13,7 @@ import org.irmacard.credentials.Attributes;
 import org.irmacard.credentials.info.AttributeDescription;
 import org.irmacard.credentials.info.CredentialDescription;
 
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 
@@ -25,10 +26,22 @@ public class ExpandableCredentialsAdapter extends BaseExpandableListAdapter {
     private HashMap<CredentialDescription,Attributes> credentialAttributes;
     private String TAG = "ECA";
 
+    public ExpandableCredentialsAdapter(Context context) {
+        this.context = context;
+        this.credentials = new ArrayList<CredentialDescription>();
+        this.credentialAttributes = null;
+    }
+
     public ExpandableCredentialsAdapter(Context context, List<CredentialDescription> credentials, HashMap<CredentialDescription,Attributes> credentialAttributes) {
         this.context = context;
         this.credentials = credentials;
         this.credentialAttributes = credentialAttributes;
+    }
+
+    public void updateData(List<CredentialDescription> credentials, HashMap<CredentialDescription,Attributes> credentialAttributes) {
+        this.credentials = credentials;
+        this.credentialAttributes = credentialAttributes;
+        this.notifyDataSetChanged();
     }
 
     @Override

@@ -86,6 +86,9 @@ public class MainActivity extends Activity implements PINDialogListener {
 
 	// PIN handling
 	private int tries = -1;
+
+    // Previewed list of credentials
+    ExpandableCredentialsAdapter credentialListAdapter;
 	
 	// State variables
 	private IsoDep lastTag = null;
@@ -166,6 +169,7 @@ public class MainActivity extends Activity implements PINDialogListener {
             throw new RuntimeException("Couldn't find card initial content");
         }
         storeCard();
+        updateCardCredentials();
     }
 
 	private void setState(int state) {
@@ -175,6 +179,7 @@ public class MainActivity extends Activity implements PINDialogListener {
     	switch (activityState) {
 		case STATE_IDLE:
 			lastTag = null;
+            updateCardCredentials();
 			break;
 		default:
 			break;
@@ -288,6 +293,25 @@ public class MainActivity extends Activity implements PINDialogListener {
         // Setup a tech list for all IsoDep cards
         mTechLists = new String[][] { new String[] { IsoDep.class.getName() } };
 
+        // Display cool list
+        ExpandableListView credentialList = (ExpandableListView) findViewById(R.id.listView);
+        //ExpandableCredentialsAdapter adapter = new ExpandableCredentialsAdapter(this, credentialDescriptions, credentialAttributes);
+        credentialListAdapter = new ExpandableCredentialsAdapter(this);
+        credentialList.setAdapter(credentialListAdapter);
+        updateCardCredentials();
+
+        setState(STATE_IDLE);
+
+	    timer = new Timer();
+	    timer.scheduleAtFixedRate(new CardPollerTask(), CARD_POLL_DELAY, CARD_POLL_DELAY);
+	}
+
+    protected void updateCardCredentials() {
+        // Can only be run when not connected to a server
+        if(activityState != STATE_IDLE) {
+            return;
+        }
+
         // Retrieve list of credentials from the card
         IdemixCredentials ic = new IdemixCredentials(is);
         List<CredentialDescription> credentialDescriptions = new ArrayList<CredentialDescription>();
@@ -307,27 +331,8 @@ public class MainActivity extends Activity implements PINDialogListener {
             e.printStackTrace();
         }
 
-        // Display a simple list
-        ArrayList<String> credentialNames = new ArrayList<String>();
-        for(CredentialDescription cd : credentialDescriptions) {
-            List<AttributeDescription> a = cd.getAttributes();
-            credentialNames.add(cd.getName());
-        }
-        ArrayAdapter<String> credsAdapter = new ArrayAdapter<String>(this,
-                android.R.layout.simple_list_item_1, credentialNames);
-        //ListView credentialList = (ExpListView) findViewById(R.id.listView);
-        //credentialList.setAdapter(credsAdapter);
-
-        // Display cool list
-        ExpandableListView credentialList = (ExpandableListView) findViewById(R.id.listView);
-        ExpandableCredentialsAdapter adapter = new ExpandableCredentialsAdapter(this, credentialDescriptions, credentialAttributes);
-        credentialList.setAdapter(adapter);
-
-        setState(STATE_IDLE);
-
-	    timer = new Timer();
-	    timer.scheduleAtFixedRate(new CardPollerTask(), CARD_POLL_DELAY, CARD_POLL_DELAY);
-	}
+        credentialListAdapter.updateData(credentialDescriptions, credentialAttributes);
+    }
 
 
 	@Override
