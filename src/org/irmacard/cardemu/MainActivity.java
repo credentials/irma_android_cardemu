@@ -61,6 +61,7 @@ import android.util.Log;
 import android.view.Menu;
 import android.view.MenuItem;
 import android.view.View;
+import android.widget.AdapterView;
 import android.widget.ArrayAdapter;
 import android.widget.ExpandableListView;
 import android.widget.ImageView;
@@ -307,11 +308,57 @@ public class MainActivity extends Activity implements PINDialogListener {
         credentialList.setAdapter(credentialListAdapter);
         updateCardCredentials();
 
+        credentialList.setOnItemLongClickListener(new AdapterView.OnItemLongClickListener() {
+            @Override
+            public boolean onItemLongClick(AdapterView<?> adapterView, View view, int i, long id) {
+                Log.i(TAG, "Credential with index " + i + " and id " + credentialListAdapter.getGroupId(i) + " was longclicked");
+                tryDeleteCredential((CredentialDescription) credentialListAdapter.getGroup(i));
+                return true;
+            }
+        });
+
         setState(STATE_IDLE);
 
 	    timer = new Timer();
 	    timer.scheduleAtFixedRate(new CardPollerTask(), CARD_POLL_DELAY, CARD_POLL_DELAY);
 	}
+
+    protected void tryDeleteCredential(final CredentialDescription cd) {
+        if (activityState != STATE_IDLE) {
+            Log.i(TAG, "Delete long-click ignored in non-idle mode");
+            return;
+        }
+
+        AlertDialog.Builder builder = new AlertDialog.Builder(this);
+        builder.setTitle("Deleting credential")
+               .setMessage("Are you sure you want to delete " + cd.getName() + "?")
+               .setPositiveButton("Delete", new DialogInterface.OnClickListener() {
+                   public void onClick(DialogInterface dialog, int id) {
+                       Log.i(TAG, "We're idle, attempting removal of credential " + cd.getName());
+                       IdemixCredentials ic = new IdemixCredentials(is);
+                       try {
+                           ic.connect();
+                           is.sendCardPin("000000".getBytes());
+                           ic.removeCredential(cd);
+                       } catch (CredentialsException e) {
+                           e.printStackTrace();
+                       } catch (CardServiceException e) {
+                           e.printStackTrace();
+                       }
+                       Log.i(TAG, "Updating credential list");
+                       updateCardCredentials();
+                       is.close();
+                       storeCard();
+                   }
+               })
+               .setNegativeButton("Cancel", new DialogInterface.OnClickListener() {
+                   public void onClick(DialogInterface dialog, int id) {
+                       // Cancelled
+                   }
+               });
+        AlertDialog dialog = builder.create();
+        dialog.show();
+    }
 
     protected void updateCardCredentials() {
         // Can only be run when not connected to a server
