@@ -30,16 +30,26 @@ public class GovernmentEnrolImpl implements GovernmentEnrol {
     }
 
     @Override
-    public void enroll(byte[] pin, IdemixService idemixService) {
+    public GovernmentEnrolResult enroll(byte[] pin, IdemixService idemixService) {
+        GovernmentEnrolResult result = GovernmentEnrolResult.SUCCESS;
+
         String passportNumber;
         PersonalRecord personalRecord;
 
         passportNumber = verifyMNOCredential (pin, idemixService);
-        if (passportNumber != null) {
-            personalRecord = personalRecordDatabase.getPersonalRecord(passportNumber);
-            if (personalRecord != null)
-                issueGovernmentCredentials (personalRecord, pin, idemixService);
-        }
+        if (passportNumber == null)
+            result = GovernmentEnrolResult.NO_VALID_MNO_CREDENTIAL;
+        if (result != GovernmentEnrolResult.SUCCESS)
+            return result;
+
+        personalRecord = personalRecordDatabase.getPersonalRecord(passportNumber);
+        result = GovernmentEnrolResult.PASSPORT_NUMBER_NOT_FOUND;
+        if (result != GovernmentEnrolResult.SUCCESS)
+            return result;
+
+        result = issueGovernmentCredentials (personalRecord, pin, idemixService);
+
+        return result;
     }
 
     private String verifyMNOCredential (byte[] pin, IdemixService idemixService) {
@@ -97,8 +107,10 @@ public class GovernmentEnrolImpl implements GovernmentEnrol {
         return passportNumber;
     }
 
-    private void issueGovernmentCredentials (PersonalRecord personalRecord,
+    private GovernmentEnrolResult issueGovernmentCredentials (PersonalRecord personalRecord,
                                             byte[] pin, IdemixService idemixService) {
+
+        GovernmentEnrolResult result = GovernmentEnrolResult.SUCCESS;
 
         Attributes attributes = new Attributes();
 
@@ -122,6 +134,8 @@ public class GovernmentEnrolImpl implements GovernmentEnrol {
             ic.issue(cd, IdemixKeyStore.getInstance().getSecretKey(cd), attributes, expiryDate);
         } catch (Exception e) {
             e.printStackTrace();
+            result = GovernmentEnrolResult.ISSUANCE_FAILED;
         }
+        return result;
     }
 }

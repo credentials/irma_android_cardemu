@@ -4,5 +4,12 @@ import org.irmacard.idemix.IdemixService;
 import org.jmrtd.PassportService;
 
 public interface MNOEnrol {
-    public void enroll(String subscriberID, byte[] pin, PassportService passport, IdemixService irmaCard);
+    public enum MNOEnrolResult {
+        SUCCESS,
+        UNKNOWN_SUBSCRIBER,
+        PASSPORT_CHECK_FAILED,
+        ISSUANCE_FAILED
+    }
+
+    public MNOEnrolResult enroll(String subscriberID, byte[] pin, PassportService passport, IdemixService irmaCard);
 }

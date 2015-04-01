@@ -17,6 +17,8 @@ import java.text.SimpleDateFormat;
 import java.util.Calendar;
 import java.util.Date;
 
+
+
 public class MNOEnrollImpl implements MNOEnrol {
     private SubscriberDatabase subscribers;
     private SimpleDateFormat shortDate;
@@ -28,16 +30,31 @@ public class MNOEnrollImpl implements MNOEnrol {
         this.shortDate = new SimpleDateFormat ("yyMMdd");
     }
 
-    public void enroll(String subscriberID, byte[] pin, PassportService passportService, IdemixService idemixService) {
+    public MNOEnrolResult enroll(String subscriberID, byte[] pin, PassportService passportService, IdemixService idemixService) {
+        MNOEnrolResult result = MNOEnrolResult.SUCCESS;
         SubscriberInfo subscriberInfo;
 
         subscriberInfo = subscribers.getSubscriber (subscriberID);
+        if (subscriberInfo == null)
+            /* Unknown subscriber */
+            result = MNOEnrolResult.SUCCESS;
+        if (result != MNOEnrolResult.SUCCESS)
+            return result;
 
-        checkPassport (subscriberInfo, passportService);
-        issueMNOCredential (subscriberInfo, pin, idemixService);
+        result = checkPassport (subscriberInfo, passportService);
+        if (result != MNOEnrolResult.SUCCESS)
+            return result;
+
+        result = issueMNOCredential (subscriberInfo, pin, idemixService);
+        if (result != MNOEnrolResult.SUCCESS)
+            return result;
+
+        return result;
     }
 
-    private void checkPassport (SubscriberInfo subscriberInfo, PassportService passportService) {
+    private MNOEnrolResult checkPassport (SubscriberInfo subscriberInfo, PassportService passportService) {
+        MNOEnrolResult result = MNOEnrolResult.SUCCESS;
+
         String passportNumber = subscriberInfo.passportNumber;
         String dateOfBirth = shortDate.format (subscriberInfo.dateOfBirth);
         String expiryDate = shortDate.format(subscriberInfo.passportExpiryDate);
@@ -47,12 +64,18 @@ public class MNOEnrollImpl implements MNOEnrol {
         try {
             passportService.doBAC (bacKey);
         } catch (CardServiceException e) {
+            /* BAC failed */
             e.printStackTrace();
+            result = MNOEnrolResult.PASSPORT_CHECK_FAILED;
         }
+
+        return result;
     }
 
-    private void issueMNOCredential (SubscriberInfo subscriberInfo, byte[] pin,
+    private MNOEnrolResult issueMNOCredential (SubscriberInfo subscriberInfo, byte[] pin,
                                      IdemixService idemixService) {
+        MNOEnrolResult result = MNOEnrolResult.SUCCESS;
+
         Attributes attributes = new Attributes();
 
         attributes.add ("docNr", subscriberInfo.passportNumber.getBytes());
@@ -76,6 +99,9 @@ public class MNOEnrollImpl implements MNOEnrol {
         } catch (Exception e) {
             Log.e(TAG, e.toString());
             e.printStackTrace();
+
+            result = MNOEnrolResult.ISSUANCE_FAILED;
         }
+        return result;
     }
 }
