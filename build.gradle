@@ -9,7 +9,7 @@ buildscript {
         mavenCentral()
     }
     dependencies {
-        classpath 'com.android.tools.build:gradle:0.13.0'
+        classpath 'com.android.tools.build:gradle:1.1.0'
     }
 }
 
@@ -61,6 +61,8 @@ dependencies {
     compile 'net.sourceforge.scuba:scuba_sc_android:0.0.3'
     
     compile 'net.sourceforge.scuba:scuba_smartcards:0.0.3'
+
+    compile files('libs/jmrtd-0.5.1.jar')
 }
 
 task wrapper(type: Wrapper) {
