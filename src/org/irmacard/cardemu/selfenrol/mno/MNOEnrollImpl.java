@@ -73,7 +73,6 @@ public class MNOEnrollImpl implements MNOEnrol {
             ic.connect();
             idemixService.sendPin (pin);
             ic.issue (cd, IdemixKeyStore.getInstance().getSecretKey(cd), attributes, expiryDate);
-          //  idemixService.close();
         } catch (Exception e) {
             Log.e(TAG, e.toString());
             e.printStackTrace();

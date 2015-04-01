@@ -14,14 +14,20 @@ import android.telephony.TelephonyManager;
 import android.util.Log;
 import android.view.View;
 import android.widget.Button;
+import android.widget.ImageView;
 import android.widget.TextView;
 
 import com.google.gson.Gson;
 
 import net.sourceforge.scuba.smartcards.CardService;
+import net.sourceforge.scuba.smartcards.CardServiceException;
 import net.sourceforge.scuba.smartcards.IsoDepCardService;
 
 import org.irmacard.cardemu.R;
+import org.irmacard.cardemu.selfenrol.government.GovernmentEnrol;
+import org.irmacard.cardemu.selfenrol.government.GovernmentEnrolImpl;
+import org.irmacard.cardemu.selfenrol.government.MockupPersonalRecordDatabase;
+import org.irmacard.cardemu.selfenrol.government.PersonalRecordDatabase;
 import org.irmacard.cardemu.selfenrol.mno.MNOEnrol;
 import org.irmacard.cardemu.selfenrol.mno.MNOEnrollImpl;
 import org.irmacard.cardemu.selfenrol.mno.MockupSubscriberDatabase;
@@ -29,7 +35,6 @@ import org.irmacard.cardemu.selfenrol.mno.SubscriberDatabase;
 import org.irmacard.credentials.idemix.smartcard.IRMACard;
 import org.irmacard.credentials.idemix.smartcard.SmartCardEmulatorService;
 import org.irmacard.idemix.IdemixService;
-import org.jmrtd.BACKey;
 import org.jmrtd.PassportService;
 
 public class Passport extends Activity {
@@ -40,6 +45,9 @@ public class Passport extends Activity {
 
     private SubscriberDatabase subscribers = new MockupSubscriberDatabase ();
     private MNOEnrol mno = new MNOEnrollImpl(subscribers);
+
+    private PersonalRecordDatabase personalRecordDatabase = new MockupPersonalRecordDatabase ();
+    private GovernmentEnrol governmentEnrol = new GovernmentEnrolImpl (personalRecordDatabase);
 
     private String TAG = "CardEmuEnrollActivity";
 
@@ -115,6 +123,11 @@ public class Passport extends Activity {
             if (is!=null){
                 Log.d(TAG,"good");
             }
+            try {
+                is.open ();
+            } catch (CardServiceException e) {
+                e.printStackTrace();
+            }
         }
 
         Context context = getApplicationContext ();
@@ -187,7 +200,7 @@ public class Passport extends Activity {
     }
 
     private void issueGovCredentials() {
-
+        governmentEnrol.enroll ("0000".getBytes (), is);
     }
 
     public void onMainTouch(View v) {
@@ -201,7 +214,9 @@ public class Passport extends Activity {
 
     private void passportVerified(){
         ((TextView)findViewById(R.id.se_feedback_text)).setText(R.string.se_passport_verified);
-        findViewById(R.id.se_statusimage).setVisibility(View.GONE);
+        ImageView statusImage = (ImageView) findViewById(R.id.se_statusimage);
+        if (statusImage != null)
+            statusImage.setVisibility(View.GONE);
         enableContinueButton();
     }
 

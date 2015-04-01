@@ -7,11 +7,10 @@ import java.util.Map;
 
 public class MockupPersonalRecordDatabase implements PersonalRecordDatabase {
     private Map<String, PersonalRecord> personalRecordDatabase = null;
-    private SimpleDateFormat iso = null;
+    private SimpleDateFormat iso = new SimpleDateFormat ("yyyyMMdd");
 
     public MockupPersonalRecordDatabase() {
         this.personalRecordDatabase = new HashMap<String, PersonalRecord>();
-        SimpleDateFormat iso = new SimpleDateFormat ("yyyyMMddZ");
 
         /* Example */
         addPersonalRecord("bsn01234567890", "Jane", "Doe", "19001231", "PPNUMMER0");

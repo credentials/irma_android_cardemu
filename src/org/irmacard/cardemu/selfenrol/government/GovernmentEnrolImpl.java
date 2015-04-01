@@ -15,8 +15,12 @@ import org.irmacard.idemix.IdemixService;
 import org.irmacard.idemix.IdemixSmartcard;
 
 import java.math.BigInteger;
+import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Calendar;
 import java.util.Date;
+import java.util.HashMap;
+import java.util.List;
 
 public class GovernmentEnrolImpl implements GovernmentEnrol {
     PersonalRecordDatabase personalRecordDatabase;
@@ -44,36 +48,51 @@ public class GovernmentEnrolImpl implements GovernmentEnrol {
         Attributes attributes = null;
         String passportNumber = null;
 
+        IdemixCredentials ic = new IdemixCredentials(idemixService);
+
+        /* FIXME
+            for unclear reasons the verification does not work yet, we fake it by using
+            the admin interface to obtain the passport number from the MNO credential
+         */
+        HashMap<CredentialDescription,Attributes> credentialAttributes = new HashMap<CredentialDescription,Attributes>();
         try {
-            vd = new IdemixVerificationDescription("KPN", "kpnSelfEnrolDocNr");
-        } catch (InfoException e) {
+            ic.connect();
+            idemixService.sendCardPin("000000".getBytes());
+            List<CredentialDescription> credentialDescriptions = ic.getCredentials();
+            for(CredentialDescription cd : credentialDescriptions) {
+                credentialAttributes.put(cd, ic.getAttributes(cd));
+                String issuerID = cd.getIssuerID();
+                if (issuerID.equals ("KPN")) {
+                    String credentialID = cd.getCredentialID();
+                    if (credentialID.equals("kpnSelfEnrolDocNr")) {
+                        attributes = ic.getAttributes(cd);
+                        byte[] docNrBytes = credentialAttributes.get(cd).get("docNr");
+                        int nLeadingZeroBytes = 0;
+                        while (nLeadingZeroBytes < docNrBytes.length && docNrBytes [nLeadingZeroBytes] == 0)
+                            nLeadingZeroBytes++;
+                        docNrBytes = Arrays.copyOfRange(docNrBytes, nLeadingZeroBytes, docNrBytes.length);
+                        passportNumber = new String(docNrBytes);
+                    }
+                }
+            }
+
+        } catch (/* Info */Exception e) {
             e.printStackTrace();
         }
-        IdemixCredentials ic = new IdemixCredentials(null);
-
-        // Select applet and process version
-        ProtocolResponse select_response = null;
+/*
+        // Doesn't work yet
         try {
-            idemixService.open();
-            select_response = idemixService.execute(
-                    IdemixSmartcard.selectApplicationCommand);
-            // Get prove commands, and send them to card
-            // Generate a nonce (you need this for verification as well)
-            BigInteger nonce = null;
-            nonce = vd.generateNonce();
-
-            ProtocolCommands commands = ic.requestProofCommands(vd, nonce);
-            ProtocolResponses responses = idemixService.execute(commands);
-            attributes = ic.verifyProofResponses(vd, nonce, responses);
+            vd = new IdemixVerificationDescription("MijnOverheid", "kpnSelfEnrolDocNr");
+            ic.connect();
+            attributes = ic.verify(vd);
         } catch (Exception e) {
             e.printStackTrace();
         }
-
         // Process the responses
         if (attributes != null) {
-            passportNumber = String.valueOf (attributes.get("docNr"));
+            passportNumber = new String (attributes.get("docNr"));
         }
-        idemixService.close();
+*/
 
         return passportNumber;
     }
@@ -83,7 +102,7 @@ public class GovernmentEnrolImpl implements GovernmentEnrol {
 
         Attributes attributes = new Attributes();
 
-        attributes.add ("root", personalRecord.personalNumber.getBytes());
+        attributes.add ("BSN", personalRecord.personalNumber.getBytes());
         String issuer = "MijnOverheid";
         String credential = "root";
 
@@ -99,9 +118,8 @@ public class GovernmentEnrolImpl implements GovernmentEnrol {
             cd = DescriptionStore.getInstance().getCredentialDescriptionByName (issuer, credential);
             IdemixCredentials ic = new IdemixCredentials (idemixService);
             ic.connect();
-            idemixService.sendPin (pin);
-            ic.issue (cd, IdemixKeyStore.getInstance().getSecretKey(cd), attributes, expiryDate);
-            idemixService.close();
+            idemixService.sendPin(pin);
+            ic.issue(cd, IdemixKeyStore.getInstance().getSecretKey(cd), attributes, expiryDate);
         } catch (Exception e) {
             e.printStackTrace();
         }
