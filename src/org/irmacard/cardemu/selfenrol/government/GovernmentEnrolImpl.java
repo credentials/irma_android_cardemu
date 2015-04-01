@@ -1,6 +1,5 @@
 package org.irmacard.cardemu.selfenrol.government;
 
-import net.sourceforge.scuba.smartcards.CardServiceException;
 import net.sourceforge.scuba.smartcards.ProtocolCommands;
 import net.sourceforge.scuba.smartcards.ProtocolResponse;
 import net.sourceforge.scuba.smartcards.ProtocolResponses;
@@ -14,7 +13,6 @@ import org.irmacard.credentials.info.DescriptionStore;
 import org.irmacard.credentials.info.InfoException;
 import org.irmacard.idemix.IdemixService;
 import org.irmacard.idemix.IdemixSmartcard;
-import org.irmacard.idemix.util.CardVersion;
 
 import java.math.BigInteger;
 import java.util.Calendar;
@@ -28,20 +26,23 @@ public class GovernmentEnrolImpl implements GovernmentEnrol {
     }
 
     @Override
-    public void enroll(String personalNumber, byte[] pin, IdemixService idemixService) {
+    public void enroll(byte[] pin, IdemixService idemixService) {
+        String passportNumber;
         PersonalRecord personalRecord;
 
-        personalRecord = personalRecordDatabase.getPersonalRecord (personalNumber);
-
-        verifyMNOCredential (personalRecord, pin, idemixService);
-        issueGovernmentCredentials(personalRecord, pin, idemixService);
+        passportNumber = verifyMNOCredential (pin, idemixService);
+        if (passportNumber != null) {
+            personalRecord = personalRecordDatabase.getPersonalRecord(passportNumber);
+            if (personalRecord != null)
+                issueGovernmentCredentials (personalRecord, pin, idemixService);
+        }
     }
 
-    private void verifyMNOCredential (PersonalRecord personalRecord,
-                                      byte[] pin, IdemixService idemixService) {
+    private String verifyMNOCredential (byte[] pin, IdemixService idemixService) {
         IdemixVerificationDescription vd =
                 null;
         Attributes attributes = null;
+        String passportNumber = null;
 
         try {
             vd = new IdemixVerificationDescription("KPN", "kpnSelfEnrolDocNr");
@@ -67,17 +68,14 @@ public class GovernmentEnrolImpl implements GovernmentEnrol {
         } catch (Exception e) {
             e.printStackTrace();
         }
-        CardVersion cv = new CardVersion(select_response.getData());
-
 
         // Process the responses
-
-        if (attributes == null) {
-            System.out.println ("The proof does not verify");
-        } else {
-            System.out.println ("Proof verified");
+        if (attributes != null) {
+            passportNumber = String.valueOf (attributes.get("docNr"));
         }
         idemixService.close();
+
+        return passportNumber;
     }
 
     private void issueGovernmentCredentials (PersonalRecord personalRecord,
@@ -107,6 +105,5 @@ public class GovernmentEnrolImpl implements GovernmentEnrol {
         } catch (Exception e) {
             e.printStackTrace();
         }
-    }
     }
 }

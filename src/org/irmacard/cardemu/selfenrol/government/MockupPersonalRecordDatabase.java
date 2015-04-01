@@ -20,7 +20,7 @@ public class MockupPersonalRecordDatabase implements PersonalRecordDatabase {
     private void addPersonalRecord (String bsn, String givenName, String familyName,
                                     String dob, String pp) {
         try {
-            personalRecordDatabase.put(bsn, new PersonalRecord(bsn,  givenName, familyName,
+            personalRecordDatabase.put(pp, new PersonalRecord(bsn,  givenName, familyName,
                     iso.parse(dob), pp));
         } catch (ParseException e) {
             e.printStackTrace();
@@ -28,7 +28,7 @@ public class MockupPersonalRecordDatabase implements PersonalRecordDatabase {
     }
 
     @Override
-    public PersonalRecord getPersonalRecord(String personalNumber) {
-        return personalRecordDatabase.get (personalNumber);
+    public PersonalRecord getPersonalRecord (String passportNumber) {
+        return personalRecordDatabase.get (passportNumber);
     }
 }
