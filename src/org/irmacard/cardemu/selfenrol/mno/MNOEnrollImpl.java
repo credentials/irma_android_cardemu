@@ -1,5 +1,7 @@
 package org.irmacard.cardemu.selfenrol.mno;
 
+import android.util.Log;
+
 import net.sourceforge.scuba.smartcards.CardServiceException;
 
 import org.irmacard.credentials.Attributes;
@@ -18,6 +20,7 @@ import java.util.Date;
 public class MNOEnrollImpl implements MNOEnrol {
     private SubscriberDatabase subscribers;
     private SimpleDateFormat shortDate;
+    private String TAG = "MNOImpl";
 
     public MNOEnrollImpl (SubscriberDatabase subscribers) {
         this.subscribers = subscribers;
@@ -70,8 +73,9 @@ public class MNOEnrollImpl implements MNOEnrol {
             ic.connect();
             idemixService.sendPin (pin);
             ic.issue (cd, IdemixKeyStore.getInstance().getSecretKey(cd), attributes, expiryDate);
-            idemixService.close();
+          //  idemixService.close();
         } catch (Exception e) {
+            Log.e(TAG, e.toString());
             e.printStackTrace();
         }
     }

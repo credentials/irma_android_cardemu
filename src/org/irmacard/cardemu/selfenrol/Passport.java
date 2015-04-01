@@ -174,6 +174,7 @@ public class Passport extends Activity {
             case SCREEN_PASSPORT:
                 setContentView(R.layout.enroll_activity_issue);
                 screen = SCREEN_ISSUE;
+                issueGovCredentials();
                 break;
             case SCREEN_ISSUE:
                 screen = SCREEN_START;
@@ -183,6 +184,10 @@ public class Passport extends Activity {
                 Log.e(TAG, "Error, screen switch fall through");
                 break;
         }
+    }
+
+    private void issueGovCredentials() {
+
     }
 
     public void onMainTouch(View v) {
@@ -203,6 +208,7 @@ public class Passport extends Activity {
     @Override
     public void finish() {
         // Prepare data intent
+        is.close();
         Intent data = new Intent();
         Log.d(TAG,"Storing card");
         Gson gson = new Gson();

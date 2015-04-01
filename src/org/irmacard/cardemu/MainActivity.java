@@ -625,10 +625,12 @@ public class MainActivity extends Activity implements PINDialogListener {
             Log.d(TAG,"enrol result!");
                if (data.hasExtra("card_json")) {
                    Log.d(TAG,"It contains card data");
-                   String card_json = data.getExtras().getString("cardservice");
+                   String card_json = data.getExtras().getString("card_json");
                    Gson gson = new Gson();
                    card = gson.fromJson(card_json, IRMACard.class);
                    is = new IdemixService(new SmartCardEmulatorService(card));
+                   storeCard();
+                   updateCardCredentials();
                }
         //   card = data.getExtras().getSerializable("card");
         } else {
