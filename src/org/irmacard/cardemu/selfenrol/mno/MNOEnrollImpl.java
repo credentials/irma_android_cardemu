@@ -12,6 +12,8 @@ import org.jmrtd.BACKey;
 import org.jmrtd.PassportService;
 
 import java.text.SimpleDateFormat;
+import java.util.Calendar;
+import java.util.Date;
 
 public class MNOEnrollImpl implements MNOEnrol {
     private SubscriberDatabase subscribers;
@@ -50,22 +52,27 @@ public class MNOEnrollImpl implements MNOEnrol {
                                      IdemixService idemixService) {
         Attributes attributes = new Attributes();
 
-        attributes.add("userID", "s1234567@student.ru.nl".getBytes());
-        attributes.add("securityHash", "DEADBABE".getBytes());
-        String issuer = "Surfnet";
-        String credential = "root";
+        attributes.add ("docNr", subscriberInfo.passportNumber.getBytes());
+        String issuer = "KPN";
+        String credential = "kpnSelfEnrolDocNr";
 
         CredentialDescription cd = null;
         try {
+            Date expiryDate = new Date ();
+
+            Calendar c = Calendar.getInstance();
+            c.setTime (expiryDate);
+            c.add (Calendar.DATE, 1);
+            expiryDate = c.getTime();
+
             cd = DescriptionStore.getInstance ().getCredentialDescriptionByName (issuer, credential);
             IdemixCredentials ic = new IdemixCredentials (idemixService);
             ic.connect();
             idemixService.sendPin (pin);
-            ic.issue(cd, IdemixKeyStore.getInstance().getSecretKey(cd), attributes, null);
+            ic.issue (cd, IdemixKeyStore.getInstance().getSecretKey(cd), attributes, expiryDate);
             idemixService.close();
         } catch (Exception e) {
             e.printStackTrace();
         }
     }
-
 }
