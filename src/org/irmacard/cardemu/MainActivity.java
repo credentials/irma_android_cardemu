@@ -10,7 +10,6 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Timer;
 import java.util.TimerTask;
-import java.util.Vector;
 
 import net.sourceforge.scuba.smartcards.CardServiceException;
 import net.sourceforge.scuba.smartcards.ProtocolCommand;
@@ -33,7 +32,6 @@ import org.irmacard.credentials.idemix.IdemixCredentials;
 import org.irmacard.credentials.idemix.info.IdemixKeyStore;
 import org.irmacard.credentials.idemix.smartcard.IRMACard;
 import org.irmacard.credentials.idemix.smartcard.SmartCardEmulatorService;
-import org.irmacard.credentials.info.AttributeDescription;
 import org.irmacard.credentials.info.CredentialDescription;
 import org.irmacard.credentials.info.DescriptionStore;
 import org.irmacard.credentials.info.InfoException;
@@ -48,7 +46,6 @@ import android.content.DialogInterface;
 import android.content.Intent;
 import android.content.IntentFilter;
 import android.content.SharedPreferences;
-import android.net.Uri;
 import android.nfc.NfcAdapter;
 import android.nfc.Tag;
 import android.nfc.tech.IsoDep;
@@ -62,10 +59,8 @@ import android.view.Menu;
 import android.view.MenuItem;
 import android.view.View;
 import android.widget.AdapterView;
-import android.widget.ArrayAdapter;
 import android.widget.ExpandableListView;
 import android.widget.ImageView;
-import android.widget.ListView;
 import android.widget.TextView;
 
 import com.google.gson.Gson;
@@ -79,7 +74,8 @@ import com.loopj.android.http.AsyncHttpResponseHandler;
 
 
 public class MainActivity extends Activity implements PINDialogListener {
-	private String TAG = "CardEmuMainActivity";
+    public static final int REQUEST_CODE = 100;
+    private String TAG = "CardEmuMainActivity";
 	private NfcAdapter nfcA;
 	private PendingIntent mPendingIntent;
 	private IntentFilter[] mFilters;
@@ -252,7 +248,7 @@ public class MainActivity extends Activity implements PINDialogListener {
 			imageResource = R.drawable.irma_icon_missing_520px;
 		}
 
-    	((TextView)findViewById(R.id.feedback_text)).setText(message);
+    	((TextView)findViewById(R.id.se_feedback_text)).setText(message);
 
     	if(imageResource != 0) {
     		((ImageView)findViewById(R.id.statusimage)).setImageResource(imageResource);
@@ -274,7 +270,7 @@ public class MainActivity extends Activity implements PINDialogListener {
 
 	private void clearFeedback() {
 		showingFeedback = false;
-		((TextView)findViewById(R.id.feedback_text)).setText("");
+		((TextView)findViewById(R.id.se_feedback_text)).setText("");
 		setUIForState();
 	}
 
@@ -625,16 +621,29 @@ public class MainActivity extends Activity implements PINDialogListener {
 	@Override
 	protected void onActivityResult(int requestCode, int resultCode, Intent data) {
 		super.onActivityResult(requestCode, resultCode, data);
-		IntentResult scanResult = IntentIntegrator
-				.parseActivityResult(requestCode, resultCode, data);
+        if (resultCode == RESULT_OK && requestCode == REQUEST_CODE) {
+            Log.d(TAG,"enrol result!");
+               if (data.hasExtra("card_json")) {
+                   Log.d(TAG,"It contains card data");
+                   String card_json = data.getExtras().getString("cardservice");
+                   Gson gson = new Gson();
+                   card = gson.fromJson(card_json, IRMACard.class);
+                   is = new IdemixService(new SmartCardEmulatorService(card));
+               }
+        //   card = data.getExtras().getSerializable("card");
+        } else {
 
-		// Process the results from the QR-scanning activity
-		if (scanResult != null) {
-			String contents = scanResult.getContents();
-			if (contents != null) {
-				gotoConnectingState(contents);
-			}
-		}
+            IntentResult scanResult = IntentIntegrator
+                    .parseActivityResult(requestCode, resultCode, data);
+
+            // Process the results from the QR-scanning activity
+            if (scanResult != null) {
+                String contents = scanResult.getContents();
+                if (contents != null) {
+                    gotoConnectingState(contents);
+                }
+            }
+        }
 	}
 	
 	private void gotoConnectingState(String url) {
@@ -843,6 +852,8 @@ public class MainActivity extends Activity implements PINDialogListener {
 		}
 	}
 
+
+
     @Override
     public boolean onOptionsItemSelected(MenuItem item) {
         Log.d(TAG,"menu press registered");
@@ -852,14 +863,26 @@ public class MainActivity extends Activity implements PINDialogListener {
                 Log.d(TAG,"menu_reset pressed");
                 resetCard();
                 return true;
+            case R.id.enroll:
+                Log.d(TAG,"enroll pressed");
+                Intent i = new Intent(this, EnrollActivity.class);
+                storeCard();
+                SharedPreferences settings = getSharedPreferences(SETTINGS, 0);
+                String card_json = settings.getString(CARD_STORAGE, "");
+                i.putExtra("card_json", card_json);
+                startActivityForResult(i, REQUEST_CODE);
+                return true;
             default:
                 return super.onOptionsItemSelected(item);
         }
     }
+
+
     @Override
     public boolean onPrepareOptionsMenu(Menu menu) {
 
         MenuItem item = menu.findItem(R.id.menu_reset);
+//TODO: fix hele menu idem.
 
         if (activityState == STATE_IDLE) {
             item.setEnabled(true);

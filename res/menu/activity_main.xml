@@ -8,6 +8,12 @@
         android:showAsAction="never"
         android:title="@string/menu_reset"/>
 
+    <item
+        android:id="@+id/enroll"
+        android:orderInCategory="101"
+        android:showAsAction="never"
+        android:title="@string/menu_enroll"/>
+
 </menu>
 
     

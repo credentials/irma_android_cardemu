@@ -1,0 +1,88 @@
+<?xml version="1.0" encoding="utf-8"?>
+<RelativeLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="fill_parent"
+    android:layout_height="match_parent"
+    android:background="@color/irmadarkblue"
+    android:onClick="onMainTouch">
+
+
+    <ImageView
+        android:id="@+id/mainshape"
+        android:layout_width="fill_parent"
+        android:layout_height="fill_parent"
+        android:layout_alignParentLeft="true"
+        android:layout_marginBottom="50dp"
+        android:layout_marginLeft="31dp"
+        android:layout_marginRight="31dp"
+        android:layout_marginTop="46dp"
+        android:src="@drawable/whiteshaperounded" />
+
+
+    <ImageView
+        android:id="@+id/irmaLogo"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_alignParentLeft="true"
+        android:layout_alignParentTop="true"
+        android:layout_marginLeft="5dp"
+        android:layout_marginTop="20dp"
+        android:contentDescription="@string/irmalogo"
+        android:src="@drawable/irma_logo_150" />
+
+
+    <TextView
+        android:id="@+id/status_text"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:gravity="center"
+        android:text="@string/se_welcome"
+        android:textAppearance="?android:attr/textAppearanceLarge"
+        android:textColor="@color/irmadarkblue"
+        android:textSize="24sp"
+        android:layout_below="@+id/irmaLogo"
+        android:layout_alignLeft="@+id/mainshape"
+        android:layout_alignStart="@+id/mainshape" />
+
+
+    <TextView
+        android:id="@+id/se_feedback_text"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:gravity="center"
+        android:text="@string/se_connect_mno"
+        android:textAppearance="?android:attr/textAppearanceLarge"
+        android:textColor="@color/irmadarkblue"
+        android:textSize="20sp"
+        android:textIsSelectable="true"
+        android:layout_below="@+id/status_text"
+        android:layout_alignLeft="@+id/mainshape"
+        android:layout_alignStart="@+id/mainshape"
+        android:layout_marginTop="39dp"
+        android:layout_alignRight="@+id/mainshape"
+        android:layout_alignEnd="@+id/mainshape" />
+
+    <TextView
+        android:id="@+id/IMSI"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:gravity="center"
+        android:text="testing"
+        android:textAppearance="?android:attr/textAppearanceLarge"
+        android:textColor="@color/irmadarkblue"
+        android:textSize="20sp"
+        android:layout_alignLeft="@+id/mainshape"
+        android:layout_alignStart="@+id/mainshape"
+        android:layout_below="@+id/se_feedback_text"
+        android:layout_marginTop="55dp"/>
+
+    <Button
+        android:id="@+id/se_button_continue"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="@string/se_button_continue"
+        android:layout_alignBottom="@+id/mainshape"
+        android:layout_toRightOf="@+id/status_text"
+        android:layout_toEndOf="@+id/status_text" />
+
+</RelativeLayout>
+
