@@ -6,13 +6,10 @@ import java.util.HashMap;
 import java.util.Map;
 
 public class MockupSubscriberDatabase implements SubscriberDatabase {
-    private  Map<String, SubscriberInfo> subscriberDatabase = null;
-    private SimpleDateFormat iso = null;
+    private  Map<String, SubscriberInfo> subscriberDatabase = new HashMap<String, SubscriberInfo>();
+    private SimpleDateFormat iso = new SimpleDateFormat ("yyyyMMdd");
 
     public MockupSubscriberDatabase() {
-        this.subscriberDatabase = new HashMap<String, SubscriberInfo>();
-        SimpleDateFormat iso = new SimpleDateFormat ("yyyyMMddZ");
-
         /* Example */
         addSubscriber ("IMSI_01234567890abcdef", "19001231", "20251231", "PPNUMMER0");
     }
