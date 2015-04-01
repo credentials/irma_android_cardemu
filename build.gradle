@@ -61,7 +61,7 @@ dependencies {
     compile 'net.sourceforge.scuba:scuba_sc_android:0.0.3'
     
     compile 'net.sourceforge.scuba:scuba_smartcards:0.0.3'
-
+    compile 'com.madgag.spongycastle:prov:1.51.0.0'
     compile files('libs/jmrtd-0.5.1.jar')
 }
 

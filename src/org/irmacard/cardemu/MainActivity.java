@@ -865,7 +865,7 @@ public class MainActivity extends Activity implements PINDialogListener {
                 return true;
             case R.id.enroll:
                 Log.d(TAG,"enroll pressed");
-                Intent i = new Intent(this, EnrollActivity.class);
+                Intent i = new Intent(this, org.irmacard.cardemu.selfenrol.Passport.class);
                 storeCard();
                 SharedPreferences settings = getSharedPreferences(SETTINGS, 0);
                 String card_json = settings.getString(CARD_STORAGE, "");
