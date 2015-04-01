@@ -108,13 +108,13 @@ public class Passport extends Activity {
         Intent intent = getIntent();
         Log.i(TAG, "Action: " + intent.getAction());
         if (intent.hasExtra("card_json")) {
-            String card_json = intent.getExtras().getString("cardservice");
+            String card_json = intent.getExtras().getString("card_json");
             Gson gson = new Gson();
             card = gson.fromJson(card_json, IRMACard.class);
             is = new IdemixService(new SmartCardEmulatorService(card));
-        }
-        if (screen == SCREEN_START){
-// start implementing logic here
+            if (is!=null){
+                Log.d(TAG,"good");
+            }
         }
 
         Context context = getApplicationContext ();
