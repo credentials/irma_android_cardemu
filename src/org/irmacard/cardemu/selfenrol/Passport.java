@@ -22,6 +22,10 @@ import net.sourceforge.scuba.smartcards.CardService;
 import net.sourceforge.scuba.smartcards.IsoDepCardService;
 
 import org.irmacard.cardemu.R;
+import org.irmacard.cardemu.selfenrol.mno.MNOEnrol;
+import org.irmacard.cardemu.selfenrol.mno.MNOEnrollImpl;
+import org.irmacard.cardemu.selfenrol.mno.MockupSubscriberDatabase;
+import org.irmacard.cardemu.selfenrol.mno.SubscriberDatabase;
 import org.irmacard.credentials.idemix.smartcard.IRMACard;
 import org.irmacard.credentials.idemix.smartcard.SmartCardEmulatorService;
 import org.irmacard.idemix.IdemixService;
@@ -33,6 +37,9 @@ public class Passport extends Activity {
     private PendingIntent mPendingIntent;
     private IntentFilter[] mFilters;
     private String[][] mTechLists;
+
+    private SubscriberDatabase subscribers = new MockupSubscriberDatabase ();
+    private MNOEnrol mno = new MNOEnrollImpl(subscribers);
 
     private String TAG = "CardEmuEnrollActivity";
 
@@ -82,19 +89,6 @@ public class Passport extends Activity {
         PendingIntent pendingIntent = PendingIntent.getActivity(this, 0, intent, PendingIntent.FLAG_UPDATE_CURRENT);
         String[][] filter = new String[][] { new String[] { "android.nfc.tech.IsoDep" } };
         adapter.enableForegroundDispatch(this, pendingIntent, null, filter);
-
-        super.onResume();
-        intent = getIntent();
-        Log.i(TAG, "Action: " + intent.getAction());
-        if (intent.hasExtra("card_json")) {
-            String card_json = intent.getExtras().getString("cardservice");
-            Gson gson = new Gson();
-            card = gson.fromJson(card_json, IRMACard.class);
-            is = new IdemixService(new SmartCardEmulatorService(card));
-        }
-        if (screen == SCREEN_START){
-// start implementing logic here
-        }
     }
 
     public void onNewIntent(Intent intent) {
@@ -110,6 +104,19 @@ public class Passport extends Activity {
         if (nfcA != null) {
             nfcA.enableForegroundDispatch(this, mPendingIntent, mFilters, mTechLists);
         }
+
+        Intent intent = getIntent();
+        Log.i(TAG, "Action: " + intent.getAction());
+        if (intent.hasExtra("card_json")) {
+            String card_json = intent.getExtras().getString("cardservice");
+            Gson gson = new Gson();
+            card = gson.fromJson(card_json, IRMACard.class);
+            is = new IdemixService(new SmartCardEmulatorService(card));
+        }
+        if (screen == SCREEN_START){
+// start implementing logic here
+        }
+
         Context context = getApplicationContext ();
         TelephonyManager telephonyManager = (TelephonyManager) context.getSystemService(Context.TELEPHONY_SERVICE);
         imsi = telephonyManager.getSubscriberId();
@@ -117,8 +124,8 @@ public class Passport extends Activity {
         if (imsi == null)
             imsi = "FAKE_IMSI_" +  Settings.Secure.getString(
                     context.getContentResolver(), Settings.Secure.ANDROID_ID);
-        ((TextView)findViewById(R.id.IMSI)).setText("IMSI: "+ imsi);
-
+        if (screen == SCREEN_START)
+            ((TextView)findViewById(R.id.IMSI)).setText("IMSI: "+ imsi);
     }
 
     @Override
@@ -136,16 +143,14 @@ public class Passport extends Activity {
         IsoDep tag = IsoDep.get(tagFromIntent);
         CardService cs = new IsoDepCardService(tag);
 
-
         try {
             cs.open ();
             PassportService passportService = new PassportService(cs);
-            BACKey bacKey = new BACKey("PPNUMMER0","001231","251231");
-            passportService.doBAC(bacKey);
+            mno.enroll(imsi, "0000".getBytes(), passportService, is);
         } catch (Exception e) {
-        e.printStackTrace();
-    }
-
+            e.printStackTrace();
+        }
+        passportVerified();
 }
 
     private void enableContinueButton(){
