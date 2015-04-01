@@ -248,7 +248,7 @@ public class MainActivity extends Activity implements PINDialogListener {
 			imageResource = R.drawable.irma_icon_missing_520px;
 		}
 
-    	((TextView)findViewById(R.id.se_feedback_text)).setText(message);
+    	((TextView)findViewById(R.id.feedback_text)).setText(message);
 
     	if(imageResource != 0) {
     		((ImageView)findViewById(R.id.statusimage)).setImageResource(imageResource);
@@ -270,7 +270,7 @@ public class MainActivity extends Activity implements PINDialogListener {
 
 	private void clearFeedback() {
 		showingFeedback = false;
-		((TextView)findViewById(R.id.se_feedback_text)).setText("");
+		((TextView)findViewById(R.id.feedback_text)).setText("");
 		setUIForState();
 	}
 
