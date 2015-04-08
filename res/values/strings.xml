@@ -2,7 +2,7 @@
 <resources>
     <string name="app_name">IRMA CardEmu</string>
     <string name="menu_settings">Settings</string>
-    <string name="menu_reset">Reset card</string>
+    <string name="menu_reset">Load demo card</string>
 	<string name="irmalogo">IRMA logo</string>
 	<string name="credential_info">Card Proxy</string>
 	<string name="feedback_waiting_for_card">Waiting for card</string>
@@ -17,15 +17,15 @@
 	<string name="status_ready">Card ready</string>
 	<string name="status_communicating">Communicating...</string>
 	<string name="status_waitingforpin">Waiting for PIN</string>
-    <string name="menu_enroll">Enroll</string>
+    <string name="menu_enroll">Enrol</string>
     <string name="enroll_expl">You are about to start receiving new (base) IRMA credentials. If you already have a set of credentials, then this step might overwrite some of those.
     During this process your passport will be read remotely and the contents will be compared to the subscription information known for this phone.
     If the passport data matches the subscription data, a set of base credentials will be issued to your IRMA app.</string>
-    <string name="se_welcome">IRMA self enrollment</string>
+    <string name="se_welcome">IRMA self enrolment</string>
     <string name="se_connect_mno">You are about to connect with your MNO and share your IMSI, do you wish to continue?</string>
     <string name="se_button_continue">Continue</string>
     <string name="se_connected_mno">Connected to MNO server</string>
     <string name="se_passport_verified">Passport data matched to subscriber data. \n Continue to MijnOverheid.nl to receive credentials.</string>
     <string name="se_connected_mijnoverheid">Connected to MijnOverheid.nl</string>
-    <string name="feedback_issueing">Issueing credentials</string>
+    <string name="feedback_issueing">Issuing credentials</string>
 </resources>
