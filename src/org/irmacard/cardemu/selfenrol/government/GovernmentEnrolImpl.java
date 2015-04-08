@@ -43,7 +43,9 @@ public class GovernmentEnrolImpl implements GovernmentEnrol {
             return result;
 
         personalRecord = personalRecordDatabase.getPersonalRecord(passportNumber);
-        result = GovernmentEnrolResult.PASSPORT_NUMBER_NOT_FOUND;
+        if (personalRecord == null)
+            result = GovernmentEnrolResult.PASSPORT_NUMBER_NOT_FOUND;
+        
         if (result != GovernmentEnrolResult.SUCCESS)
             return result;
 
