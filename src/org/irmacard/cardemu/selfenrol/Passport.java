@@ -256,12 +256,7 @@ public class Passport extends Activity {
     }
 
     public void onMainTouch(View v) {
-        if (screen == SCREEN_PASSPORT){
-            passportVerified();
-        }
-        if (screen == SCREEN_ISSUE){
-            enableContinueButton();
-        }
+
     }
 
     private void passportVerified(){
