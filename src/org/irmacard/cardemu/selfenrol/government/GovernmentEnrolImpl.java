@@ -1,10 +1,10 @@
 package org.irmacard.cardemu.selfenrol.government;
 
-import net.sourceforge.scuba.smartcards.ProtocolCommands;
-import net.sourceforge.scuba.smartcards.ProtocolResponse;
-import net.sourceforge.scuba.smartcards.ProtocolResponses;
+import net.sourceforge.scuba.smartcards.CardServiceException;
+
 
 import org.irmacard.credentials.Attributes;
+import org.irmacard.credentials.CredentialsException;
 import org.irmacard.credentials.idemix.IdemixCredentials;
 import org.irmacard.credentials.idemix.descriptions.IdemixVerificationDescription;
 import org.irmacard.credentials.idemix.info.IdemixKeyStore;
@@ -12,10 +12,7 @@ import org.irmacard.credentials.info.CredentialDescription;
 import org.irmacard.credentials.info.DescriptionStore;
 import org.irmacard.credentials.info.InfoException;
 import org.irmacard.idemix.IdemixService;
-import org.irmacard.idemix.IdemixSmartcard;
 
-import java.math.BigInteger;
-import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Calendar;
 import java.util.Date;
@@ -24,6 +21,7 @@ import java.util.List;
 
 public class GovernmentEnrolImpl implements GovernmentEnrol {
     PersonalRecordDatabase personalRecordDatabase;
+    private static final int validityPeriod = 365;
 
     public GovernmentEnrolImpl (PersonalRecordDatabase personalRecordDatabase) {
         this.personalRecordDatabase = personalRecordDatabase;
@@ -45,7 +43,7 @@ public class GovernmentEnrolImpl implements GovernmentEnrol {
         personalRecord = personalRecordDatabase.getPersonalRecord(passportNumber);
         if (personalRecord == null)
             result = GovernmentEnrolResult.PASSPORT_NUMBER_NOT_FOUND;
-        
+
         if (result != GovernmentEnrolResult.SUCCESS)
             return result;
 
@@ -113,31 +111,89 @@ public class GovernmentEnrolImpl implements GovernmentEnrol {
                                             byte[] pin, IdemixService idemixService) {
 
         GovernmentEnrolResult result = GovernmentEnrolResult.SUCCESS;
-
-        Attributes attributes = new Attributes();
-
-        attributes.add ("BSN", personalRecord.personalNumber.getBytes());
-        String issuer = "MijnOverheid";
-        String credential = "root";
-
-        CredentialDescription cd = null;
         try {
-            Date expiryDate = new Date ();
-
-            Calendar c = Calendar.getInstance();
-            c.setTime (expiryDate);
-            c.add (Calendar.DATE, 365);
-            expiryDate = c.getTime();
-
-            cd = DescriptionStore.getInstance().getCredentialDescriptionByName (issuer, credential);
-            IdemixCredentials ic = new IdemixCredentials (idemixService);
-            ic.connect();
-            idemixService.sendPin(pin);
-            ic.issue(cd, IdemixKeyStore.getInstance().getSecretKey(cd), attributes, expiryDate);
+            issueBSN(personalRecord, pin, idemixService);
+            issueAgeCredential(personalRecord, pin, idemixService);
         } catch (Exception e) {
             e.printStackTrace();
             result = GovernmentEnrolResult.ISSUANCE_FAILED;
         }
         return result;
+    }
+
+    private void issueAgeCredential(PersonalRecord personalRecord, byte[] pin, IdemixService idemixService) throws InfoException, CredentialsException, CardServiceException {
+        Attributes attributes = new Attributes();
+        String issuer = "MijnOverheid";
+        String credential = "ageLower";
+        CredentialDescription cd = DescriptionStore.getInstance().getCredentialDescriptionByName(issuer, credential);
+
+        Date expiryDate = new Date();
+        Calendar c = Calendar.getInstance();
+        c.setTime(expiryDate);
+        c.add(Calendar.DATE, validityPeriod);
+        expiryDate = c.getTime();
+
+        c = Calendar.getInstance();
+        c.add(Calendar.YEAR, -12);
+        Date ageVerification = c.getTime();
+        String over12, over16, over18, over21;
+        if (personalRecord.dateOfBirth.before(ageVerification)){
+            over12 = "yes";
+        } else {
+            over12 = "no";
+        }
+        c.add(Calendar.YEAR, -4);
+        ageVerification = c.getTime();
+        if (personalRecord.dateOfBirth.before(ageVerification)){
+            over16 = "yes";
+        } else {
+            over16 = "no";
+        }
+        c.add(Calendar.YEAR, -2);
+        ageVerification = c.getTime();
+        if (personalRecord.dateOfBirth.before(ageVerification)){
+            over18 = "yes";
+        } else {
+            over18 = "no";
+        }
+        c.add(Calendar.YEAR, -3);
+        ageVerification = c.getTime();
+        if (personalRecord.dateOfBirth.before(ageVerification)){
+            over21 = "yes";
+        } else {
+            over21 = "no";
+        }
+
+        attributes.add("over12", over12.getBytes());
+        attributes.add("over16", over16.getBytes());
+        attributes.add("over18", over18.getBytes());
+        attributes.add("over21", over21.getBytes());
+
+        IdemixCredentials ic = new IdemixCredentials(idemixService);
+        ic.connect();
+        idemixService.sendPin(pin);
+        ic.issue(cd, IdemixKeyStore.getInstance().getSecretKey(cd), attributes, expiryDate);
+
+    }
+
+    private void issueBSN(PersonalRecord personalRecord,
+                             byte[] pin, IdemixService idemixService) throws InfoException, CredentialsException, CardServiceException {
+        Attributes attributes = new Attributes();
+
+        attributes.add ("BSN", personalRecord.personalNumber.getBytes());
+        String issuer = "MijnOverheid";
+        String credential = "root";
+        Date expiryDate = new Date ();
+
+        Calendar c = Calendar.getInstance();
+        c.setTime (expiryDate);
+        c.add (Calendar.DATE, validityPeriod);
+        expiryDate = c.getTime();
+
+        CredentialDescription cd = DescriptionStore.getInstance().getCredentialDescriptionByName (issuer, credential);
+        IdemixCredentials ic = new IdemixCredentials (idemixService);
+        ic.connect();
+        idemixService.sendPin(pin);
+        ic.issue(cd, IdemixKeyStore.getInstance().getSecretKey(cd), attributes, expiryDate);
     }
 }
