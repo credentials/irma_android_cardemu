@@ -118,18 +118,11 @@ public class MainActivity extends Activity implements PINDialogListener {
     private final String CARD_STORAGE = "card";
     private final String SETTINGS = "cardemu";
     private void loadCard() {
-        Log.d(TAG,"started loadCard");
         SharedPreferences settings = getSharedPreferences(SETTINGS, 0);
-        Log.d(TAG,"got shared Preferences");
         String card_json = settings.getString(CARD_STORAGE, "");
-        Log.d(TAG,"card_json is retrieved: " + card_json);
-        // For now always reset the card to default state
-        //card_json = "";
-        //Log.d(TAG,"And now reset");
 
         Gson gson = new Gson();
         if(card_json == "") {
-            Log.d(TAG,"card appears to be empty");
             // Default card content
             try {
                 BufferedReader reader = new BufferedReader(new InputStreamReader(getAssets().open("card.json")));
@@ -139,11 +132,8 @@ public class MainActivity extends Activity implements PINDialogListener {
             }
         } else {
             card = gson.fromJson(card_json, IRMACard.class);
-            Log.d(TAG,"?? card wasn't empty?");
         }
-        Log.d(TAG,"ready to start IdemixService");
         is = new IdemixService(new SmartCardEmulatorService(card));
-        Log.d(TAG,"IdemixService created: " +is.toString());
     }
 
     private void storeCard() {
@@ -354,6 +344,28 @@ public class MainActivity extends Activity implements PINDialogListener {
                });
         AlertDialog dialog = builder.create();
         dialog.show();
+    }
+
+    protected void logCard(){
+        Log.d(TAG,"Current card contents");
+        // Retrieve list of credentials from the card
+        IdemixCredentials ic = new IdemixCredentials(is);
+        List<CredentialDescription> credentialDescriptions = new ArrayList<CredentialDescription>();
+        // HashMap<CredentialDescription,Attributes> credentialAttributes = new HashMap<CredentialDescription,Attributes>();
+        try {
+            ic.connect();
+            is.sendCardPin("000000".getBytes());
+            credentialDescriptions = ic.getCredentials();
+            for(CredentialDescription cd : credentialDescriptions) {
+                Log.d(TAG,cd.getName());
+            }
+        } catch (CardServiceException e) {
+            e.printStackTrace();
+        } catch (InfoException e) {
+            e.printStackTrace();
+        } catch (CredentialsException e) {
+            e.printStackTrace();
+        }
     }
 
     protected void updateCardCredentials() {
@@ -622,17 +634,8 @@ public class MainActivity extends Activity implements PINDialogListener {
 	protected void onActivityResult(int requestCode, int resultCode, Intent data) {
 		super.onActivityResult(requestCode, resultCode, data);
         if (resultCode == RESULT_OK && requestCode == REQUEST_CODE) {
-            Log.d(TAG,"enrol result!");
-               if (data.hasExtra("card_json")) {
-                   Log.d(TAG,"It contains card data");
-                   String card_json = data.getExtras().getString("card_json");
-                   Gson gson = new Gson();
-                   card = gson.fromJson(card_json, IRMACard.class);
-                   is = new IdemixService(new SmartCardEmulatorService(card));
-                   storeCard();
-                   updateCardCredentials();
-               }
-        //   card = data.getExtras().getSerializable("card");
+            loadCard();
+            updateCardCredentials();
         } else {
 
             IntentResult scanResult = IntentIntegrator
@@ -869,9 +872,7 @@ public class MainActivity extends Activity implements PINDialogListener {
                 Log.d(TAG,"enroll pressed");
                 Intent i = new Intent(this, org.irmacard.cardemu.selfenrol.Passport.class);
                 storeCard();
-                SharedPreferences settings = getSharedPreferences(SETTINGS, 0);
-                String card_json = settings.getString(CARD_STORAGE, "");
-                i.putExtra("card_json", card_json);
+                i.putExtra("card_json", "loadCard");
                 startActivityForResult(i, REQUEST_CODE);
                 return true;
             default:

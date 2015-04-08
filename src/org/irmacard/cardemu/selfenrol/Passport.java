@@ -5,6 +5,7 @@ import android.content.Intent;
 import android.app.PendingIntent;
 import android.content.IntentFilter;
 import android.content.Context;
+import android.content.SharedPreferences;
 import android.nfc.NfcAdapter;
 import android.nfc.Tag;
 import android.nfc.tech.IsoDep;
@@ -32,10 +33,20 @@ import org.irmacard.cardemu.selfenrol.mno.MNOEnrol;
 import org.irmacard.cardemu.selfenrol.mno.MNOEnrollImpl;
 import org.irmacard.cardemu.selfenrol.mno.MockupSubscriberDatabase;
 import org.irmacard.cardemu.selfenrol.mno.SubscriberDatabase;
+import org.irmacard.credentials.CredentialsException;
+import org.irmacard.credentials.idemix.IdemixCredentials;
 import org.irmacard.credentials.idemix.smartcard.IRMACard;
 import org.irmacard.credentials.idemix.smartcard.SmartCardEmulatorService;
+import org.irmacard.credentials.info.CredentialDescription;
+import org.irmacard.credentials.info.InfoException;
 import org.irmacard.idemix.IdemixService;
 import org.jmrtd.PassportService;
+
+import java.io.BufferedReader;
+import java.io.IOException;
+import java.io.InputStreamReader;
+import java.util.ArrayList;
+import java.util.List;
 
 public class Passport extends Activity {
     private NfcAdapter nfcA;
@@ -49,7 +60,7 @@ public class Passport extends Activity {
     private PersonalRecordDatabase personalRecordDatabase = new MockupPersonalRecordDatabase ();
     private GovernmentEnrol governmentEnrol = new GovernmentEnrolImpl (personalRecordDatabase);
 
-    private String TAG = "CardEmuEnrollActivity";
+    private String TAG = "cardemu.Passport";
 
     // PIN handling
     private int tries = -1;
@@ -63,6 +74,9 @@ public class Passport extends Activity {
     private static final int SCREEN_PASSPORT = 2;
     private static final int SCREEN_ISSUE = 3;
     private String imsi;
+
+    private final String CARD_STORAGE = "card";
+    private final String SETTINGS = "cardemu";
 
 
     @Override
@@ -116,13 +130,8 @@ public class Passport extends Activity {
         Intent intent = getIntent();
         Log.i(TAG, "Action: " + intent.getAction());
         if (intent.hasExtra("card_json")) {
-            String card_json = intent.getExtras().getString("card_json");
-            Gson gson = new Gson();
-            card = gson.fromJson(card_json, IRMACard.class);
-            is = new IdemixService(new SmartCardEmulatorService(card));
-            if (is!=null){
-                Log.d(TAG,"good");
-            }
+            loadCard();
+            Log.d(TAG,"loaded initial card");
             try {
                 is.open ();
             } catch (CardServiceException e) {
@@ -139,6 +148,47 @@ public class Passport extends Activity {
                     context.getContentResolver(), Settings.Secure.ANDROID_ID);
         if (screen == SCREEN_START)
             ((TextView)findViewById(R.id.IMSI)).setText("IMSI: "+ imsi);
+    }
+
+    //TODO: move all card functionality to a specific class, so we don't need this ugly code duplication and can do explicit card state checks there.
+    protected void logCard(){
+        Log.d(TAG,"Current card contents");
+        // Retrieve list of credentials from the card
+        IdemixCredentials ic = new IdemixCredentials(is);
+        List<CredentialDescription> credentialDescriptions = new ArrayList<CredentialDescription>();
+        // HashMap<CredentialDescription,Attributes> credentialAttributes = new HashMap<CredentialDescription,Attributes>();
+        try {
+            ic.connect();
+            is.sendCardPin("000000".getBytes());
+            credentialDescriptions = ic.getCredentials();
+            for(CredentialDescription cd : credentialDescriptions) {
+                Log.d(TAG,cd.getName());
+            }
+        } catch (CardServiceException e) {
+            e.printStackTrace();
+        } catch (InfoException e) {
+            e.printStackTrace();
+        } catch (CredentialsException e) {
+            e.printStackTrace();
+        }
+    }
+
+    private void storeCard() {
+        Log.d(TAG,"Storing card");
+        SharedPreferences settings = getSharedPreferences(SETTINGS, 0);
+        SharedPreferences.Editor editor = settings.edit();
+        Gson gson = new Gson();
+        editor.putString(CARD_STORAGE, gson.toJson(card));
+        editor.commit();
+    }
+
+    private void loadCard() {
+        SharedPreferences settings = getSharedPreferences(SETTINGS, 0);
+        String card_json = settings.getString(CARD_STORAGE, "");
+
+        Gson gson = new Gson();
+        card = gson.fromJson(card_json, IRMACard.class);
+        is = new IdemixService(new SmartCardEmulatorService(card));
     }
 
     @Override
@@ -160,10 +210,11 @@ public class Passport extends Activity {
             cs.open ();
             PassportService passportService = new PassportService(cs);
             mno.enroll(imsi, "0000".getBytes(), passportService, is);
+            //TODO: make verification result explicit
+            passportVerified();
         } catch (Exception e) {
             e.printStackTrace();
         }
-        passportVerified();
 }
 
     private void enableContinueButton(){
@@ -201,6 +252,7 @@ public class Passport extends Activity {
 
     private void issueGovCredentials() {
         governmentEnrol.enroll ("0000".getBytes (), is);
+        enableContinueButton();
     }
 
     public void onMainTouch(View v) {
@@ -217,6 +269,7 @@ public class Passport extends Activity {
         ImageView statusImage = (ImageView) findViewById(R.id.se_statusimage);
         if (statusImage != null)
             statusImage.setVisibility(View.GONE);
+        storeCard();
         enableContinueButton();
     }
 
@@ -226,10 +279,7 @@ public class Passport extends Activity {
         is.close();
         Intent data = new Intent();
         Log.d(TAG,"Storing card");
-        Gson gson = new Gson();
-        String card_json = gson.toJson(card);
-        data.putExtra("card_json", card_json);
-        // Activity finished ok, return the data
+        storeCard();
         setResult(RESULT_OK, data);
         super.finish();
     }
