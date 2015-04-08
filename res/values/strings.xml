@@ -28,4 +28,5 @@
     <string name="se_passport_verified">Passport data matched to subscriber data. \n Continue to MijnOverheid.nl to receive credentials.</string>
     <string name="se_connected_mijnoverheid">Connected to MijnOverheid.nl</string>
     <string name="feedback_issueing">Issuing credentials</string>
+    <string name="clear_card">Clear card</string>
 </resources>

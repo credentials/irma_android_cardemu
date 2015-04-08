@@ -309,6 +309,48 @@ public class MainActivity extends Activity implements PINDialogListener {
 	    timer.scheduleAtFixedRate(new CardPollerTask(), CARD_POLL_DELAY, CARD_POLL_DELAY);
 	}
 
+    protected void clearCard(){
+        if (activityState == STATE_IDLE){
+            AlertDialog.Builder builder = new AlertDialog.Builder(this);
+            builder.setTitle("Deleting credentials")
+                    .setMessage("Are you sure you want to delete ALL credentials?")
+                    .setPositiveButton("Delete", new DialogInterface.OnClickListener() {
+                        public void onClick(DialogInterface dialog, int id) {
+                            Log.i(TAG, "We're idle, attempting removal of all credentials");
+                            IdemixCredentials ic = new IdemixCredentials(is);
+                            List<CredentialDescription> credentialDescriptions = new ArrayList<CredentialDescription>();
+                            try {
+                                ic.connect();
+                                is.sendCardPin("000000".getBytes());
+                                credentialDescriptions = ic.getCredentials();
+                                for (CredentialDescription cd : credentialDescriptions) {
+                                    ic.removeCredential(cd);
+                                }
+                            } catch (CardServiceException e) {
+                                e.printStackTrace();
+                            } catch (InfoException e) {
+                                e.printStackTrace();
+                            } catch (CredentialsException e) {
+                                e.printStackTrace();
+                            }
+                            updateCardCredentials();
+                            is.close();
+                            storeCard();
+                            // loadCard();
+                            logCard();
+                        }
+                    })
+                    .setNegativeButton("Cancel", new DialogInterface.OnClickListener() {
+                        public void onClick(DialogInterface dialog, int id) {
+                            // Cancelled
+                        }
+                    });
+            AlertDialog dialog = builder.create();
+            dialog.show();
+        }
+
+    }
+
     protected void tryDeleteCredential(final CredentialDescription cd) {
         if (activityState != STATE_IDLE) {
             Log.i(TAG, "Delete long-click ignored in non-idle mode");
@@ -874,6 +916,12 @@ public class MainActivity extends Activity implements PINDialogListener {
                 storeCard();
                 i.putExtra("card_json", "loadCard");
                 startActivityForResult(i, REQUEST_CODE);
+                return true;
+            case R.id.menu_clear:
+                if (activityState == STATE_IDLE){
+                    clearCard();
+                    updateCardCredentials();
+                }
                 return true;
             default:
                 return super.onOptionsItemSelected(item);
