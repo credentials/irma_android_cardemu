@@ -36,8 +36,7 @@ public class MNOEnrollImpl implements MNOEnrol {
 
         subscriberInfo = subscribers.getSubscriber (subscriberID);
         if (subscriberInfo == null)
-            /* Unknown subscriber */
-            result = MNOEnrolResult.SUCCESS;
+            result = MNOEnrolResult.UNKNOWN_SUBSCRIBER;
         if (result != MNOEnrolResult.SUCCESS)
             return result;
 
@@ -62,6 +61,7 @@ public class MNOEnrollImpl implements MNOEnrol {
         BACKey bacKey = new BACKey (passportNumber, dateOfBirth, expiryDate);
 
         try {
+            passportService.sendSelectApplet (false);
             passportService.doBAC (bacKey);
         } catch (CardServiceException e) {
             /* BAC failed */
