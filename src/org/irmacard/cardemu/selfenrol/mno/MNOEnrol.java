@@ -11,5 +11,5 @@ public interface MNOEnrol {
         ISSUANCE_FAILED
     }
 
-    public MNOEnrolResult enroll(String subscriberID, byte[] pin, PassportService passport, IdemixService irmaCard);
+    public MNOEnrolResult enroll(String subscriberID, SubscriberInfo si, byte[] pin, PassportService passport, IdemixService irmaCard);
 }

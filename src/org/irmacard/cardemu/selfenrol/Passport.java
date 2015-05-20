@@ -9,14 +9,17 @@ import android.content.SharedPreferences;
 import android.nfc.NfcAdapter;
 import android.nfc.Tag;
 import android.nfc.tech.IsoDep;
+import android.os.AsyncTask;
 import android.os.Bundle;
 import android.provider.Settings;
 import android.telephony.TelephonyManager;
 import android.util.Log;
 import android.view.View;
 import android.widget.Button;
+import android.widget.EditText;
 import android.widget.ImageView;
 import android.widget.TextView;
+import android.widget.Toast;
 
 import com.google.gson.Gson;
 
@@ -33,6 +36,7 @@ import org.irmacard.cardemu.selfenrol.mno.MNOEnrol;
 import org.irmacard.cardemu.selfenrol.mno.MNOEnrollImpl;
 import org.irmacard.cardemu.selfenrol.mno.MockupSubscriberDatabase;
 import org.irmacard.cardemu.selfenrol.mno.SubscriberDatabase;
+import org.irmacard.cardemu.selfenrol.mno.SubscriberInfo;
 import org.irmacard.credentials.CredentialsException;
 import org.irmacard.credentials.idemix.IdemixCredentials;
 import org.irmacard.credentials.idemix.smartcard.IRMACard;
@@ -43,12 +47,30 @@ import org.irmacard.idemix.IdemixService;
 import org.jmrtd.PassportService;
 
 import java.io.BufferedReader;
+import java.io.DataOutputStream;
 import java.io.IOException;
+import java.io.InputStream;
 import java.io.InputStreamReader;
+import java.io.OutputStream;
+import java.net.InetAddress;
+import java.net.InetSocketAddress;
+import java.net.Socket;
+import java.net.SocketAddress;
+import java.text.ParseException;
+import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 public class Passport extends Activity {
+    private static String MNO_SERVER_IP = "10.0.1.32";//"192.168.0.10";
+    private static final int SERVER_PORT = 6789;
+    NetworkMNOTask networkMNOTask;
+    //NetworkGovTask networkGovTask;
+    public SubscriberInfo subscriberInfo=null;
+    public boolean serverReady = true;
+
     private NfcAdapter nfcA;
     private PendingIntent mPendingIntent;
     private IntentFilter[] mFilters;
@@ -131,7 +153,7 @@ public class Passport extends Activity {
         Log.i(TAG, "Action: " + intent.getAction());
         if (intent.hasExtra("card_json")) {
             loadCard();
-            Log.d(TAG,"loaded initial card");
+            Log.d(TAG,"loaded card");
             try {
                 is.open ();
             } catch (CardServiceException e) {
@@ -146,13 +168,15 @@ public class Passport extends Activity {
         if (imsi == null)
             imsi = "FAKE_IMSI_" +  Settings.Secure.getString(
                     context.getContentResolver(), Settings.Secure.ANDROID_ID);
-        if (screen == SCREEN_START)
-            ((TextView)findViewById(R.id.IMSI)).setText("IMSI: "+ imsi);
+        if (screen == SCREEN_START) {
+            ((TextView) findViewById(R.id.IMSI)).setText("IMSI: " + imsi);
+            ((EditText) findViewById(R.id.se_mno_ip_field)).setText(MNO_SERVER_IP);
+        }
     }
 
     //TODO: move all card functionality to a specific class, so we don't need this ugly code duplication and can do explicit card state checks there.
     protected void logCard(){
-        Log.d(TAG,"Current card contents");
+        Log.d(TAG, "Current card contents");
         // Retrieve list of credentials from the card
         IdemixCredentials ic = new IdemixCredentials(is);
         List<CredentialDescription> credentialDescriptions = new ArrayList<CredentialDescription>();
@@ -209,7 +233,8 @@ public class Passport extends Activity {
         try {
             cs.open ();
             PassportService passportService = new PassportService(cs);
-            mno.enroll(imsi, "0000".getBytes(), passportService, is);
+            networkMNOTask.setState(networkMNOTask.PASSPORT_FOUND);
+            mno.enroll(imsi, subscriberInfo, "0000".getBytes(), passportService, is);
             //TODO: make verification result explicit
             passportVerified();
         } catch (Exception e) {
@@ -229,11 +254,48 @@ public class Passport extends Activity {
         });
     }
 
+    private boolean connectToServer(){
+        String ip = ((EditText) findViewById(R.id.se_mno_ip_field)).getText().toString();
+        Log.d(TAG, "retrieved ip: " + ip);
+        //check IP
+        Pattern IP_ADDRESS
+                = Pattern.compile(
+                "((25[0-5]|2[0-4][0-9]|[0-1][0-9]{2}|[1-9][0-9]|[1-9])\\.(25[0-5]|2[0-4]"
+                        + "[0-9]|[0-1][0-9]{2}|[1-9][0-9]|[1-9]|0)\\.(25[0-5]|2[0-4][0-9]|[0-1]"
+                        + "[0-9]{2}|[1-9][0-9]|[1-9]|0)\\.(25[0-5]|2[0-4][0-9]|[0-1][0-9]{2}"
+                        + "|[1-9][0-9]|[0-9]))");
+        Matcher matcher = IP_ADDRESS.matcher(ip);
+        if (matcher.matches()){
+            MNO_SERVER_IP = ip;
+        }
+        networkMNOTask = new NetworkMNOTask();
+        networkMNOTask.execute();
+        return subscriberInfo != null;
+    }
+
+    private void networkError(String msg){
+        Toast.makeText(this,msg,Toast.LENGTH_LONG).show();
+        finish();
+    }
+
     private void advanceScreen(){
         switch (screen) {
             case SCREEN_START:
-                setContentView(R.layout.enroll_activity_passport);
-                screen = SCREEN_PASSPORT;
+                final Button button = (Button) findViewById(R.id.se_button_continue);
+                button.setEnabled(false);
+                connectToServer();
+                try {
+                    Thread.sleep(2000);
+                } catch (InterruptedException e) {
+                    e.printStackTrace();
+                }
+                if (subscriberInfo ==null) {
+                    networkError("Could not connect to server");
+                    finish();
+                }else {
+                    setContentView(R.layout.enroll_activity_passport);
+                    screen = SCREEN_PASSPORT;
+                }
                 break;
             case SCREEN_PASSPORT:
                 setContentView(R.layout.enroll_activity_issue);
@@ -250,16 +312,18 @@ public class Passport extends Activity {
         }
     }
 
+
     private void issueGovCredentials() {
         governmentEnrol.enroll ("0000".getBytes (), is);
         enableContinueButton();
     }
 
-    public void onMainTouch(View v) {
-
-    }
+ //   public void onMainTouch(View v) {
+//
+//    }
 
     private void passportVerified(){
+        networkMNOTask.setState(networkMNOTask.PASSPORT_VERIFIED);
         ((TextView)findViewById(R.id.se_feedback_text)).setText(R.string.se_passport_verified);
         ImageView statusImage = (ImageView) findViewById(R.id.se_statusimage);
         if (statusImage != null)
@@ -277,5 +341,136 @@ public class Passport extends Activity {
         storeCard();
         setResult(RESULT_OK, data);
         super.finish();
+    }
+
+    private class NetworkMNOTask extends AsyncTask<Void, byte[], Boolean> {
+        private static final int CONNECTING = 0;
+        private static final int PASSPORT_FOUND = 1;
+        private static final int PASSPORT_VERIFIED = 2;
+        private int nState = CONNECTING;
+
+        Socket clientSocket;
+   //     Socket nsocket; //Network Socket
+    //    InputStream nis; //Network Input Stream
+    //    OutputStream nos; //Network Output Stream
+        DataOutputStream outToServer;
+        BufferedReader inFromServer;
+
+        String TAG = "Passport-NetworkTask";
+
+        private SimpleDateFormat iso = new SimpleDateFormat ("yyyyMMdd");
+
+        public boolean setState (int state){
+            if (nState == -1){
+                synchronized (this){nState = state;}
+                return true;
+            } else
+                return false;
+        }
+
+        @Override
+        protected Boolean doInBackground(Void... params) { //This runs on a different thread
+            boolean result = false;
+
+
+            try {
+                Log.i(TAG, "deInBackground: Creating socket");
+                SocketAddress sockaddr = new InetSocketAddress(MNO_SERVER_IP, SERVER_PORT);
+                InetAddress serverAddr = InetAddress.getByName(MNO_SERVER_IP);
+                clientSocket = new Socket(serverAddr, SERVER_PORT);
+                outToServer = new DataOutputStream(clientSocket.getOutputStream());
+                inFromServer = new BufferedReader(new InputStreamReader(clientSocket.getInputStream()));
+                String input;
+                sendMessage("IMSI: " + imsi + '\n');
+                while (true) {
+                    while ((input = inFromServer.readLine()) != null) {
+                        handleServerMessage(input);
+                        break;
+                    }
+                    if (nState != -1){
+                        synchronized (this){
+                            switch (nState){
+                                case PASSPORT_FOUND:
+                                    sendMessage("PASP: found");
+                                    break;
+                                case PASSPORT_VERIFIED:
+                                    sendMessage("PASP: verified");
+                                    break;
+                            }
+                            nState = -1;
+                        }
+                    }
+                }
+
+            } catch (IOException e) {
+                e.printStackTrace();
+                Log.i(TAG, "doInBackground: IOException");
+                result = true;
+            } catch (Exception e) {
+                e.printStackTrace();
+                Log.i(TAG, "doInBackground: Exception");
+                result = true;
+            }
+            return result;
+        }
+
+        private void handleServerMessage(String input) {
+            Log.d(TAG,"FROM SERVER: " + input);
+          //  String serverResponse = new String(input);
+            if (input.startsWith("SI: ")){
+                retrieveSubscriberInfo(input.substring(4));
+            }
+
+        }
+
+        private void sendMessage(String msg){
+            try {
+                outToServer.writeBytes(msg);
+            } catch (Exception e) {
+                e.printStackTrace();
+            }
+        }
+
+        private void retrieveSubscriberInfo(String si) {
+            if (!si.equals("error")) {
+                String[] response = si.split(", ");
+                Log.d(TAG, (response[0] + " <=> " + response[1]) + "<=>" + response[2]);
+                try {
+                    subscriberInfo = new SubscriberInfo(iso.parse(response[0]), iso.parse(response[1]), response[2]);
+                    Log.d(TAG, subscriberInfo.toString());
+                } catch (ParseException e) {
+                    e.printStackTrace();
+                }
+                serverReady = true;
+            }
+            //TODO else
+        }
+
+        @Override
+        protected void onProgressUpdate(byte[]... values) {
+            if (values.length > 0) {
+                Log.i(TAG, "onProgressUpdate: " + values[0].length + " bytes received.");
+            }
+        }
+        @Override
+        protected void onCancelled() {
+            Log.i(TAG, "Cancelled.");
+            super.onCancelled();
+        }
+        @Override
+        protected void onPostExecute(Boolean result) {
+            try {
+                inFromServer.close();
+                outToServer.close();
+                clientSocket.close();
+            } catch (Exception e) {
+                e.printStackTrace();
+            }
+            if (result) {
+                Log.i(TAG, "onPostExecute: Completed with an Error.");
+            } else {
+                Log.i(TAG, "onPostExecute: Completed.");
+            }
+        }
     }
 }
