@@ -9,8 +9,9 @@ import android.content.SharedPreferences;
 import android.nfc.NfcAdapter;
 import android.nfc.Tag;
 import android.nfc.tech.IsoDep;
-import android.os.AsyncTask;
 import android.os.Bundle;
+import android.os.Handler;
+import android.os.HandlerThread;
 import android.provider.Settings;
 import android.telephony.TelephonyManager;
 import android.util.Log;
@@ -48,14 +49,9 @@ import org.jmrtd.PassportService;
 
 import java.io.BufferedReader;
 import java.io.DataOutputStream;
-import java.io.IOException;
-import java.io.InputStream;
 import java.io.InputStreamReader;
-import java.io.OutputStream;
 import java.net.InetAddress;
-import java.net.InetSocketAddress;
 import java.net.Socket;
-import java.net.SocketAddress;
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
@@ -64,12 +60,17 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 public class Passport extends Activity {
-    private static String MNO_SERVER_IP = "10.0.1.32";//"192.168.0.10";
-    private static final int SERVER_PORT = 6789;
-    NetworkMNOTask networkMNOTask;
+    private static String MNO_SERVER_IP = "192.168.0.11";//"192.168.0.10";
+    private static final int MNO_SERVER_PORT = 6789;
+    private static final int GOV_SERVER_PORT = 6788;
+    // NetworkMNOTask networkMNOTask;
     //NetworkGovTask networkGovTask;
     public SubscriberInfo subscriberInfo=null;
     public boolean serverReady = true;
+
+    Socket clientSocket;
+    DataOutputStream outToServer;
+    BufferedReader inFromServer;
 
     private NfcAdapter nfcA;
     private PendingIntent mPendingIntent;
@@ -97,6 +98,8 @@ public class Passport extends Activity {
     private static final int SCREEN_ISSUE = 3;
     private String imsi;
 
+    private Handler networkHandler;
+
     private final String CARD_STORAGE = "card";
     private final String SETTINGS = "cardemu";
 
@@ -120,7 +123,11 @@ public class Passport extends Activity {
             onNewIntent(getIntent());
         }
 
-        super.onCreate(savedInstanceState);
+        //  super.onCreate(savedInstanceState);
+        HandlerThread dbThread = new HandlerThread("network");
+        dbThread.start();
+        networkHandler = new Handler(dbThread.getLooper());
+
         setContentView(R.layout.enroll_activity_start);
         screen = SCREEN_START;
         enableContinueButton();
@@ -172,6 +179,13 @@ public class Passport extends Activity {
             ((TextView) findViewById(R.id.IMSI)).setText("IMSI: " + imsi);
             ((EditText) findViewById(R.id.se_mno_ip_field)).setText(MNO_SERVER_IP);
         }
+    }
+
+    @Override
+    public void onBackPressed() {
+        super.onBackPressed();
+        closeConnection();
+        finish();
     }
 
     //TODO: move all card functionality to a specific class, so we don't need this ugly code duplication and can do explicit card state checks there.
@@ -231,16 +245,16 @@ public class Passport extends Activity {
         CardService cs = new IsoDepCardService(tag);
 
         try {
-            cs.open ();
+            cs.open();
             PassportService passportService = new PassportService(cs);
-            networkMNOTask.setState(networkMNOTask.PASSPORT_FOUND);
+            sendMessage("PASP: found\n");
             mno.enroll(imsi, subscriberInfo, "0000".getBytes(), passportService, is);
             //TODO: make verification result explicit
             passportVerified();
         } catch (Exception e) {
             e.printStackTrace();
         }
-}
+    }
 
     private void enableContinueButton(){
         final Button button = (Button) findViewById(R.id.se_button_continue);
@@ -254,7 +268,7 @@ public class Passport extends Activity {
         });
     }
 
-    private boolean connectToServer(){
+    private void connectToMNOServer(){
         String ip = ((EditText) findViewById(R.id.se_mno_ip_field)).getText().toString();
         Log.d(TAG, "retrieved ip: " + ip);
         //check IP
@@ -268,9 +282,114 @@ public class Passport extends Activity {
         if (matcher.matches()){
             MNO_SERVER_IP = ip;
         }
-        networkMNOTask = new NetworkMNOTask();
-        networkMNOTask.execute();
-        return subscriberInfo != null;
+        openConnection(MNO_SERVER_IP, MNO_SERVER_PORT,1000);
+    }
+
+    private void openConnection(final String ip, final int port, long timeout){
+        networkHandler.post(new Runnable() {
+            @Override
+            public void run() {
+                try {
+                    Log.i(TAG, "deInBackground: Creating socket");
+                    // SocketAddress sockaddr = new InetSocketAddress(ip, port);
+                    InetAddress serverAddr = InetAddress.getByName(ip);
+                    clientSocket = new Socket(serverAddr, port);
+                    outToServer = new DataOutputStream(clientSocket.getOutputStream());
+                    inFromServer = new BufferedReader(new InputStreamReader(clientSocket.getInputStream()));
+                } catch (Exception e) {
+                    e.printStackTrace();
+                    Log.i(TAG, "doInBackground: Exception");
+                }
+            }
+        });
+        try {
+            Thread.sleep(timeout);
+        } catch (InterruptedException e) {
+            e.printStackTrace();
+        }
+        if (inFromServer == null){
+            networkError("Could not connect to server");
+            finish();
+        }
+    }
+
+    private void sendMessage (String msg){
+        final String message = new String (msg);
+        networkHandler.post(new Runnable() {
+            @Override
+            public void run() {
+                try {
+                    outToServer.writeBytes(message+"\n");
+                } catch (Exception e) {
+                    e.printStackTrace();
+                }
+            }
+        });
+    }
+
+
+    private String response;
+    private boolean resp = false;
+    private void sendAndListen (String msg, long timeout){
+        final String message = new String (msg);
+        networkHandler.post(new Runnable() {
+            @Override
+            public void run() {
+                try {
+                    String input;
+                    outToServer.writeBytes(message+"\n");
+                    while ((input = inFromServer.readLine()) != null) {
+                        response = new String(input);
+                        resp = true;
+                        break;
+                    }
+                } catch (Exception e) {
+                    e.printStackTrace();
+                }
+            }
+        });
+        try {
+            Thread.sleep(timeout);
+        } catch (InterruptedException e) {
+            e.printStackTrace();
+        }
+        if (resp){
+            handleResponse (response);
+            resp = false;
+        } else {
+            networkError("Could not connect to server");
+            finish();
+        }
+    }
+
+    private void handleResponse(String r) {
+        if (r.startsWith("SI: ")) {
+            SimpleDateFormat iso = new SimpleDateFormat("yyyyMMdd");
+            String[] res = r.substring(4).split(", ");
+            try {
+                subscriberInfo = new SubscriberInfo(iso.parse(res[0]), iso.parse(res[1]), res[2]);
+            } catch (ParseException e) {
+                e.printStackTrace();
+            }
+        } else {
+            //TODO logic
+        }
+
+    }
+
+    private void closeConnection (){
+        networkHandler.post(new Runnable() {
+            @Override
+            public void run() {
+                try {
+                    inFromServer.close();
+                    outToServer.close();
+                    clientSocket.close();
+                } catch (Exception e) {
+                    e.printStackTrace();
+                }
+            }
+        });
     }
 
     private void networkError(String msg){
@@ -283,19 +402,11 @@ public class Passport extends Activity {
             case SCREEN_START:
                 final Button button = (Button) findViewById(R.id.se_button_continue);
                 button.setEnabled(false);
-                connectToServer();
-                try {
-                    Thread.sleep(2000);
-                } catch (InterruptedException e) {
-                    e.printStackTrace();
-                }
-                if (subscriberInfo ==null) {
-                    networkError("Could not connect to server");
-                    finish();
-                }else {
-                    setContentView(R.layout.enroll_activity_passport);
-                    screen = SCREEN_PASSPORT;
-                }
+                connectToMNOServer();
+                sendAndListen("IMSI: " + imsi,1000);
+
+                setContentView(R.layout.enroll_activity_passport);
+                screen = SCREEN_PASSPORT;
                 break;
             case SCREEN_PASSPORT:
                 setContentView(R.layout.enroll_activity_issue);
@@ -314,28 +425,35 @@ public class Passport extends Activity {
 
 
     private void issueGovCredentials() {
-        governmentEnrol.enroll ("0000".getBytes (), is);
+        openConnection(MNO_SERVER_IP,GOV_SERVER_PORT,1000);
+        sendMessage("VERI: MNO credential");
+        governmentEnrol.enroll("0000".getBytes(), is);
+        //sendAndListen("DOCN: 123456",1000);
         enableContinueButton();
     }
 
- //   public void onMainTouch(View v) {
+    //   public void onMainTouch(View v) {
 //
 //    }
 
     private void passportVerified(){
-        networkMNOTask.setState(networkMNOTask.PASSPORT_VERIFIED);
+        sendMessage("PASP: verified");
         ((TextView)findViewById(R.id.se_feedback_text)).setText(R.string.se_passport_verified);
         ImageView statusImage = (ImageView) findViewById(R.id.se_statusimage);
         if (statusImage != null)
             statusImage.setVisibility(View.GONE);
         storeCard();
+        sendMessage("ISSU: succesfull");
+        closeConnection();
         enableContinueButton();
     }
 
     @Override
     public void finish() {
         // Prepare data intent
-        is.close();
+        if (is != null) {
+            is.close();
+        }
         Intent data = new Intent();
         Log.d(TAG,"Storing card");
         storeCard();
@@ -343,134 +461,5 @@ public class Passport extends Activity {
         super.finish();
     }
 
-    private class NetworkMNOTask extends AsyncTask<Void, byte[], Boolean> {
-        private static final int CONNECTING = 0;
-        private static final int PASSPORT_FOUND = 1;
-        private static final int PASSPORT_VERIFIED = 2;
-        private int nState = CONNECTING;
 
-        Socket clientSocket;
-   //     Socket nsocket; //Network Socket
-    //    InputStream nis; //Network Input Stream
-    //    OutputStream nos; //Network Output Stream
-        DataOutputStream outToServer;
-        BufferedReader inFromServer;
-
-        String TAG = "Passport-NetworkTask";
-
-        private SimpleDateFormat iso = new SimpleDateFormat ("yyyyMMdd");
-
-        public boolean setState (int state){
-            if (nState == -1){
-                synchronized (this){nState = state;}
-                return true;
-            } else
-                return false;
-        }
-
-        @Override
-        protected Boolean doInBackground(Void... params) { //This runs on a different thread
-            boolean result = false;
-
-
-            try {
-                Log.i(TAG, "deInBackground: Creating socket");
-                SocketAddress sockaddr = new InetSocketAddress(MNO_SERVER_IP, SERVER_PORT);
-                InetAddress serverAddr = InetAddress.getByName(MNO_SERVER_IP);
-                clientSocket = new Socket(serverAddr, SERVER_PORT);
-                outToServer = new DataOutputStream(clientSocket.getOutputStream());
-                inFromServer = new BufferedReader(new InputStreamReader(clientSocket.getInputStream()));
-                String input;
-                sendMessage("IMSI: " + imsi + '\n');
-                while (true) {
-                    while ((input = inFromServer.readLine()) != null) {
-                        handleServerMessage(input);
-                        break;
-                    }
-                    if (nState != -1){
-                        synchronized (this){
-                            switch (nState){
-                                case PASSPORT_FOUND:
-                                    sendMessage("PASP: found");
-                                    break;
-                                case PASSPORT_VERIFIED:
-                                    sendMessage("PASP: verified");
-                                    break;
-                            }
-                            nState = -1;
-                        }
-                    }
-                }
-
-            } catch (IOException e) {
-                e.printStackTrace();
-                Log.i(TAG, "doInBackground: IOException");
-                result = true;
-            } catch (Exception e) {
-                e.printStackTrace();
-                Log.i(TAG, "doInBackground: Exception");
-                result = true;
-            }
-            return result;
-        }
-
-        private void handleServerMessage(String input) {
-            Log.d(TAG,"FROM SERVER: " + input);
-          //  String serverResponse = new String(input);
-            if (input.startsWith("SI: ")){
-                retrieveSubscriberInfo(input.substring(4));
-            }
-
-        }
-
-        private void sendMessage(String msg){
-            try {
-                outToServer.writeBytes(msg);
-            } catch (Exception e) {
-                e.printStackTrace();
-            }
-        }
-
-        private void retrieveSubscriberInfo(String si) {
-            if (!si.equals("error")) {
-                String[] response = si.split(", ");
-                Log.d(TAG, (response[0] + " <=> " + response[1]) + "<=>" + response[2]);
-                try {
-                    subscriberInfo = new SubscriberInfo(iso.parse(response[0]), iso.parse(response[1]), response[2]);
-                    Log.d(TAG, subscriberInfo.toString());
-                } catch (ParseException e) {
-                    e.printStackTrace();
-                }
-                serverReady = true;
-            }
-            //TODO else
-        }
-
-        @Override
-        protected void onProgressUpdate(byte[]... values) {
-            if (values.length > 0) {
-                Log.i(TAG, "onProgressUpdate: " + values[0].length + " bytes received.");
-            }
-        }
-        @Override
-        protected void onCancelled() {
-            Log.i(TAG, "Cancelled.");
-            super.onCancelled();
-        }
-        @Override
-        protected void onPostExecute(Boolean result) {
-            try {
-                inFromServer.close();
-                outToServer.close();
-                clientSocket.close();
-            } catch (Exception e) {
-                e.printStackTrace();
-            }
-            if (result) {
-                Log.i(TAG, "onPostExecute: Completed with an Error.");
-            } else {
-                Log.i(TAG, "onPostExecute: Completed.");
-            }
-        }
-    }
 }
