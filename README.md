@@ -17,6 +17,7 @@ Internal dependencies:
 
  * [irma_android_library](https://github.com/credentials/irma_android_library/), The IRMA android library
  * [Scuba](https://github.com/credentials/scuba), The smartcard abstraction layer, uses `scuba_sc_android` and `scuba_smartcard`
+ * [jmrtd](http://jmrtd.org/), A library for easy reading of ICAO documents. This should become an external library, but untill it is, this version was changed from the original build using the JarJar tool (https://code.google.com/p/jarjar/) to change any occurences of Scuba to our Scuba version.
 
 Gradle will take care of the transitive dependencies. However, you must make sure that you [build and install the idemix_library](https://github.com/credentials/idemix_library/) yourself.
 
