@@ -122,7 +122,7 @@ public class MainActivity extends Activity implements PINDialogListener {
         String card_json = settings.getString(CARD_STORAGE, "");
 
         Gson gson = new Gson();
-        if(card_json == "") {
+        if(card_json == "" || card_json.equals("null")) {
             // Default card content
             try {
                 BufferedReader reader = new BufferedReader(new InputStreamReader(getAssets().open("card.json")));
