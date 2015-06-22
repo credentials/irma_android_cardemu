@@ -122,18 +122,30 @@ public class MainActivity extends Activity implements PINDialogListener {
         String card_json = settings.getString(CARD_STORAGE, "");
 
         Gson gson = new Gson();
-        if(card_json == "" || card_json.equals("null")) {
-            // Default card content
+
+        if (!card_json.equals("")) {
             try {
-                BufferedReader reader = new BufferedReader(new InputStreamReader(getAssets().open("card.json")));
-                card = gson.fromJson(reader, IRMACard.class);
-            } catch (IOException e) {
-                throw new RuntimeException("Couldn't find card initial content");
+                card = gson.fromJson(card_json, IRMACard.class);
+            } catch (Exception e) {
+                card = getDefaultCard();
             }
-        } else {
-            card = gson.fromJson(card_json, IRMACard.class);
         }
+
+        if (card == null)
+            card = getDefaultCard();
+
         is = new IdemixService(new SmartCardEmulatorService(card));
+    }
+
+    private IRMACard getDefaultCard() {
+        try {
+            Gson gson = new Gson();
+            BufferedReader reader = new BufferedReader(new InputStreamReader(getAssets().open("card.json")));
+            return gson.fromJson(reader, IRMACard.class);
+        } catch (IOException e) {
+            e.printStackTrace();
+            return null;
+        }
     }
 
     private void storeCard() {
@@ -147,21 +159,17 @@ public class MainActivity extends Activity implements PINDialogListener {
 
     private void resetCard() {
         Log.d(TAG,"Resetting card");
-        Gson gson = new Gson();
-        // Default card content
-        try {
-            BufferedReader reader = new BufferedReader(new InputStreamReader(getAssets().open("card.json")));
-            SharedPreferences settings = getSharedPreferences(SETTINGS, 0);
-            SharedPreferences.Editor editor = settings.edit();
 
-            // FIXME: this is a bit of a hack, ideally we'd directly store the file as as a property
-            IRMACard tmp_card;
-            tmp_card = gson.fromJson(reader, IRMACard.class);
-            editor.putString(CARD_STORAGE, gson.toJson(tmp_card));
-            editor.commit();
-        } catch (IOException e) {
-            throw new RuntimeException("Couldn't find card initial content");
-        }
+        SharedPreferences settings = getSharedPreferences(SETTINGS, 0);
+        SharedPreferences.Editor editor = settings.edit();
+
+        // FIXME: this is a bit of a hack, ideally we'd directly store the file as as a property
+        IRMACard tmp_card = getDefaultCard();
+
+        Gson gson = new Gson();
+        editor.putString(CARD_STORAGE, gson.toJson(tmp_card));
+        editor.commit();
+
         loadCard();
         updateCardCredentials();
     }
