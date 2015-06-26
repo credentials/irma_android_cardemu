@@ -11,11 +11,11 @@ import java.util.List;
 import java.util.Timer;
 import java.util.TimerTask;
 
-import net.sourceforge.scuba.smartcards.CardServiceException;
-import net.sourceforge.scuba.smartcards.ProtocolCommand;
-import net.sourceforge.scuba.smartcards.ProtocolResponse;
-import net.sourceforge.scuba.smartcards.ProtocolResponses;
-import net.sourceforge.scuba.smartcards.ResponseAPDU;
+import net.sf.scuba.smartcards.CardServiceException;
+import net.sf.scuba.smartcards.ProtocolCommand;
+import net.sf.scuba.smartcards.ProtocolResponse;
+import net.sf.scuba.smartcards.ProtocolResponses;
+import net.sf.scuba.smartcards.ResponseAPDU;
 import org.apache.http.entity.StringEntity;
 import org.irmacard.android.util.credentials.AndroidWalker;
 import org.irmacard.android.util.pindialog.EnterPINDialogFragment;

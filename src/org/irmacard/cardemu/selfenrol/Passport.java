@@ -24,9 +24,9 @@ import android.widget.Toast;
 
 import com.google.gson.Gson;
 
-import net.sourceforge.scuba.smartcards.CardService;
-import net.sourceforge.scuba.smartcards.CardServiceException;
-import net.sourceforge.scuba.smartcards.IsoDepCardService;
+import net.sf.scuba.smartcards.CardService;
+import net.sf.scuba.smartcards.CardServiceException;
+import net.sf.scuba.smartcards.IsoDepCardService;
 
 import org.irmacard.cardemu.R;
 import org.irmacard.cardemu.selfenrol.government.GovernmentEnrol;

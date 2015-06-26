@@ -3,7 +3,7 @@ package org.irmacard.cardemu.selfenrol.mno;
 import android.os.AsyncTask;
 import android.util.Log;
 
-import net.sourceforge.scuba.smartcards.CardServiceException;
+import net.sf.scuba.smartcards.CardServiceException;
 
 import org.irmacard.credentials.Attributes;
 import org.irmacard.credentials.idemix.IdemixCredentials;

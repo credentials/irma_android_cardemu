@@ -1,6 +1,6 @@
 package org.irmacard.cardemu.selfenrol.government;
 
-import net.sourceforge.scuba.smartcards.CardServiceException;
+import net.sf.scuba.smartcards.CardServiceException;
 
 
 import org.irmacard.credentials.Attributes;
