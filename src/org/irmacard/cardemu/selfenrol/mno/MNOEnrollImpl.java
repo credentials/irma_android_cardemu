@@ -24,6 +24,7 @@ import java.net.InetAddress;
 import java.net.InetSocketAddress;
 import java.net.Socket;
 import java.net.SocketAddress;
+import java.security.Security;
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
 import java.util.Calendar;
@@ -102,7 +103,11 @@ public class MNOEnrollImpl implements MNOEnrol {
         BACKey bacKey = new BACKey (passportNumber, dateOfBirth, expiryDate);
 
         try {
-            passportService.sendSelectApplet (false);
+            // Spongycastle provides the MAC ISO9797Alg3Mac, which JMRTD uses
+            // in the doBAC method below (at DESedeSecureMessagingWrapper.java,
+            // line 115)
+            Security.addProvider(new org.spongycastle.jce.provider.BouncyCastleProvider());
+            passportService.sendSelectApplet(false);
             passportService.doBAC (bacKey);
         } catch (CardServiceException e) {
             /* BAC failed */

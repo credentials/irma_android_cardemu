@@ -61,8 +61,11 @@ dependencies {
     compile 'net.sf.scuba:scuba_sc_android:0.0.7-irma'
     compile 'net.sf.scuba:scuba_smartcards:0.0.7-irma'
 
-    compile 'com.madgag.spongycastle:prov:1.51.0.0'
-    compile files('libs/jmrtd-0.5.1.jar')
+    compile 'com.madgag.spongycastle:prov:1.52.0.0'
+//    compile files('libs/jmrtd-0.5.1.jar')
+    compile('org.jmrtd:jmrtd:0.5.2') {
+        transitive = false
+    }
 }
 
 task wrapper(type: Wrapper) {
