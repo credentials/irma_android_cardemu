@@ -550,63 +550,73 @@ public class MainActivity extends Activity implements PINDialogListener {
 				registerTypeAdapter(ProtocolCommand.class, new ProtocolCommandDeserializer()).
 				registerTypeAdapter(ReaderMessage.class, new ReaderMessageDeserializer()).
 				create();
+
+
 		if (activityState == STATE_CONNECTING_TO_SERVER) {
 			// this is the message that containts the url to write to
 			JsonParser p = new JsonParser();
 			String write_url = p.parse(data).getAsJsonObject().get("write_url").getAsString();
 			currentWriteURL = write_url;
-			setState(STATE_READY);
-			// Signal to the other end that we we are ready accept commands
+			setState(STATE_READY); // This ensures we will be in this block only once
 			postMessage(
 					new ReaderMessage(ReaderMessage.TYPE_EVENT, ReaderMessage.NAME_EVENT_CARDREADERFOUND, null,
 							new EventArguments().withEntry("type", "phone")));
-            postMessage(new ReaderMessage(ReaderMessage.TYPE_EVENT, ReaderMessage.NAME_EVENT_CARDFOUND, null));
-		} else {
-			ReaderMessage rm;
-			try {
-				Log.i(TAG, "Length (real): " + data);
-				JsonReader reader = new JsonReader(new StringReader(data));
-				reader.setLenient(true);
-				rm = gson.fromJson(reader, ReaderMessage.class);
-			} catch(Exception e) {
-				e.printStackTrace();
-				return;
+			postMessage(new ReaderMessage(ReaderMessage.TYPE_EVENT, ReaderMessage.NAME_EVENT_CARDFOUND, null));
+
+			return;
+		}
+
+		// If we're here, we're done connecting. Parse the data the other end sent to us
+		ReaderMessage rm;
+		try {
+			Log.i(TAG, "Length (real): " + data);
+			JsonReader reader = new JsonReader(new StringReader(data));
+			reader.setLenient(true);
+			rm = gson.fromJson(reader, ReaderMessage.class);
+		} catch(Exception e) {
+			e.printStackTrace();
+			return;
+		}
+
+		lastReaderMessage = rm;
+
+		// If the other end sent a command, execute it
+		if (rm.type.equals(ReaderMessage.TYPE_COMMAND)) {
+			Log.i(TAG, "Got command message");
+
+			if (activityState != STATE_READY) {
+				// FIXME: Only when ready can we handle commands
+				throw new RuntimeException(
+					"Illegal command from server, no card currently connected");
 			}
-			lastReaderMessage = rm;
-			if (rm.type.equals(ReaderMessage.TYPE_COMMAND)) {
-				Log.i(TAG, "Got command message");
 
-				if (activityState != STATE_READY) {
-					// FIXME: Only when ready can we handle commands
-					throw new RuntimeException(
-							"Illegal command from server, no card currently connected");
-				}
+			if (rm.name.equals(ReaderMessage.NAME_COMMAND_AUTHPIN)) {
+				askForPIN();
+			} else {
+				setState(STATE_COMMUNICATING);
+				new ProcessReaderMessage().execute(new ReaderInput(lastTag, rm));
+			}
+		}
 
-				if (rm.name.equals(ReaderMessage.NAME_COMMAND_AUTHPIN)) {
-					askForPIN();
-				} else {
-					setState(STATE_COMMUNICATING);
-					new ProcessReaderMessage().execute(new ReaderInput(lastTag, rm));
+		// If the other end sent an event, deal with it
+		if (rm.type.equals(ReaderMessage.TYPE_EVENT)) {
+			EventArguments ea = (EventArguments)rm.arguments;
+			if (rm.name.equals(ReaderMessage.NAME_EVENT_STATUSUPDATE)) {
+				String state = ea.data.get("state");
+				String feedback = ea.data.get("feedback");
+				if (state != null) {
+					setFeedback(feedback, state);
 				}
-			} else if (rm.type.equals(ReaderMessage.TYPE_EVENT)) {
-				EventArguments ea = (EventArguments)rm.arguments;
-				if (rm.name.equals(ReaderMessage.NAME_EVENT_STATUSUPDATE)) {
-					String state = ea.data.get("state");
-					String feedback = ea.data.get("feedback");
-					if (state != null) {
-						setFeedback(feedback, state);
-					}
-				} else if(rm.name.equals(ReaderMessage.NAME_EVENT_TIMEOUT)) {
-					setState(STATE_IDLE);
-				} else if(rm.name.equals(ReaderMessage.NAME_EVENT_DONE)) {
-                    storeCard();
-					setState(STATE_IDLE);
-				}
+			} else if(rm.name.equals(ReaderMessage.NAME_EVENT_TIMEOUT)) {
+				setState(STATE_IDLE);
+			} else if(rm.name.equals(ReaderMessage.NAME_EVENT_DONE)) {
+				storeCard();
+				setState(STATE_IDLE);
 			}
 		}
 	}
-	
-	
+
+
 	private void postMessage(ReaderMessage rm) {
 		if (currentWriteURL != null) {
 			Gson gson = new GsonBuilder().
