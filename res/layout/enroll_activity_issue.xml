@@ -4,8 +4,7 @@
     <RelativeLayout
         android:layout_width="fill_parent"
         android:layout_height="match_parent"
-        android:background="@color/irmadarkblue"
-        android:onClick="onMainTouch">
+        android:background="@color/irmadarkblue">
 
 
         <ImageView
