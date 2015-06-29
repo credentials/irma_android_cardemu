@@ -53,46 +53,14 @@ public class GovernmentEnrolImpl implements GovernmentEnrol {
     }
 
     private String verifyMNOCredential (byte[] pin, IdemixService idemixService) {
-        IdemixVerificationDescription vd =
-                null;
+        IdemixVerificationDescription vd = null;
         Attributes attributes = null;
         String passportNumber = null;
-
         IdemixCredentials ic = new IdemixCredentials(idemixService);
 
-        /* FIXME
-            for unclear reasons the verification does not work yet, we fake it by using
-            the admin interface to obtain the passport number from the MNO credential
-         */
-        HashMap<CredentialDescription,Attributes> credentialAttributes = new HashMap<CredentialDescription,Attributes>();
-        try {
-            ic.connect();
-            idemixService.sendCardPin("000000".getBytes());
-            List<CredentialDescription> credentialDescriptions = ic.getCredentials();
-            for(CredentialDescription cd : credentialDescriptions) {
-                credentialAttributes.put(cd, ic.getAttributes(cd));
-                String issuerID = cd.getIssuerID();
-                if (issuerID.equals ("KPN")) {
-                    String credentialID = cd.getCredentialID();
-                    if (credentialID.equals("kpnSelfEnrolDocNr")) {
-                        attributes = ic.getAttributes(cd);
-                        byte[] docNrBytes = credentialAttributes.get(cd).get("docNr");
-                        int nLeadingZeroBytes = 0;
-                        while (nLeadingZeroBytes < docNrBytes.length && docNrBytes [nLeadingZeroBytes] == 0)
-                            nLeadingZeroBytes++;
-                        docNrBytes = Arrays.copyOfRange(docNrBytes, nLeadingZeroBytes, docNrBytes.length);
-                        passportNumber = new String(docNrBytes);
-                    }
-                }
-            }
-
-        } catch (/* Info */Exception e) {
-            e.printStackTrace();
-        }
-/*
-        // Doesn't work yet
         try {
             vd = new IdemixVerificationDescription("MijnOverheid", "kpnSelfEnrolDocNr");
+            idemixService.sendCardPin(pin);
             ic.connect();
             attributes = ic.verify(vd);
         } catch (Exception e) {
@@ -102,7 +70,6 @@ public class GovernmentEnrolImpl implements GovernmentEnrol {
         if (attributes != null) {
             passportNumber = new String (attributes.get("docNr"));
         }
-*/
 
         return passportNumber;
     }
