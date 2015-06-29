@@ -106,6 +106,8 @@ public class MNOEnrollImpl implements MNOEnrol {
             // Spongycastle provides the MAC ISO9797Alg3Mac, which JMRTD uses
             // in the doBAC method below (at DESedeSecureMessagingWrapper.java,
             // line 115)
+            // TODO examine if Android's BouncyCastle version causes other problems;
+            // perhaps we should use SpongyCastle over all projects.
             Security.addProvider(new org.spongycastle.jce.provider.BouncyCastleProvider());
             passportService.sendSelectApplet(false);
             passportService.doBAC (bacKey);
