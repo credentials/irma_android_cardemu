@@ -29,4 +29,9 @@
     <string name="se_connected_mijnoverheid">Connected to MijnOverheid.nl</string>
     <string name="feedback_issueing">Issuing credentials</string>
     <string name="clear_card">Clear card</string>
+    <string name="enroll_url_menu_item">Set enroll server</string>
+    <string name="enroll_url_dialog_hint">Enroll server URL</string>
+    <string name="enroll_url_dialog_title">Enter the enrollment server URL</string>
+    <string name="default_string">Default</string>
+    <string name="enroll_default_url">enroll.irmacard.org</string>
 </resources>

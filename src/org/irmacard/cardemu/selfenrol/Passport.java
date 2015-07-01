@@ -1,11 +1,9 @@
 package org.irmacard.cardemu.selfenrol;
 
 import android.app.Activity;
-import android.content.Intent;
+import android.app.AlertDialog;
+import android.content.*;
 import android.app.PendingIntent;
-import android.content.IntentFilter;
-import android.content.Context;
-import android.content.SharedPreferences;
 import android.nfc.NfcAdapter;
 import android.nfc.Tag;
 import android.nfc.tech.IsoDep;
@@ -14,8 +12,13 @@ import android.os.Handler;
 import android.os.HandlerThread;
 import android.provider.Settings;
 import android.telephony.TelephonyManager;
+import android.text.Editable;
+import android.text.TextWatcher;
+import android.text.method.KeyListener;
 import android.util.Log;
-import android.view.View;
+import android.view.*;
+import android.view.inputmethod.InputMethodManager;
+import android.webkit.URLUtil;
 import android.widget.Button;
 import android.widget.EditText;
 import android.widget.ImageView;
@@ -60,7 +63,6 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 public class Passport extends Activity {
-    private static String MNO_SERVER_IP = "192.168.0.11";//"192.168.0.10";
     private static final int MNO_SERVER_PORT = 6789;
     private static final int GOV_SERVER_PORT = 6788;
     // NetworkMNOTask networkMNOTask;
@@ -103,6 +105,10 @@ public class Passport extends Activity {
     private final String CARD_STORAGE = "card";
     private final String SETTINGS = "cardemu";
 
+    private AlertDialog urldialog = null;
+    private String enrollServerUrl;
+    private SharedPreferences settings;
+
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -118,6 +124,13 @@ public class Passport extends Activity {
 
         // Setup a tech list for all IsoDep cards
         mTechLists = new String[][] { new String[] { IsoDep.class.getName() } };
+
+        // Attempt to get the enroll server URL from the settings. If none is there,
+        // use the default value (from res/values/strings.xml)
+        settings = getSharedPreferences(SETTINGS, 0);
+        enrollServerUrl = settings.getString("enroll_server_url", "");
+        if (enrollServerUrl.length() == 0)
+            enrollServerUrl = getString(R.string.enroll_default_url);
 
         if(getIntent() != null) {
             onNewIntent(getIntent());
@@ -177,7 +190,6 @@ public class Passport extends Activity {
                     context.getContentResolver(), Settings.Secure.ANDROID_ID);
         if (screen == SCREEN_START) {
             ((TextView) findViewById(R.id.IMSI)).setText("IMSI: " + imsi);
-            ((EditText) findViewById(R.id.se_mno_ip_field)).setText(MNO_SERVER_IP);
         }
     }
 
@@ -213,7 +225,6 @@ public class Passport extends Activity {
 
     private void storeCard() {
         Log.d(TAG,"Storing card");
-        SharedPreferences settings = getSharedPreferences(SETTINGS, 0);
         SharedPreferences.Editor editor = settings.edit();
         Gson gson = new Gson();
         editor.putString(CARD_STORAGE, gson.toJson(card));
@@ -221,9 +232,7 @@ public class Passport extends Activity {
     }
 
     private void loadCard() {
-        SharedPreferences settings = getSharedPreferences(SETTINGS, 0);
         String card_json = settings.getString(CARD_STORAGE, "");
-
         Gson gson = new Gson();
         card = gson.fromJson(card_json, IRMACard.class);
         is = new IdemixService(new SmartCardEmulatorService(card));
@@ -268,21 +277,60 @@ public class Passport extends Activity {
         });
     }
 
-    private void connectToMNOServer(){
-        String ip = ((EditText) findViewById(R.id.se_mno_ip_field)).getText().toString();
-        Log.d(TAG, "retrieved ip: " + ip);
-        //check IP
-        Pattern IP_ADDRESS
-                = Pattern.compile(
+
+    /**
+     * Check if an IP address is valid.
+     *
+     * @param url The IP to check
+     * @return True if valid, false otherwise.
+     */
+    private static Boolean isValidIPAddress(String url) {
+        Pattern IP_ADDRESS = Pattern.compile(
                 "((25[0-5]|2[0-4][0-9]|[0-1][0-9]{2}|[1-9][0-9]|[1-9])\\.(25[0-5]|2[0-4]"
                         + "[0-9]|[0-1][0-9]{2}|[1-9][0-9]|[1-9]|0)\\.(25[0-5]|2[0-4][0-9]|[0-1]"
                         + "[0-9]{2}|[1-9][0-9]|[1-9]|0)\\.(25[0-5]|2[0-4][0-9]|[0-1][0-9]{2}"
                         + "|[1-9][0-9]|[0-9]))");
-        Matcher matcher = IP_ADDRESS.matcher(ip);
-        if (matcher.matches()){
-            MNO_SERVER_IP = ip;
-        }
-        openConnection(MNO_SERVER_IP, MNO_SERVER_PORT,1000);
+        return IP_ADDRESS.matcher(url).matches();
+    }
+
+    /**
+     * Check if a given domain name is valid. We consider it valid if it consists of
+     * alphanumeric characters and dots, and if the first character is not a dot.
+     *
+     * @param url The domain to check
+     * @return True if valid, false otherwise
+     */
+    private static Boolean isValidDomainName(String url) {
+        Pattern VALID_DOMAIN = Pattern.compile("([\\w]+[\\.\\w]*)");
+        return VALID_DOMAIN.matcher(url).matches();
+    }
+
+
+    /**
+     * Check if a given URL is valid. We consider it valid if it is either a valid
+     * IP address or a valid domain name, which is checked using
+     * using {@link #isValidDomainName(String)} Boolean} and
+     * {@link #isValidIPAddress(String) Boolean}.
+     *
+     * @param url The URL to check
+     * @return True if valid, false otherwise
+     */
+    private static Boolean isValidURL(String url) {
+        String[] parts = url.split("\\.");
+
+        // If the part of the url after the rightmost dot consists
+        // only of numbers, it must be an IP address
+        if (Pattern.matches("[\\d]+", parts[parts.length-1]))
+            return isValidIPAddress(url);
+        else
+            return isValidDomainName(url);
+    }
+
+    private void connectToMNOServer(){
+        // The address in enrollServerUrl should already have been checked on valididy
+        // by the urldialog, so there is no need to check it here
+        Log.d(TAG, "Connecting to: " + enrollServerUrl);
+        openConnection(enrollServerUrl, MNO_SERVER_PORT,1000);
     }
 
     private void openConnection(final String ip, final int port, long timeout){
@@ -425,7 +473,7 @@ public class Passport extends Activity {
 
 
     private void issueGovCredentials() {
-        openConnection(MNO_SERVER_IP,GOV_SERVER_PORT,1000);
+        openConnection(enrollServerUrl, GOV_SERVER_PORT,1000);
         sendMessage("VERI: MNO credential");
         governmentEnrol.enroll("0000".getBytes(), is);
         //sendAndListen("DOCN: 123456",1000);
@@ -461,5 +509,103 @@ public class Passport extends Activity {
         super.finish();
     }
 
+    @Override
+    public boolean onCreateOptionsMenu(Menu menu) {
+        // Inflate the menu; this adds items to the action bar if it is present.
+        getMenuInflater().inflate(R.menu.enroll_activity_start, menu);
+        return true;
+    }
 
+    @Override
+    public boolean onOptionsItemSelected(MenuItem item) {
+        Log.d(TAG, "enroll menu press registered");
+
+        // Handle item selection
+        switch (item.getItemId()) {
+        case R.id.set_enroll_url:
+            Log.d(TAG, "set_enroll_url pressed");
+
+            // Create the dialog only once
+            if (urldialog == null)
+                urldialog = getUrlDialog();
+
+            // Show the dialog
+            urldialog.show();
+            // Pop up the keyboard
+            urldialog.getWindow().setSoftInputMode(WindowManager.LayoutParams.SOFT_INPUT_STATE_ALWAYS_VISIBLE);
+
+            return true;
+        default:
+            return super.onOptionsItemSelected(item);
+        }
+    }
+
+
+    // Helper function to build the URL dialog and set the listeners.
+    private AlertDialog getUrlDialog() {
+        AlertDialog.Builder builder = new AlertDialog.Builder(this);
+
+        // Simple view containing the actual input field
+        View v = this.getLayoutInflater().inflate(R.layout.enroll_url_dialog, null);
+
+        // Set the URL field to the appropriate value
+        final EditText urlfield = (EditText)v.findViewById(R.id.enroll_url_field);
+        urlfield.setText(enrollServerUrl);
+
+        // Build the dialog
+        builder.setTitle(R.string.enroll_url_dialog_title)
+                .setView(v)
+                .setPositiveButton(android.R.string.ok, new DialogInterface.OnClickListener() {
+                    @Override
+                    public void onClick(DialogInterface dialog, int id) {
+                        enrollServerUrl = urlfield.getText().toString();
+                        settings.edit().putString("enroll_server_url", enrollServerUrl).apply();
+                        Log.d("Passport", enrollServerUrl);
+                    }
+                }).setNeutralButton(R.string.default_string, null)
+                .setNegativeButton(android.R.string.cancel, new DialogInterface.OnClickListener() {
+                    @Override
+                    public void onClick(DialogInterface dialog, int which) {
+                        // Reset the URL field to the last known valid value
+                        urlfield.setText(enrollServerUrl);
+                    }
+                });
+
+        final AlertDialog urldialog = builder.create();
+
+
+        urldialog.setOnShowListener(new DialogInterface.OnShowListener() {
+            @Override
+            public void onShow(DialogInterface dialog) {
+                // By overriding the neutral button's onClick event in this onShow listener,
+                // we prevent the dialog from closing when the default button is pressed.
+                Button defaultbutton = urldialog.getButton(DialogInterface.BUTTON_NEUTRAL);
+                defaultbutton.setOnClickListener(new View.OnClickListener() {
+                    @Override
+                    public void onClick(View v) {
+                        urlfield.setText(R.string.enroll_default_url);
+                        // Move cursor to end of field
+                        urlfield.setSelection(urlfield.getText().length());
+                    }
+                });
+
+                // Move cursor to end of field
+                urlfield.setSelection(urlfield.getText().length());
+            }
+        });
+
+        // If the text from the input field changes to something that we do not consider valid
+        // (i.e., it is not a valid IP or domain name), we disable the OK button
+        urlfield.addTextChangedListener(new TextWatcher() {
+            @Override public void beforeTextChanged(CharSequence s, int start, int count, int after) { }
+            @Override public void onTextChanged(CharSequence s, int start, int before, int count) {  }
+            @Override
+            public void afterTextChanged(Editable s) {
+                Button okbutton = urldialog.getButton(DialogInterface.BUTTON_POSITIVE);
+                okbutton.setEnabled(isValidURL(s.toString()));
+            }
+        });
+
+        return urldialog;
+    }
 }
