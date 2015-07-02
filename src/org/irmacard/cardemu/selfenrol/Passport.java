@@ -484,6 +484,7 @@ public class Passport extends Activity {
                 sendAndListen("IMSI: " + imsi,1000);
                 setContentView(R.layout.enroll_activity_passport);
                 screen = SCREEN_PASSPORT;
+                invalidateOptionsMenu();
                 updateProgressCounter();
                 break;
 
@@ -541,9 +542,13 @@ public class Passport extends Activity {
 
     @Override
     public boolean onCreateOptionsMenu(Menu menu) {
-        // Inflate the menu; this adds items to the action bar if it is present.
-        getMenuInflater().inflate(R.menu.enroll_activity_start, menu);
-        return true;
+        if (screen == SCREEN_START) {
+            // Inflate the menu; this adds items to the action bar if it is present.
+            getMenuInflater().inflate(R.menu.enroll_activity_start, menu);
+            return true;
+        }
+
+        return false;
     }
 
     @Override
