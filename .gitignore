@@ -6,3 +6,6 @@ build/
 .gradle/
 .idea/
 *.iml
+*.class
+*.jar
+assets/irma_configuration
