@@ -1,0 +1,28 @@
+<?xml version="1.0" encoding="utf-8"?>
+<RelativeLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="fill_parent"
+    android:layout_height="match_parent"
+    android:background="@color/irmadarkblue" >
+
+    <ImageView
+        android:id="@+id/mainshape"
+        android:layout_width="fill_parent"
+        android:layout_height="fill_parent"
+        android:layout_marginBottom="50dp"
+        android:layout_marginLeft="31dp"
+        android:layout_marginRight="31dp"
+        android:layout_marginTop="46dp"
+        android:src="@drawable/whiteshaperounded"
+        android:layout_alignParentTop="false"/>
+    <ImageView
+        android:id="@+id/irmaLogo"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_alignParentTop="true"
+        android:layout_marginLeft="5dp"
+        android:layout_marginTop="20dp"
+        android:contentDescription="@string/irmalogo"
+        android:src="@drawable/irma_logo_150" />
+
+</RelativeLayout>
+

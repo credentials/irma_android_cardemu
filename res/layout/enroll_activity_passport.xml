@@ -4,91 +4,71 @@
     android:layout_height="match_parent"
     android:background="@color/irmadarkblue">
 
+    <include layout="@layout/irma_background_issue" />
 
-    <ImageView
-        android:id="@+id/mainshape"
-        android:layout_width="fill_parent"
-        android:layout_height="fill_parent"
-        android:layout_alignParentLeft="true"
-        android:layout_marginBottom="50dp"
-        android:layout_marginLeft="31dp"
-        android:layout_marginRight="31dp"
-        android:layout_marginTop="46dp"
-        android:src="@drawable/whiteshaperounded" />
+    <RelativeLayout
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:paddingLeft="40dp"
+            android:paddingRight="40dp"
+            android:paddingTop="100dp"
+            android:paddingBottom="60dp">
 
+        <TextView
+            android:id="@+id/title_text"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:gravity="center"
+            android:text="@string/se_welcome"
+            android:textAppearance="?android:attr/textAppearanceLarge"
+            android:textColor="@color/irmadarkblue"
+            android:textSize="24sp"/>
+        <TextView
+            android:id="@+id/se_connected"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_below="@+id/title_text"
+            android:layout_centerHorizontal="true"
+            android:gravity="center"
+            android:layout_marginTop="20dp"
+            android:textAppearance="?android:attr/textAppearanceLarge"
+            android:textColor="@color/irmagreen"
+            android:text="@string/se_connected_mno"
+            android:textSize="24sp"
+            android:textIsSelectable="true" />
+        <TextView
+            android:id="@+id/se_feedback_text"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_below="@+id/se_connected"
+            android:layout_centerHorizontal="true"
+            android:gravity="center"
+            android:layout_marginTop="20dp"
+            android:textAppearance="?android:attr/textAppearanceLarge"
+            android:textColor="@color/irmadarkblue"
+            android:text="@string/feedback_waiting_for_passport"
+            android:textSize="24sp"
+            android:textIsSelectable="true" />
+        <ImageView
+            android:id="@+id/se_statusimage"
+            android:layout_width="200dp"
+            android:layout_height="200dp"
+            android:src="@drawable/irma_icon_place_card_520px"
+            android:layout_below="@id/se_feedback_text"
+            android:layout_marginTop="30dp"
+            android:layout_centerHorizontal="true" />
+        <Button
+            android:id="@+id/se_button_continue"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="@string/se_button_continue"
+            android:visibility="invisible"
+            android:enabled="false"
+            android:layout_alignParentBottom="true"
+            android:layout_alignParentRight="true"
+            android:layout_alignParentEnd="true" />
 
-    <ImageView
-        android:id="@+id/irmaLogo"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:layout_alignParentLeft="true"
-        android:layout_alignParentTop="true"
-        android:layout_marginLeft="5dp"
-        android:layout_marginTop="20dp"
-        android:contentDescription="@string/irmalogo"
-        android:src="@drawable/irma_logo_150" />
-
-
-    <TextView
-        android:id="@+id/title_text"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:gravity="center"
-        android:text="@string/se_welcome"
-        android:textAppearance="?android:attr/textAppearanceLarge"
-        android:textColor="@color/irmadarkblue"
-        android:textSize="24sp"
-        android:layout_below="@+id/irmaLogo"
-        android:layout_alignLeft="@+id/mainshape"
-        android:layout_alignStart="@+id/mainshape" />
-
-    <TextView
-        android:id="@+id/se_connected"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:layout_below="@+id/title_text"
-        android:layout_centerHorizontal="true"
-        android:gravity="center"
-        android:layout_marginTop="20dp"
-        android:textAppearance="?android:attr/textAppearanceLarge"
-        android:textColor="@color/irmagreen"
-        android:text="@string/se_connected_mno"
-        android:textSize="24sp"
-        android:textIsSelectable="true" />
-
-    <TextView
-        android:id="@+id/se_feedback_text"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:layout_below="@+id/se_connected"
-        android:layout_centerHorizontal="true"
-        android:gravity="center"
-        android:layout_marginTop="20dp"
-        android:textAppearance="?android:attr/textAppearanceLarge"
-        android:textColor="@color/irmadarkblue"
-        android:text="@string/feedback_waiting_for_passport"
-        android:textSize="24sp"
-        android:textIsSelectable="true" />
-
-    <ImageView
-        android:id="@+id/se_statusimage"
-        android:layout_width="200dp"
-        android:layout_height="200dp"
-        android:src="@drawable/irma_icon_place_card_520px"
-        android:layout_below="@id/se_feedback_text"
-        android:layout_marginTop="30dp"
-        android:layout_centerHorizontal="true" />
-
-    <Button
-        android:id="@+id/se_button_continue"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:text="@string/se_button_continue"
-        android:visibility="invisible"
-        android:enabled="false"
-        android:layout_alignBottom="@+id/mainshape"
-        android:layout_alignRight="@+id/mainshape"
-        android:layout_alignEnd="@+id/mainshape" />
+    </RelativeLayout>
 
 </RelativeLayout>
 

@@ -1,35 +1,17 @@
 <?xml version="1.0" encoding="utf-8"?>
 <RelativeLayout xmlns:android="http://schemas.android.com/apk/res/android"
-    android:layout_width="match_parent" android:layout_height="match_parent">
+    android:layout_width="match_parent"
+    android:layout_height="match_parent">
+
+    <include layout="@layout/irma_background_issue" />
+
     <RelativeLayout
-        android:layout_width="fill_parent"
-        android:layout_height="match_parent"
-        android:background="@color/irmadarkblue">
-
-
-        <ImageView
-            android:id="@+id/mainshape"
-            android:layout_width="fill_parent"
-            android:layout_height="fill_parent"
-            android:layout_alignParentLeft="true"
-            android:layout_marginBottom="50dp"
-            android:layout_marginLeft="31dp"
-            android:layout_marginRight="31dp"
-            android:layout_marginTop="46dp"
-            android:src="@drawable/whiteshaperounded" />
-
-
-        <ImageView
-            android:id="@+id/irmaLogo"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:layout_alignParentLeft="true"
-            android:layout_alignParentTop="true"
-            android:layout_marginLeft="5dp"
-            android:layout_marginTop="20dp"
-            android:contentDescription="@string/irmalogo"
-            android:src="@drawable/irma_logo_150" />
-
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:paddingLeft="40dp"
+            android:paddingRight="40dp"
+            android:paddingTop="100dp"
+            android:paddingBottom="60dp">
 
         <TextView
             android:id="@+id/title_text"
@@ -39,11 +21,7 @@
             android:text="@string/se_welcome"
             android:textAppearance="?android:attr/textAppearanceLarge"
             android:textColor="@color/irmadarkblue"
-            android:textSize="24sp"
-            android:layout_below="@+id/irmaLogo"
-            android:layout_alignLeft="@+id/mainshape"
-            android:layout_alignStart="@+id/mainshape" />
-
+            android:textSize="24sp"/>
         <TextView
             android:id="@+id/se_connected"
             android:layout_width="wrap_content"
@@ -57,7 +35,6 @@
             android:text="@string/se_connected_mijnoverheid"
             android:textSize="24sp"
             android:textIsSelectable="true" />
-
         <TextView
             android:id="@+id/se_feedback_text"
             android:layout_width="wrap_content"
@@ -71,19 +48,16 @@
             android:text="@string/feedback_issueing"
             android:textSize="24sp"
             android:textIsSelectable="true" />
-
-
         <Button
             android:id="@+id/se_button_continue"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:text="@string/se_button_continue"
             android:enabled="false"
-            android:layout_alignBottom="@+id/mainshape"
-            android:layout_alignRight="@+id/mainshape"
-            android:layout_alignEnd="@+id/mainshape" />
+            android:layout_alignParentBottom="true"
+            android:layout_alignParentRight="true"
+            android:layout_alignParentEnd="true" />
 
-    </RelativeLayout>
-
+        </RelativeLayout>
 
 </RelativeLayout>
