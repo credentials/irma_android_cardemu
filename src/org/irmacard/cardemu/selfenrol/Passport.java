@@ -4,6 +4,7 @@ import android.app.Activity;
 import android.app.AlertDialog;
 import android.content.*;
 import android.app.PendingIntent;
+import android.content.res.Resources;
 import android.nfc.NfcAdapter;
 import android.nfc.Tag;
 import android.nfc.tech.IsoDep;
@@ -13,6 +14,7 @@ import android.os.HandlerThread;
 import android.provider.Settings;
 import android.telephony.TelephonyManager;
 import android.text.Editable;
+import android.text.Html;
 import android.text.TextWatcher;
 import android.text.method.KeyListener;
 import android.util.Log;
@@ -142,8 +144,15 @@ public class Passport extends Activity {
         networkHandler = new Handler(dbThread.getLooper());
 
         setContentView(R.layout.enroll_activity_start);
+        updateHelpText();
         screen = SCREEN_START;
         enableContinueButton();
+    }
+
+    private void updateHelpText() {
+        String helpHtml = String.format(getString(R.string.se_connect_mno), enrollServerUrl);
+        TextView helpTextView = (TextView)findViewById(R.id.se_feedback_text);
+        helpTextView.setText(Html.fromHtml(helpHtml));
     }
 
     private void enableForegroundDispatch() {
@@ -560,6 +569,7 @@ public class Passport extends Activity {
                     public void onClick(DialogInterface dialog, int id) {
                         enrollServerUrl = urlfield.getText().toString();
                         settings.edit().putString("enroll_server_url", enrollServerUrl).apply();
+                        updateHelpText();
                         Log.d("Passport", enrollServerUrl);
                     }
                 }).setNeutralButton(R.string.default_string, null)
@@ -588,6 +598,7 @@ public class Passport extends Activity {
                         settings.edit().putString("enroll_server_url", enrollServerUrl).apply();
                         // Move cursor to end of field
                         urlfield.setSelection(urlfield.getText().length());
+                        updateHelpText();
                     }
                 });
 
