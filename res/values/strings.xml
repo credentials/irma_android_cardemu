@@ -1,6 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <string name="app_name">IRMA CardEmu</string>
+    <string name="app_name_enroll">IRMA Self Enrollment</string>
     <string name="menu_settings">Settings</string>
     <string name="menu_reset">Load demo card</string>
 	<string name="irmalogo">IRMA logo</string>
@@ -28,7 +29,10 @@
     &nbsp;&nbsp;2.&nbsp;&nbsp;Reading data from your passport; <br/>
     &nbsp;&nbsp;3.&nbsp;&nbsp;Issuing the credential. <br/><br/>
     During the final process, your name, date and place of birth, and your IMSI will be transmitted to the enrollment server (%1$s).
-    <br/><br/>Proceed?
+    <br/><br/>
+    For more invormation, see <a href="https://credentials.github.io/">here</a>.
+    <br/><br/>
+    Proceed?
     ]]></string>
     <string name="se_button_continue">Continue</string>
     <string name="se_connected_mno">Connected to server</string>

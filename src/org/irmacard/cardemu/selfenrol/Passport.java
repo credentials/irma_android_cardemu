@@ -17,6 +17,7 @@ import android.text.Editable;
 import android.text.Html;
 import android.text.TextWatcher;
 import android.text.method.KeyListener;
+import android.text.method.LinkMovementMethod;
 import android.util.Log;
 import android.view.*;
 import android.view.inputmethod.InputMethodManager;
@@ -145,6 +146,12 @@ public class Passport extends Activity {
 
         setContentView(R.layout.enroll_activity_start);
         updateHelpText();
+        setTitle(R.string.app_name_enroll);
+
+        TextView descriptionTextView = (TextView)findViewById(R.id.se_feedback_text);
+        descriptionTextView.setMovementMethod(LinkMovementMethod.getInstance());
+        descriptionTextView.setLinksClickable(true);
+
         screen = SCREEN_START;
         enableContinueButton();
     }

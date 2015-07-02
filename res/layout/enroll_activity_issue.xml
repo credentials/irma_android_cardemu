@@ -14,22 +14,12 @@
             android:paddingBottom="60dp">
 
         <TextView
-            android:id="@+id/title_text"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:gravity="center"
-            android:text="@string/se_welcome"
-            android:textAppearance="?android:attr/textAppearanceLarge"
-            android:textColor="@color/irmadarkblue"
-            android:textSize="24sp"/>
-        <TextView
             android:id="@+id/se_connected"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:layout_below="@+id/title_text"
             android:layout_centerHorizontal="true"
             android:gravity="center"
-            android:layout_marginTop="20dp"
+            android:layout_marginTop="10dp"
             android:textAppearance="?android:attr/textAppearanceLarge"
             android:textColor="@color/irmagreen"
             android:text="@string/se_connected_mijnoverheid"
