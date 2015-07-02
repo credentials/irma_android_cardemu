@@ -513,14 +513,10 @@ public class Passport extends Activity {
 
     private void passportVerified(){
         sendMessage("PASP: verified");
-        ((TextView)findViewById(R.id.se_feedback_text)).setText(R.string.se_passport_verified);
-        ImageView statusImage = (ImageView) findViewById(R.id.se_statusimage);
-        if (statusImage != null)
-            statusImage.setVisibility(View.GONE);
         storeCard();
         sendMessage("ISSU: succesfull");
         closeConnection();
-        enableContinueButton();
+        advanceScreen();
     }
 
     @Override
