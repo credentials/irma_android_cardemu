@@ -583,7 +583,9 @@ public class Passport extends Activity {
                 defaultbutton.setOnClickListener(new View.OnClickListener() {
                     @Override
                     public void onClick(View v) {
-                        urlfield.setText(R.string.enroll_default_url);
+                        enrollServerUrl = getString(R.string.enroll_default_url);
+                        urlfield.setText(enrollServerUrl);
+                        settings.edit().putString("enroll_server_url", enrollServerUrl).apply();
                         // Move cursor to end of field
                         urlfield.setSelection(urlfield.getText().length());
                     }
