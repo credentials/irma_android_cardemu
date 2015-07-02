@@ -180,8 +180,13 @@ public class Passport extends Activity {
     protected void onResume() {
         super.onResume();
         if (NfcAdapter.ACTION_TECH_DISCOVERED.equals(getIntent().getAction())) {
-            processIntent(getIntent());
+            try {
+                processIntent(getIntent());
+            } catch (EnrollException e) {
+                showErrorScreen(e.getMessage());
+            }
         }
+
         if (nfcA != null) {
             nfcA.enableForegroundDispatch(this, mPendingIntent, mFilters, mTechLists);
         }
@@ -263,7 +268,7 @@ public class Passport extends Activity {
         }
     }
 
-    public void processIntent (Intent intent) {
+    public void processIntent(Intent intent) throws EnrollException {
         Tag tagFromIntent = intent.getParcelableExtra(NfcAdapter.EXTRA_TAG);
         assert (tagFromIntent != null);
 
@@ -274,11 +279,14 @@ public class Passport extends Activity {
             cs.open();
             PassportService passportService = new PassportService(cs);
             sendMessage("PASP: found\n");
-            mno.enroll(imsi, subscriberInfo, "0000".getBytes(), passportService, is);
-            //TODO: make verification result explicit
+
+            MNOEnrol.MNOEnrolResult result = mno.enroll(imsi, subscriberInfo, "0000".getBytes(), passportService, is);
+            if (result != MNOEnrol.MNOEnrolResult.SUCCESS)
+                throw new EnrollException("Issuing of credential failed");
+
             passportVerified();
-        } catch (Exception e) {
-            e.printStackTrace();
+        } catch (CardServiceException e) {
+            throw new EnrollException(e);
         }
     }
 
@@ -343,14 +351,16 @@ public class Passport extends Activity {
             return isValidDomainName(url);
     }
 
-    private void connectToMNOServer(){
+    private void connectToMNOServer() throws EnrollException {
         // The address in enrollServerUrl should already have been checked on valididy
         // by the urldialog, so there is no need to check it here
         Log.d(TAG, "Connecting to: " + enrollServerUrl);
         openConnection(enrollServerUrl, MNO_SERVER_PORT,1000);
     }
 
-    private void openConnection(final String ip, final int port, long timeout){
+    private void openConnection(final String ip, final int port, long timeout) throws EnrollException {
+        inFromServer = null;
+
         networkHandler.post(new Runnable() {
             @Override
             public void run() {
@@ -372,9 +382,9 @@ public class Passport extends Activity {
         } catch (InterruptedException e) {
             e.printStackTrace();
         }
-        if (inFromServer == null){
-            networkError("Could not connect to server");
-            finish();
+
+        if (inFromServer == null) {
+            throw new EnrollException("Could not connect to the enrollment server.");
         }
     }
 
@@ -395,7 +405,7 @@ public class Passport extends Activity {
 
     private String response;
     private boolean resp = false;
-    private void sendAndListen (String msg, long timeout){
+    private void sendAndListen (String msg, long timeout) throws EnrollException {
         final String message = new String (msg);
         networkHandler.post(new Runnable() {
             @Override
@@ -413,17 +423,18 @@ public class Passport extends Activity {
                 }
             }
         });
+
         try {
             Thread.sleep(timeout);
         } catch (InterruptedException e) {
             e.printStackTrace();
         }
+
         if (resp){
             handleResponse (response);
             resp = false;
         } else {
-            networkError("Could not connect to server");
-            finish();
+            throw new EnrollException("Got no response from server");
         }
     }
 
@@ -455,11 +466,6 @@ public class Passport extends Activity {
                 }
             }
         });
-    }
-
-    private void networkError(String msg){
-        Toast.makeText(this,msg,Toast.LENGTH_LONG).show();
-        finish();
     }
 
     private void updateProgressCounter() {
@@ -497,17 +503,17 @@ public class Passport extends Activity {
 
     private void advanceScreen(){
 
-
-        switch (screen) {
+        try {
+            switch (screen) {
             case SCREEN_START:
-                final Button button = (Button) findViewById(R.id.se_button_continue);
-                button.setEnabled(false);
-                connectToMNOServer();
-                sendAndListen("IMSI: " + imsi,1000);
                 setContentView(R.layout.enroll_activity_passport);
                 screen = SCREEN_PASSPORT;
                 invalidateOptionsMenu();
                 updateProgressCounter();
+                final Button button = (Button) findViewById(R.id.se_button_continue);
+                button.setEnabled(false);
+                connectToMNOServer();
+                sendAndListen("IMSI: " + imsi, 1000);
                 break;
 
             case SCREEN_PASSPORT:
@@ -526,15 +532,22 @@ public class Passport extends Activity {
             default:
                 Log.e(TAG, "Error, screen switch fall through");
                 break;
+            }
+        } catch (EnrollException e) {
+            showErrorScreen(e.getMessage());
         }
     }
 
 
-    private void issueGovCredentials() {
+    private void issueGovCredentials() throws EnrollException {
         openConnection(enrollServerUrl, GOV_SERVER_PORT,1000);
         sendMessage("VERI: MNO credential");
-        governmentEnrol.enroll("0000".getBytes(), is);
-        //sendAndListen("DOCN: 123456",1000);
+
+        GovernmentEnrol.GovernmentEnrolResult result = governmentEnrol.enroll("0000".getBytes(), is);
+        if (result != GovernmentEnrol.GovernmentEnrolResult.SUCCESS)
+            throw new EnrollException("Issuing credential failed");
+
+
         enableContinueButton();
     }
 
@@ -669,5 +682,14 @@ public class Passport extends Activity {
         });
 
         return urldialog;
+    }
+
+    private class EnrollException extends Exception {
+        public EnrollException(String message) {
+            super(message);
+        }
+        public EnrollException(Exception e) {
+            super(e);
+        }
     }
 }
