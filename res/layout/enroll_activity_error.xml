@@ -1,0 +1,55 @@
+<?xml version="1.0" encoding="utf-8"?>
+<RelativeLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent">
+
+    <include layout="@layout/irma_background_issue" />
+
+    <RelativeLayout
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:paddingLeft="40dp"
+        android:paddingRight="40dp"
+        android:paddingTop="100dp"
+        android:paddingBottom="60dp">
+
+        <TextView
+            android:id="@+id/se_connected"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_centerHorizontal="true"
+            android:gravity="center"
+            android:layout_marginTop="10dp"
+            android:textAppearance="?android:attr/textAppearanceLarge"
+            android:textColor="@color/irmared"
+            android:text="@string/enroll_error_label"
+            android:textSize="24sp"
+            android:textIsSelectable="true" />
+        <Button
+            style="@style/Irma.Button"
+            android:id="@+id/se_button_continue"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="@string/se_button_continue"
+            android:enabled="false"
+            android:layout_alignParentBottom="true"
+            android:layout_alignParentRight="true"
+            android:layout_alignParentEnd="true" />
+        <TextView
+            android:id="@+id/enroll_error_msg"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:gravity="start"
+            android:text="Error message will go here"
+            android:textAppearance="?android:attr/textAppearanceMedium"
+            android:textColor="@color/irmadarkblue"
+            android:textSize="20sp"
+            android:textIsSelectable="true"
+            android:layout_marginTop="34dp"
+            android:layout_below="@+id/se_connected"
+            android:layout_alignParentLeft="true"
+            android:layout_alignParentStart="true"/>
+
+    </RelativeLayout>
+
+</RelativeLayout>

@@ -101,6 +101,7 @@ public class Passport extends Activity {
     private static final int SCREEN_START = 1;
     private static final int SCREEN_PASSPORT = 2;
     private static final int SCREEN_ISSUE = 3;
+    private static final int SCREEN_ERROR = 4;
     private String imsi;
 
     private Handler networkHandler;
@@ -473,6 +474,27 @@ public class Passport extends Activity {
         }
     }
 
+    private void showErrorScreen(String errormsg) {
+        setContentView(R.layout.enroll_activity_error);
+
+        Resources r = getResources();
+        switch (screen) {
+            case SCREEN_ISSUE:
+                ((TextView)findViewById(R.id.step3_text)).setTextColor(r.getColor(R.color.irmared));
+            case SCREEN_PASSPORT:
+                ((TextView)findViewById(R.id.step1_text)).setTextColor(r.getColor(R.color.irmared));
+                ((TextView)findViewById(R.id.step2_text)).setTextColor(r.getColor(R.color.irmared));
+            case SCREEN_START:
+                ((TextView)findViewById(R.id.step_text)).setTextColor(r.getColor(R.color.irmared));
+        }
+
+        TextView view = (TextView)findViewById(R.id.enroll_error_msg);
+        view.setText(errormsg);
+
+        screen = SCREEN_ERROR;
+        enableContinueButton();
+    }
+
     private void advanceScreen(){
 
 
@@ -496,6 +518,7 @@ public class Passport extends Activity {
                 break;
 
             case SCREEN_ISSUE:
+            case SCREEN_ERROR:
                 screen = SCREEN_START;
                 finish();
                 break;

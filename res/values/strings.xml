@@ -46,4 +46,5 @@
     <string name="default_string">Default</string>
     <string name="step_string">Step</string>
     <string name="enroll_default_url">enroll.irmacard.org</string>
+    <string name="enroll_error_label">Self enrollment failed</string>
 </resources>
