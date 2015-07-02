@@ -454,26 +454,44 @@ public class Passport extends Activity {
         finish();
     }
 
+    private void updateProgressCounter() {
+        Resources r = getResources();
+        switch (screen) {
+            case SCREEN_ISSUE:
+                ((TextView)findViewById(R.id.step3_text)).setTextColor(r.getColor(R.color.irmadarkblue));
+            case SCREEN_PASSPORT:
+                ((TextView)findViewById(R.id.step_text)).setTextColor(r.getColor(R.color.irmadarkblue));
+                ((TextView)findViewById(R.id.step1_text)).setTextColor(r.getColor(R.color.irmadarkblue));
+                ((TextView)findViewById(R.id.step2_text)).setTextColor(r.getColor(R.color.irmadarkblue));
+        }
+    }
+
     private void advanceScreen(){
+
+
         switch (screen) {
             case SCREEN_START:
                 final Button button = (Button) findViewById(R.id.se_button_continue);
                 button.setEnabled(false);
                 connectToMNOServer();
                 sendAndListen("IMSI: " + imsi,1000);
-
                 setContentView(R.layout.enroll_activity_passport);
                 screen = SCREEN_PASSPORT;
+                updateProgressCounter();
                 break;
+
             case SCREEN_PASSPORT:
                 setContentView(R.layout.enroll_activity_issue);
                 screen = SCREEN_ISSUE;
+                updateProgressCounter();
                 issueGovCredentials();
                 break;
+
             case SCREEN_ISSUE:
                 screen = SCREEN_START;
                 finish();
                 break;
+
             default:
                 Log.e(TAG, "Error, screen switch fall through");
                 break;
