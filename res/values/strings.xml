@@ -31,9 +31,9 @@
     <br/><br/>Proceed?
     ]]></string>
     <string name="se_button_continue">Continue</string>
-    <string name="se_connected_mno">Connected to MNO server</string>
+    <string name="se_connected_mno">Connected to server</string>
     <string name="se_passport_verified">Passport data matched to subscriber data. \n Continue to MijnOverheid.nl to receive credentials.</string>
-    <string name="se_connected_mijnoverheid">Connected to MijnOverheid.nl</string>
+    <string name="se_connected_mijnoverheid">Connected to server</string>
     <string name="feedback_issueing">Issuing credentials</string>
     <string name="clear_card">Clear card</string>
     <string name="enroll_url_menu_item">Set enroll server</string>
