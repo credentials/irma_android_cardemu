@@ -47,4 +47,10 @@
     <string name="step_string">Step</string>
     <string name="enroll_default_url">enroll.irmacard.org</string>
     <string name="enroll_error_label">Self enrollment failed</string>
+    <string name="error_nfc_notsupported">This phone does not support NFC.</string>
+    <string name="error_nfc_disabled">NFC is disabled. Please enable NFC in the phone settings before using this
+        feature.</string>
+    <string name="error_enroll_issuing_failed">Issuing credential failed.</string>
+    <string name="error_enroll_cantconnect">Could not connect to the enrollment server.</string>
+    <string name="error_enroll_serverdied">Received no response from the enrollment server.</string>
 </resources>

@@ -16,17 +16,12 @@ import android.telephony.TelephonyManager;
 import android.text.Editable;
 import android.text.Html;
 import android.text.TextWatcher;
-import android.text.method.KeyListener;
 import android.text.method.LinkMovementMethod;
 import android.util.Log;
 import android.view.*;
-import android.view.inputmethod.InputMethodManager;
-import android.webkit.URLUtil;
 import android.widget.Button;
 import android.widget.EditText;
-import android.widget.ImageView;
 import android.widget.TextView;
-import android.widget.Toast;
 
 import com.google.gson.Gson;
 
@@ -62,7 +57,6 @@ import java.text.ParseException;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 public class Passport extends Activity {
@@ -157,9 +151,9 @@ public class Passport extends Activity {
         enableContinueButton();
 
         if (nfcA == null)
-            showErrorScreen("This phone does not support NFC.");
+            showErrorScreen(R.string.error_nfc_notsupported);
         if (!nfcA.isEnabled())
-            showErrorScreen("NFC is disabled. Please enable NFC in the phone settings before using this feature.");
+            showErrorScreen(R.string.error_nfc_disabled);
     }
 
     private void updateHelpText() {
@@ -287,10 +281,11 @@ public class Passport extends Activity {
 
             MNOEnrol.MNOEnrolResult result = mno.enroll(imsi, subscriberInfo, "0000".getBytes(), passportService, is);
             if (result != MNOEnrol.MNOEnrolResult.SUCCESS)
-                throw new EnrollException("Issuing of credential failed");
+                throw new EnrollException(R.string.error_enroll_issuing_failed);
 
             passportVerified();
         } catch (CardServiceException e) {
+            // TODO under what circumstances does this happen? Maybe handle it more intelligently?
             throw new EnrollException(e);
         }
     }
@@ -389,7 +384,7 @@ public class Passport extends Activity {
         }
 
         if (inFromServer == null) {
-            throw new EnrollException("Could not connect to the enrollment server.");
+            throw new EnrollException(R.string.error_enroll_cantconnect);
         }
     }
 
@@ -439,7 +434,7 @@ public class Passport extends Activity {
             handleResponse (response);
             resp = false;
         } else {
-            throw new EnrollException("Got no response from server");
+            throw new EnrollException(R.string.error_enroll_serverdied);
         }
     }
 
@@ -483,6 +478,10 @@ public class Passport extends Activity {
                 ((TextView)findViewById(R.id.step1_text)).setTextColor(r.getColor(R.color.irmadarkblue));
                 ((TextView)findViewById(R.id.step2_text)).setTextColor(r.getColor(R.color.irmadarkblue));
         }
+    }
+
+    private void showErrorScreen(int errormsgId) {
+        showErrorScreen(getString(errormsgId));
     }
 
     private void showErrorScreen(String errormsg) {
@@ -550,7 +549,7 @@ public class Passport extends Activity {
 
         GovernmentEnrol.GovernmentEnrolResult result = governmentEnrol.enroll("0000".getBytes(), is);
         if (result != GovernmentEnrol.GovernmentEnrolResult.SUCCESS)
-            throw new EnrollException("Issuing credential failed");
+            throw new EnrollException(R.string.error_enroll_issuing_failed);
 
 
         enableContinueButton();
@@ -692,6 +691,9 @@ public class Passport extends Activity {
     private class EnrollException extends Exception {
         public EnrollException(String message) {
             super(message);
+        }
+        public EnrollException(int msgId) {
+            this(getString(msgId));
         }
         public EnrollException(Exception e) {
             super(e);
