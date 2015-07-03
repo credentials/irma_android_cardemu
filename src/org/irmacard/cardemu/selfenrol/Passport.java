@@ -155,6 +155,11 @@ public class Passport extends Activity {
 
         screen = SCREEN_START;
         enableContinueButton();
+
+        if (nfcA == null)
+            showErrorScreen("This phone does not support NFC.");
+        if (!nfcA.isEnabled())
+            showErrorScreen("NFC is disabled. Please enable NFC in the phone settings before using this feature.");
     }
 
     private void updateHelpText() {
