@@ -18,7 +18,7 @@
 	<string name="status_ready">Card ready</string>
 	<string name="status_communicating">Communicating...</string>
 	<string name="status_waitingforpin">Waiting for PIN</string>
-    <string name="menu_enroll">Enrol</string>
+    <string name="menu_enroll">Enroll</string>
     <string name="enroll_expl">You are about to start receiving new (base) IRMA credentials. If you already have a set of credentials, then this step might overwrite some of those.
     During this process your passport will be read remotely and the contents will be compared to the subscription information known for this phone.
     If the passport data matches the subscription data, a set of base credentials will be issued to your IRMA app.</string>

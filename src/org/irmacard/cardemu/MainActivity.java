@@ -475,7 +475,7 @@ public class MainActivity extends Activity implements PINDialogListener {
 	private static final int MESSAGE_STARTGET = 1;
 	String currentReaderURL = "";
 	int currentHandlers = 0;
-	
+
 	Handler handler = new Handler() {
 		@Override
 		public void handleMessage(Message msg) {
@@ -644,7 +644,7 @@ public class MainActivity extends Activity implements PINDialogListener {
 		}
 	}
 	
-	public void onMainTouch(View v) {
+	public void onMainShapeTouch(View v) {
 		if (activityState == STATE_IDLE) {
 			lastTag = null;
 			startQRScanner("Scan the QR image in the browser.");

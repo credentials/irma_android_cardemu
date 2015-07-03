@@ -4,7 +4,6 @@
     android:layout_width="fill_parent"
     android:layout_height="match_parent"
     android:background="@color/irmadarkblue"
-    android:onClick="onMainTouch"
     tools:context=".MainActivity">
 
 
@@ -16,7 +15,8 @@
         android:layout_marginLeft="31dp"
         android:layout_marginRight="31dp"
         android:layout_marginTop="46dp"
-        android:src="@drawable/whiteshaperounded" />
+        android:src="@drawable/whiteshaperounded"
+        android:onClick="onMainShapeTouch"/>
 
     <ImageView
         android:id="@+id/irmaLogo"
