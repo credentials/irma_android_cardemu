@@ -270,8 +270,10 @@ public class Passport extends Activity {
         client.enroll(passportService, is, new Handler() {
             @Override
             public void handleMessage(Message msg) {
-                if (msg.obj == null)
+                if (msg.obj == null) {
                     enableContinueButton();
+                    ((TextView)findViewById(R.id.se_done_text)).setVisibility(View.VISIBLE);
+                }
                 else
                     showErrorScreen((String)msg.obj);
             }
@@ -574,7 +576,7 @@ public class Passport extends Activity {
          * The main enrolling method. This method talks to the MNO server and does all the work.
          * It does so on the networkHandler thread, and when it is done it reports its result
          * to the specified handler. This handler will receive a message whose .obj is either
-         * null when everything went fine, or a string containing an error message if some  
+         * null when everything went fine, or a string containing an error message if some
          * problem occured.
          *
          * @param passportService The passport to talk to

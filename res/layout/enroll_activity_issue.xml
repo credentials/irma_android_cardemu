@@ -38,6 +38,20 @@
             android:text="@string/feedback_issueing"
             android:textSize="24sp"
             android:textIsSelectable="true" />
+        <TextView
+            android:id="@+id/se_done_text"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_below="@+id/se_feedback_text"
+            android:layout_centerHorizontal="true"
+            android:gravity="center"
+            android:layout_marginTop="20dp"
+            android:textAppearance="?android:attr/textAppearanceLarge"
+            android:textColor="@color/irmadarkblue"
+            android:text="@string/done"
+            android:textSize="24sp"
+            android:textIsSelectable="true"
+            android:visibility="invisible" />
         <Button
             style="@style/Irma.Button"
             android:id="@+id/se_button_continue"
