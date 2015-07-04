@@ -247,6 +247,10 @@ public class Passport extends Activity {
     }
 
     public void processIntent(Intent intent) throws EnrollException {
+        // Only handle this event if we expect it
+        if (screen != SCREEN_PASSPORT)
+            return;
+
         Tag tagFromIntent = intent.getParcelableExtra(NfcAdapter.EXTRA_TAG);
         assert (tagFromIntent != null);
 
