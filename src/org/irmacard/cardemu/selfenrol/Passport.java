@@ -51,6 +51,7 @@ import org.jmrtd.PassportService;
 
 import java.io.BufferedReader;
 import java.io.DataOutputStream;
+import java.io.IOException;
 import java.io.InputStreamReader;
 import java.net.InetAddress;
 import java.net.Socket;
@@ -158,11 +159,7 @@ public class Passport extends Activity {
     protected void onResume() {
         super.onResume();
         if (NfcAdapter.ACTION_TECH_DISCOVERED.equals(getIntent().getAction())) {
-            try {
-                processIntent(getIntent());
-            } catch (EnrollException e) {
-                showErrorScreen(e.getMessage());
-            }
+            processIntent(getIntent());
         }
 
         if (nfcA != null) {
@@ -196,7 +193,8 @@ public class Passport extends Activity {
     @Override
     public void onBackPressed() {
         super.onBackPressed();
-        client.closeConnection();
+        if (client != null)
+            client.closeConnection();
         finish();
     }
 
@@ -246,27 +244,38 @@ public class Passport extends Activity {
         }
     }
 
-    public void processIntent(Intent intent) throws EnrollException {
+    public void processIntent(Intent intent) {
         // Only handle this event if we expect it
         if (screen != SCREEN_PASSPORT)
             return;
+
+        advanceScreen();
 
         Tag tagFromIntent = intent.getParcelableExtra(NfcAdapter.EXTRA_TAG);
         assert (tagFromIntent != null);
 
         IsoDep tag = IsoDep.get(tagFromIntent);
         CardService cs = new IsoDepCardService(tag);
+        PassportService passportService = null;
 
         try {
             cs.open();
-            PassportService passportService = new PassportService(cs);
-            client.mnoEnroll(passportService, is);
-            storeCard();
-            advanceScreen();
+            passportService = new PassportService(cs);
         } catch (CardServiceException e) {
             // TODO under what circumstances does this happen? Maybe handle it more intelligently?
-            throw new EnrollException(e);
+            showErrorScreen(e.getMessage());
         }
+
+        client = new EnrollClient();
+        client.enroll(passportService, is, new Handler() {
+            @Override
+            public void handleMessage(Message msg) {
+                if (msg.obj == null)
+                    enableContinueButton();
+                else
+                    showErrorScreen((String)msg.obj);
+            }
+        });
     }
 
     private void enableContinueButton(){
@@ -368,42 +377,32 @@ public class Passport extends Activity {
         enableContinueButton();
     }
 
-    private void advanceScreen(){
+    private void advanceScreen() {
+        switch (screen) {
+        case SCREEN_START:
+            setContentView(R.layout.enroll_activity_passport);
+            screen = SCREEN_PASSPORT;
+            invalidateOptionsMenu();
+            updateProgressCounter();
+            final Button button = (Button) findViewById(R.id.se_button_continue);
+            button.setEnabled(false);
+            break;
 
-        try {
-            switch (screen) {
-            case SCREEN_START:
-                setContentView(R.layout.enroll_activity_passport);
-                screen = SCREEN_PASSPORT;
-                invalidateOptionsMenu();
-                updateProgressCounter();
-                final Button button = (Button) findViewById(R.id.se_button_continue);
-                button.setEnabled(false);
+        case SCREEN_PASSPORT:
+            setContentView(R.layout.enroll_activity_issue);
+            screen = SCREEN_ISSUE;
+            updateProgressCounter();
+            break;
 
-                client = new EnrollClient();
-                client.connectToMNOServer();
-                break;
+        case SCREEN_ISSUE:
+        case SCREEN_ERROR:
+            screen = SCREEN_START;
+            finish();
+            break;
 
-            case SCREEN_PASSPORT:
-                setContentView(R.layout.enroll_activity_issue);
-                screen = SCREEN_ISSUE;
-                updateProgressCounter();
-                client.issueGovCredentials(is);
-                enableContinueButton();
-                break;
-
-            case SCREEN_ISSUE:
-            case SCREEN_ERROR:
-                screen = SCREEN_START;
-                finish();
-                break;
-
-            default:
-                Log.e(TAG, "Error, screen switch fall through");
-                break;
-            }
-        } catch (EnrollException e) {
-            showErrorScreen(e.getMessage());
+        default:
+            Log.e(TAG, "Error, screen switch fall through");
+            break;
         }
     }
 
@@ -540,6 +539,10 @@ public class Passport extends Activity {
         }
     }
 
+    /**
+     * Contains all the network and issuing code, which it executes on its own
+     * separate thread. See the enroll() method.
+     */
     private class EnrollClient {
         private static final String TAG = "cardemu.Passport";
 
@@ -549,6 +552,7 @@ public class Passport extends Activity {
         private DataOutputStream outToServer;
         private BufferedReader inFromServer;
         private Handler networkHandler;
+        private Handler uiHandler;
         private String response;
         private boolean resp = false;
 
@@ -559,41 +563,79 @@ public class Passport extends Activity {
         private GovernmentEnrol governmentEnrol = new GovernmentEnrolImpl(personalRecordDatabase);
 
         public EnrollClient() {
-            //  super.onCreate(savedInstanceState); // TODO
-
             HandlerThread dbThread = new HandlerThread("network");
             dbThread.start();
             networkHandler = new Handler(dbThread.getLooper());
         }
 
-        //
-        // Connection methods
-        //
+        //region Main method
 
-        private void connectToMNOServer() throws EnrollException {
+        /**
+         * The main enrolling method. This method talks to the MNO server and does all the work.
+         * It does so on the networkHandler thread, and when it is done it reports its result
+         * to the specified handler. This handler will receive a message whose .obj is either
+         * null when everything went fine, or a string containing an error message if some  
+         * problem occured.
+         *
+         * @param passportService The passport to talk to
+         * @param is The IdemixService to issue the credential to
+         * @param h A handler whose handleMessage() method will be called when done
+         */
+        private void enroll(final PassportService passportService, final IdemixService is, Handler h) {
+            uiHandler = h;
             // The address in enrollServerUrl should already have been checked on valididy
             // by the urldialog, so there is no need to check it here
             Log.d(TAG, "Connecting to: " + enrollServerUrl);
-            openConnection(enrollServerUrl, MNO_SERVER_PORT,1000);
-            sendAndListen("IMSI: " + imsi, 1000, new Handler() {
+
+            openConnection(enrollServerUrl, MNO_SERVER_PORT);
+
+            sendAndListen("IMSI: " + imsi, new Runnable() {
                 @Override
-                public void handleMessage(Message msg) {
-                    String r = msg.obj.toString();
-                    if (r.startsWith("SI: ")) {
-                        SimpleDateFormat iso = new SimpleDateFormat("yyyyMMdd");
-                        String[] res = r.substring(4).split(", ");
-                        try {
-                            subscriberInfo = new SubscriberInfo(iso.parse(res[0]), iso.parse(res[1]), res[2]);
-                        } catch (ParseException e) {
-                            e.printStackTrace();
+                public void run() {
+                    if (!response.startsWith("SI: "))
+                        return; // TODO do something here?
+
+                    if (inFromServer == null) // openConnection didn't work
+                        return;
+
+                    SimpleDateFormat iso = new SimpleDateFormat("yyyyMMdd");
+                    String[] res = response.substring(4).split(", ");
+                    MNOEnrol.MNOEnrolResult mnoResult;
+
+                    // Get the MNO credential
+                    try {
+                        subscriberInfo = new SubscriberInfo(iso.parse(res[0]), iso.parse(res[1]), res[2]);
+                        sendMessage("PASP: found\n");
+                        mnoResult = mno.enroll(imsi, subscriberInfo, "0000".getBytes(), passportService, is);
+                        if (mnoResult == MNOEnrol.MNOEnrolResult.SUCCESS) {
+                            sendMessage("PASP: verified");
+                            sendMessage("ISSU: succesfull");
                         }
-                    } // TODO else
+                    } catch (ParseException e) {
+                        reportError(e.getMessage());
+                        return;
+                    } finally { // Always close the connection
+                        closeConnection();
+                    }
+
+                    // Get the government credential
+                    final GovernmentEnrol.GovernmentEnrolResult govResult = governmentEnrol.enroll("0000".getBytes(), is);
+                    if (mnoResult != MNOEnrol.MNOEnrolResult.SUCCESS
+                            || govResult != GovernmentEnrol.GovernmentEnrolResult.SUCCESS)
+                        reportError(R.string.error_enroll_issuing_failed);
+                    else {
+                        storeCard();
+                        reportSuccess();
+                    }
                 }
             });
         }
 
+        //endregion
 
-        private void openConnection(final String ip, final int port, long timeout) throws EnrollException {
+        //region Connection methods
+
+        private void openConnection(final String ip, final int port) {
             inFromServer = null;
 
             networkHandler.post(new Runnable() {
@@ -601,26 +643,17 @@ public class Passport extends Activity {
                 public void run() {
                     try {
                         Log.i(TAG, "deInBackground: Creating socket");
-                        // SocketAddress sockaddr = new InetSocketAddress(ip, port);
                         InetAddress serverAddr = InetAddress.getByName(ip);
                         clientSocket = new Socket(serverAddr, port);
                         outToServer = new DataOutputStream(clientSocket.getOutputStream());
                         inFromServer = new BufferedReader(new InputStreamReader(clientSocket.getInputStream()));
-                    } catch (Exception e) {
+                    } catch (IOException e) {
                         e.printStackTrace();
                         Log.i(TAG, "doInBackground: Exception");
+                        reportError(R.string.error_enroll_cantconnect);
                     }
                 }
             });
-            try {
-                Thread.sleep(timeout);
-            } catch (InterruptedException e) {
-                e.printStackTrace();
-            }
-
-            if (inFromServer == null) {
-                throw new EnrollException(R.string.error_enroll_cantconnect);
-            }
         }
 
         private void closeConnection() {
@@ -638,77 +671,44 @@ public class Passport extends Activity {
             });
         }
 
-        //
-        // Sending methods
-        //
+        //endregion
 
-        private void sendMessage(final String msg) {
-            try { sendAndListen(msg, 0, null); } catch (Exception e) { }
-        }
+        //region Sending methods
 
-        private void sendAndListen(final String msg, long timeout, final Handler handler) throws EnrollException {
+        private void sendMessage(final String msg) { sendAndListen(msg, null); }
+        private void sendAndListen(final String msg, final Runnable runnable) {
             networkHandler.post(new Runnable() {
                 @Override
                 public void run() {
                     try {
-                        String input;
-                        outToServer.writeBytes(msg+"\n");
-                        if (handler != null && (response = inFromServer.readLine()) != null)
-                            resp = true;
-                    } catch (Exception e) {
+                        if (outToServer == null || inFromServer == null)
+                            return;
+                        outToServer.writeBytes(msg + "\n");
+                        if (runnable != null && (response = inFromServer.readLine()) != null)
+                            runnable.run();
+                    } catch (IOException e) {
+                        reportError(e.getMessage());
                         e.printStackTrace();
                     }
                 }
             });
-
-            // We're done
-            if (handler == null)
-                return;
-
-            try {
-                Thread.sleep(timeout);
-            } catch (InterruptedException e) {
-                e.printStackTrace();
-            }
-
-            if (resp) {
-                Message responseMsg = new Message();
-                responseMsg.obj = response;
-                handler.sendMessage(responseMsg);
-                resp = false;
-            } else {
-                throw new EnrollException(R.string.error_enroll_serverdied);
-            }
         }
 
-        //
-        // Issuing methods
-        //
+        //endregion
 
-        public void mnoEnroll(PassportService passportService, IdemixService is) throws EnrollException {
-            client.sendMessage("PASP: found\n");
+        //region Methods for reporting to the handler given to enroll()
 
-            MNOEnrol.MNOEnrolResult result = mno.enroll(imsi, subscriberInfo, "0000".getBytes(),
-                    passportService, is);
-            if (result != MNOEnrol.MNOEnrolResult.SUCCESS)
-                throw new EnrollException(R.string.error_enroll_issuing_failed);
-
-            passportVerified();
+        private void reportSuccess() { report(null); }
+        private void reportError(final String msg) { report(msg); }
+        private void reportError(final int msgId) {
+            reportError(getString(msgId));
+        }
+        private void report(final String msg) {
+            Message m = new Message();
+            m.obj = msg;
+            uiHandler.sendMessage(m);
         }
 
-        private void issueGovCredentials(IdemixService is) throws EnrollException {
-            openConnection(enrollServerUrl, GOV_SERVER_PORT,1000);
-            sendMessage("VERI: MNO credential");
-
-            GovernmentEnrol.GovernmentEnrolResult result = governmentEnrol.enroll("0000".getBytes(), is);
-            if (result != GovernmentEnrol.GovernmentEnrolResult.SUCCESS)
-                throw new EnrollException(R.string.error_enroll_issuing_failed);
-        }
-
-        private void passportVerified() {
-            sendMessage("PASP: verified");
-            sendMessage("ISSU: succesfull");
-            closeConnection();
-        }
+        //endregion
     }
 }
