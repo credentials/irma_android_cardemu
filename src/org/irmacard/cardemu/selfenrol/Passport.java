@@ -11,6 +11,7 @@ import android.nfc.tech.IsoDep;
 import android.os.Bundle;
 import android.os.Handler;
 import android.os.HandlerThread;
+import android.os.Message;
 import android.provider.Settings;
 import android.telephony.TelephonyManager;
 import android.text.Editable;
@@ -570,7 +571,21 @@ public class Passport extends Activity {
             // by the urldialog, so there is no need to check it here
             Log.d(TAG, "Connecting to: " + enrollServerUrl);
             openConnection(enrollServerUrl, MNO_SERVER_PORT,1000);
-            sendAndListen("IMSI: " + imsi, 1000);
+            sendAndListen("IMSI: " + imsi, 1000, new Handler() {
+                @Override
+                public void handleMessage(Message msg) {
+                    String r = msg.obj.toString();
+                    if (r.startsWith("SI: ")) {
+                        SimpleDateFormat iso = new SimpleDateFormat("yyyyMMdd");
+                        String[] res = r.substring(4).split(", ");
+                        try {
+                            subscriberInfo = new SubscriberInfo(iso.parse(res[0]), iso.parse(res[1]), res[2]);
+                        } catch (ParseException e) {
+                            e.printStackTrace();
+                        }
+                    } // TODO else
+                }
+            });
         }
 
 
@@ -623,38 +638,28 @@ public class Passport extends Activity {
         // Sending methods
         //
 
-        private void sendMessage(String msg) {
-            final String message = new String (msg);
-            networkHandler.post(new Runnable() {
-                @Override
-                public void run() {
-                    try {
-                        outToServer.writeBytes(message+"\n");
-                    } catch (Exception e) {
-                        e.printStackTrace();
-                    }
-                }
-            });
+        private void sendMessage(final String msg) {
+            try { sendAndListen(msg, 0, null); } catch (Exception e) { }
         }
 
-        private void sendAndListen(String msg, long timeout) throws EnrollException {
-            final String message = new String (msg);
+        private void sendAndListen(final String msg, long timeout, final Handler handler) throws EnrollException {
             networkHandler.post(new Runnable() {
                 @Override
                 public void run() {
                     try {
                         String input;
-                        outToServer.writeBytes(message+"\n");
-                        while ((input = inFromServer.readLine()) != null) {
-                            response = new String(input);
+                        outToServer.writeBytes(msg+"\n");
+                        if (handler != null && (response = inFromServer.readLine()) != null)
                             resp = true;
-                            break;
-                        }
                     } catch (Exception e) {
                         e.printStackTrace();
                     }
                 }
             });
+
+            // We're done
+            if (handler == null)
+                return;
 
             try {
                 Thread.sleep(timeout);
@@ -663,26 +668,13 @@ public class Passport extends Activity {
             }
 
             if (resp) {
-                handleResponse(response);
+                Message responseMsg = new Message();
+                responseMsg.obj = response;
+                handler.sendMessage(responseMsg);
                 resp = false;
             } else {
                 throw new EnrollException(R.string.error_enroll_serverdied);
             }
-        }
-
-        private void handleResponse(String r) {
-            if (r.startsWith("SI: ")) {
-                SimpleDateFormat iso = new SimpleDateFormat("yyyyMMdd");
-                String[] res = r.substring(4).split(", ");
-                try {
-                    subscriberInfo = new SubscriberInfo(iso.parse(res[0]), iso.parse(res[1]), res[2]);
-                } catch (ParseException e) {
-                    e.printStackTrace();
-                }
-            } else {
-                //TODO logic
-            }
-
         }
 
         //
