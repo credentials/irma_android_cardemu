@@ -550,22 +550,20 @@ public class Passport extends Activity {
 
         private static final int MNO_SERVER_PORT = 6789;
         private static final int GOV_SERVER_PORT = 6788;
+        private HandlerThread dbThread;
         private Socket clientSocket;
         private DataOutputStream outToServer;
         private BufferedReader inFromServer;
         private Handler networkHandler;
         private Handler uiHandler;
-        private String response;
-        private boolean resp = false;
 
-        private SubscriberInfo subscriberInfo = null;
         private SubscriberDatabase subscribers = new MockupSubscriberDatabase();
         private MNOEnrol mno = new MNOEnrollImpl(subscribers);
         private PersonalRecordDatabase personalRecordDatabase = new MockupPersonalRecordDatabase();
         private GovernmentEnrol governmentEnrol = new GovernmentEnrolImpl(personalRecordDatabase);
 
         public EnrollClient() {
-            HandlerThread dbThread = new HandlerThread("network");
+            dbThread = new HandlerThread("network");
             dbThread.start();
             networkHandler = new Handler(dbThread.getLooper());
         }
@@ -591,14 +589,13 @@ public class Passport extends Activity {
 
             openConnection(enrollServerUrl, MNO_SERVER_PORT);
 
-            sendAndListen("IMSI: " + imsi, new Runnable() {
+            sendAndListen("IMSI: " + imsi, new Handler(dbThread.getLooper()) {
                 @Override
-                public void run() {
+                public void handleMessage(Message msg) {
+                    String response = (String) msg.obj;
+
                     if (!response.startsWith("SI: "))
                         return; // TODO do something here?
-
-                    if (inFromServer == null) // openConnection didn't work
-                        return;
 
                     SimpleDateFormat iso = new SimpleDateFormat("yyyyMMdd");
                     String[] res = response.substring(4).split(", ");
@@ -606,12 +603,13 @@ public class Passport extends Activity {
 
                     // Get the MNO credential
                     try {
-                        subscriberInfo = new SubscriberInfo(iso.parse(res[0]), iso.parse(res[1]), res[2]);
-                        sendMessage("PASP: found\n");
+                        SubscriberInfo subscriberInfo = new SubscriberInfo(iso.parse(res[0]), iso.parse(res[1]),
+                                res[2]);
+                        send("PASP: found\n");
                         mnoResult = mno.enroll(imsi, subscriberInfo, "0000".getBytes(), passportService, is);
                         if (mnoResult == MNOEnrol.MNOEnrolResult.SUCCESS) {
-                            sendMessage("PASP: verified");
-                            sendMessage("ISSU: succesfull");
+                            send("PASP: verified");
+                            send("ISSU: succesfull");
                         }
                     } catch (ParseException e) {
                         reportError(e.getMessage());
@@ -659,26 +657,31 @@ public class Passport extends Activity {
         }
 
         private void closeConnection() {
-            networkHandler.post(new Runnable() {
-                @Override
-                public void run() {
-                    try {
-                        inFromServer.close();
-                        outToServer.close();
-                        clientSocket.close();
-                    } catch (Exception e) {
-                        e.printStackTrace();
-                    }
-                }
-            });
+            try {
+                inFromServer.close();
+                outToServer.close();
+                clientSocket.close();
+            } catch (Exception e) {
+                e.printStackTrace();
+            }
         }
 
         //endregion
 
         //region Sending methods
 
-        private void sendMessage(final String msg) { sendAndListen(msg, null); }
-        private void sendAndListen(final String msg, final Runnable runnable) {
+        private void send(final String msg) {
+            if (outToServer == null || inFromServer == null)
+                return;
+            try {
+                outToServer.writeBytes(msg + "\n");
+            } catch (IOException e) {
+                reportError(e.getMessage());
+                e.printStackTrace();
+            }
+        }
+
+        private void sendAndListen(final String msg, final Handler handler) {
             networkHandler.post(new Runnable() {
                 @Override
                 public void run() {
@@ -686,8 +689,12 @@ public class Passport extends Activity {
                         if (outToServer == null || inFromServer == null)
                             return;
                         outToServer.writeBytes(msg + "\n");
-                        if (runnable != null && (response = inFromServer.readLine()) != null)
-                            runnable.run();
+                        String response = inFromServer.readLine();
+                        if (handler != null && response != null) {
+                            Message m = Message.obtain();
+                            m.obj = response;
+                            handler.sendMessage(m);
+                        }
                     } catch (IOException e) {
                         reportError(e.getMessage());
                         e.printStackTrace();
