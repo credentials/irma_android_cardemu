@@ -8,10 +8,7 @@ import android.content.res.Resources;
 import android.nfc.NfcAdapter;
 import android.nfc.Tag;
 import android.nfc.tech.IsoDep;
-import android.os.Bundle;
-import android.os.Handler;
-import android.os.HandlerThread;
-import android.os.Message;
+import android.os.*;
 import android.provider.Settings;
 import android.telephony.TelephonyManager;
 import android.text.Editable;
@@ -26,10 +23,16 @@ import android.widget.TextView;
 
 import com.google.gson.Gson;
 
-import net.sf.scuba.smartcards.CardService;
-import net.sf.scuba.smartcards.CardServiceException;
-import net.sf.scuba.smartcards.IsoDepCardService;
+import com.google.gson.JsonParseException;
+import com.google.gson.reflect.TypeToken;
+import com.loopj.android.http.*;
+import net.sf.scuba.smartcards.*;
 
+import org.apache.http.Header;
+import org.apache.http.entity.ByteArrayEntity;
+import org.irmacard.cardemu.ByteArrayToBase64TypeAdapter;
+import org.irmacard.cardemu.ProtocolCommandDeserializer;
+import org.irmacard.cardemu.ProtocolResponseSerializer;
 import org.irmacard.cardemu.R;
 import org.irmacard.cardemu.selfenrol.government.GovernmentEnrol;
 import org.irmacard.cardemu.selfenrol.government.GovernmentEnrolImpl;
@@ -40,26 +43,34 @@ import org.irmacard.cardemu.selfenrol.mno.MNOEnrollImpl;
 import org.irmacard.cardemu.selfenrol.mno.MockupSubscriberDatabase;
 import org.irmacard.cardemu.selfenrol.mno.SubscriberDatabase;
 import org.irmacard.cardemu.selfenrol.mno.SubscriberInfo;
+import org.irmacard.credentials.Attributes;
 import org.irmacard.credentials.CredentialsException;
 import org.irmacard.credentials.idemix.IdemixCredentials;
+import org.irmacard.credentials.idemix.descriptions.IdemixVerificationDescription;
 import org.irmacard.credentials.idemix.smartcard.IRMACard;
 import org.irmacard.credentials.idemix.smartcard.SmartCardEmulatorService;
 import org.irmacard.credentials.info.CredentialDescription;
 import org.irmacard.credentials.info.InfoException;
 import org.irmacard.idemix.IdemixService;
+import org.irmacard.idemix.IdemixSmartcard;
+import org.irmacard.mno.common.BasicClientMessage;
+import org.irmacard.mno.common.EnrollmentStartMessage;
+import org.irmacard.mno.common.RequestFinishIssuanceMessage;
+import org.irmacard.mno.common.RequestStartIssuanceMessage;
 import org.jmrtd.PassportService;
 
-import java.io.BufferedReader;
-import java.io.DataOutputStream;
-import java.io.IOException;
-import java.io.InputStreamReader;
-import java.net.InetAddress;
-import java.net.Socket;
+import java.io.*;
+import java.lang.reflect.Type;
+import java.net.*;
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.regex.Pattern;
+
+import com.google.gson.GsonBuilder;
 
 public class Passport extends Activity {
     private NfcAdapter nfcA;
@@ -212,17 +223,13 @@ public class Passport extends Activity {
             for(CredentialDescription cd : credentialDescriptions) {
                 Log.d(TAG,cd.getName());
             }
-        } catch (CardServiceException e) {
-            e.printStackTrace();
-        } catch (InfoException e) {
-            e.printStackTrace();
-        } catch (CredentialsException e) {
+        } catch (CardServiceException|InfoException|CredentialsException e) {
             e.printStackTrace();
         }
     }
 
     private void storeCard() {
-        Log.d(TAG,"Storing card");
+        Log.d(TAG, "Storing card");
         SharedPreferences.Editor editor = settings.edit();
         Gson gson = new Gson();
         editor.putString(CARD_STORAGE, gson.toJson(card));
@@ -246,9 +253,10 @@ public class Passport extends Activity {
 
     public void processIntent(Intent intent) {
         // Only handle this event if we expect it
-        if (screen != SCREEN_PASSPORT)
+        if (screen != SCREEN_START)
             return;
 
+        screen = SCREEN_PASSPORT;
         advanceScreen();
 
         Tag tagFromIntent = intent.getParcelableExtra(NfcAdapter.EXTRA_TAG);
@@ -272,10 +280,9 @@ public class Passport extends Activity {
             public void handleMessage(Message msg) {
                 if (msg.obj == null) {
                     enableContinueButton();
-                    ((TextView)findViewById(R.id.se_done_text)).setVisibility(View.VISIBLE);
-                }
-                else
-                    showErrorScreen((String)msg.obj);
+                    ((TextView) findViewById(R.id.se_done_text)).setVisibility(View.VISIBLE);
+                } else
+                    showErrorScreen((String) msg.obj);
             }
         });
     }
@@ -291,56 +298,6 @@ public class Passport extends Activity {
             }
         });
     }
-
-
-    /**
-     * Check if an IP address is valid.
-     *
-     * @param url The IP to check
-     * @return True if valid, false otherwise.
-     */
-    private static Boolean isValidIPAddress(String url) {
-        Pattern IP_ADDRESS = Pattern.compile(
-                "((25[0-5]|2[0-4][0-9]|[0-1][0-9]{2}|[1-9][0-9]|[1-9])\\.(25[0-5]|2[0-4]"
-                        + "[0-9]|[0-1][0-9]{2}|[1-9][0-9]|[1-9]|0)\\.(25[0-5]|2[0-4][0-9]|[0-1]"
-                        + "[0-9]{2}|[1-9][0-9]|[1-9]|0)\\.(25[0-5]|2[0-4][0-9]|[0-1][0-9]{2}"
-                        + "|[1-9][0-9]|[0-9]))");
-        return IP_ADDRESS.matcher(url).matches();
-    }
-
-    /**
-     * Check if a given domain name is valid. We consider it valid if it consists of
-     * alphanumeric characters and dots, and if the first character is not a dot.
-     *
-     * @param url The domain to check
-     * @return True if valid, false otherwise
-     */
-    private static Boolean isValidDomainName(String url) {
-        Pattern VALID_DOMAIN = Pattern.compile("([\\w]+[\\.\\w]*)");
-        return VALID_DOMAIN.matcher(url).matches();
-    }
-
-
-    /**
-     * Check if a given URL is valid. We consider it valid if it is either a valid
-     * IP address or a valid domain name, which is checked using
-     * using {@link #isValidDomainName(String)} Boolean} and
-     * {@link #isValidIPAddress(String) Boolean}.
-     *
-     * @param url The URL to check
-     * @return True if valid, false otherwise
-     */
-    private static Boolean isValidURL(String url) {
-        String[] parts = url.split("\\.");
-
-        // If the part of the url after the rightmost dot consists
-        // only of numbers, it must be an IP address
-        if (Pattern.matches("[\\d]+", parts[parts.length-1]))
-            return isValidIPAddress(url);
-        else
-            return isValidDomainName(url);
-    }
-
 
     private void updateProgressCounter() {
         Resources r = getResources();
@@ -382,12 +339,20 @@ public class Passport extends Activity {
     private void advanceScreen() {
         switch (screen) {
         case SCREEN_START:
-            setContentView(R.layout.enroll_activity_passport);
-            screen = SCREEN_PASSPORT;
+            setContentView(R.layout.enroll_activity_issue);
+            screen = SCREEN_ISSUE; // Skip the passport screen for now
             invalidateOptionsMenu();
             updateProgressCounter();
-            final Button button = (Button) findViewById(R.id.se_button_continue);
-            button.setEnabled(false);
+            enroll(new Handler() {
+                @Override
+                public void handleMessage(Message msg) {
+                    if (msg.obj == null) {
+                        enableContinueButton();
+                        ((TextView) findViewById(R.id.se_done_text)).setVisibility(View.VISIBLE);
+                    } else
+                        showErrorScreen(((Exception) msg.obj).getMessage());
+                }
+            });
             break;
 
         case SCREEN_PASSPORT:
@@ -517,8 +482,14 @@ public class Passport extends Activity {
         // If the text from the input field changes to something that we do not consider valid
         // (i.e., it is not a valid IP or domain name), we disable the OK button
         urlfield.addTextChangedListener(new TextWatcher() {
-            @Override public void beforeTextChanged(CharSequence s, int start, int count, int after) { }
-            @Override public void onTextChanged(CharSequence s, int start, int before, int count) {  }
+            @Override
+            public void beforeTextChanged(CharSequence s, int start, int count, int after) {
+            }
+
+            @Override
+            public void onTextChanged(CharSequence s, int start, int before, int count) {
+            }
+
             @Override
             public void afterTextChanged(Editable s) {
                 Button okbutton = urldialog.getButton(DialogInterface.BUTTON_POSITIVE);
@@ -529,15 +500,261 @@ public class Passport extends Activity {
         return urldialog;
     }
 
-    private class EnrollException extends Exception {
-        public EnrollException(String message) {
-            super(message);
-        }
-        public EnrollException(int msgId) {
-            this(getString(msgId));
-        }
-        public EnrollException(Exception e) {
+    //region Network and issuing
+
+    /**
+     * Check if an IP address is valid.
+     *
+     * @param url The IP to check
+     * @return True if valid, false otherwise.
+     */
+    private static Boolean isValidIPAddress(String url) {
+        Pattern IP_ADDRESS = Pattern.compile(
+                "((25[0-5]|2[0-4][0-9]|[0-1][0-9]{2}|[1-9][0-9]|[1-9])\\.(25[0-5]|2[0-4]"
+                        + "[0-9]|[0-1][0-9]{2}|[1-9][0-9]|[1-9]|0)\\.(25[0-5]|2[0-4][0-9]|[0-1]"
+                        + "[0-9]{2}|[1-9][0-9]|[1-9]|0)\\.(25[0-5]|2[0-4][0-9]|[0-1][0-9]{2}"
+                        + "|[1-9][0-9]|[0-9]))");
+        return IP_ADDRESS.matcher(url).matches();
+    }
+
+    /**
+     * Check if a given domain name is valid. We consider it valid if it consists of
+     * alphanumeric characters and dots, and if the first character is not a dot.
+     *
+     * @param url The domain to check
+     * @return True if valid, false otherwise
+     */
+    private static Boolean isValidDomainName(String url) {
+        Pattern VALID_DOMAIN = Pattern.compile("([\\w]+[\\.\\w]*)");
+        return VALID_DOMAIN.matcher(url).matches();
+    }
+
+
+    /**
+     * Check if a given URL is valid. We consider it valid if it is either a valid
+     * IP address or a valid domain name, which is checked using
+     * using {@link #isValidDomainName(String)} Boolean} and
+     * {@link #isValidIPAddress(String) Boolean}.
+     *
+     * @param url The URL to check
+     * @return True if valid, false otherwise
+     */
+    private static Boolean isValidURL(String url) {
+        String[] parts = url.split("\\.");
+
+        // If the part of the url after the rightmost dot consists
+        // only of numbers, it must be an IP address
+        if (Pattern.matches("[\\d]+", parts[parts.length-1]))
+            return isValidIPAddress(url);
+        else
+            return isValidDomainName(url);
+    }
+
+    private SyncHttpClient getClient() {
+        SyncHttpClient c = new SyncHttpClient();
+        c.setTimeout(5000); // TODO is this a suitable value?
+        c.setUserAgent("org.irmacard.cardemu.enrollclient");
+        return c;
+    }
+
+    Gson gson;
+    String serverUrl;
+
+    /**
+     * Do the enrolling and send a message to uiHandler when done. If something
+     * went wrong, the .obj of the message sent to uiHandler will be an exception;
+     * if everything went OK the .obj will be null.
+     *
+     * @param uiHandler The handler to message when done.
+     */
+    public void enroll(final Handler uiHandler) {
+        serverUrl  = "http://" + enrollServerUrl + ":8080/irma_mno_server/api/v1";
+
+        // Doing HTTP(S) stuff on the main thread is not allowed.
+        AsyncTask<Void, Void, Exception> task = new AsyncTask<Void, Void, Exception>() {
+            @Override
+            protected Exception doInBackground(Void... params) {
+                try {
+                    gson = new GsonBuilder()
+                            .registerTypeAdapter(ProtocolCommand.class, new ProtocolCommandDeserializer())
+                            .registerTypeAdapter(ProtocolResponse.class, new ProtocolResponseSerializer())
+                            .registerTypeHierarchyAdapter(byte[].class, new ByteArrayToBase64TypeAdapter())
+                            .create();
+                    HttpClient client = new HttpClient(getClient(), gson);
+
+                    // Get a session token
+                    EnrollmentStartMessage session = client.doGet(EnrollmentStartMessage.class, serverUrl + "/start");
+
+                    // Get a list of credential that the client can issue
+                    BasicClientMessage bcm = new BasicClientMessage(session.getSessionToken());
+                    Type t = new TypeToken<HashMap<String, Map<String, String>>>() {}.getType();
+                    HashMap<String, Map<String, String>> credentialList =
+                            client.doPost(t, serverUrl + "/issue/credential-list", bcm);
+
+                    // Get them all!
+                    for (String credentialType : credentialList.keySet()) {
+                        issue(credentialType, session, client);
+                    }
+                } catch (Exception e) {
+                    // TODO more specific exception catching and handling
+                    e.printStackTrace();
+                    return e;
+                }
+                return null;
+            }
+
+            private void issue(String credentialType, EnrollmentStartMessage session, HttpClient client)
+            throws HttpClientException, CardServiceException, InfoException, CredentialsException {
+                // Get the first batch of commands for issuing
+                RequestStartIssuanceMessage startMsg = new RequestStartIssuanceMessage(
+                        session.getSessionToken(),
+                        is.execute(IdemixSmartcard.selectApplicationCommand).getData()
+                );
+                ProtocolCommands issueCommands = client.doPost(ProtocolCommands.class,
+                        serverUrl + "/issue/" + credentialType + "/start", startMsg);
+
+                // Execute the retrieved commands
+                is.sendCardPin("0000".getBytes()); // TODO
+                ProtocolResponses responses = is.execute(issueCommands);
+
+                // Get the second batch of commands for issuing
+                RequestFinishIssuanceMessage finishMsg
+                        = new RequestFinishIssuanceMessage(session.getSessionToken(), responses);
+                issueCommands = client.doPost(ProtocolCommands.class,
+                        serverUrl + "/issue/" + credentialType + "/finish", finishMsg);
+
+                // Execute the retrieved commands
+                is.execute(issueCommands);
+
+                // Check if it worked
+                IdemixCredentials ic = new IdemixCredentials(is);
+                IdemixVerificationDescription ivd = new IdemixVerificationDescription(
+                        "MijnOverheid", credentialType + "All");
+                Attributes attributes = ic.verify(ivd);
+
+                if (attributes != null)
+                    Log.d(TAG, "Enrollment issuing succes!");
+                else
+                    Log.d(TAG, "Enrollment issuing failed.");
+            }
+
+            @Override
+            protected void onPostExecute(Exception result) {
+                Message msg = Message.obtain();
+                msg.obj = result;
+                uiHandler.sendMessage(msg);
+            }
+        }.execute();
+    }
+
+
+    /**
+     * Exception class for HttpClient.
+     */
+    public class HttpClientException extends Exception {
+        public int status;
+        private Throwable e;
+
+        public HttpClientException(int status, Throwable e) {
             super(e);
+            this.e = e;
+            this.status = status;
+        }
+    }
+
+    /**
+     * Convenience class to synchroniously do HTTP GET and PUT requests,
+     * and serialize the in- and output automatically using Gson. <br/>
+     * NOTE: the methods of this class must not be used on the main thread,
+     * as otherwise a NetworkOnMainThreadException will occur.
+     */
+    public class HttpClient {
+        Gson gson;
+        SyncHttpClient client;
+
+        // The doGet and doPost use these members to temporarily store their result
+        Object returnValue;
+        HttpClientException exception;
+
+        /**
+         * Instantiate a new HttpClient.
+         *
+         * @param client The SyncHttpClient that will be used.
+         * @param gson The Gson object that will handle (de)serialization.
+         */
+        public HttpClient(SyncHttpClient client, Gson gson) {
+            this.client = client;
+            this.gson = gson;
+        }
+
+        /**
+         * Performs a GET on the specified url. See the javadoc of doPost.
+         *
+         * @param type The type to which the return value should be cast. If the casting fails
+         *             an exception will be raised.
+         * @param url The url to post to.
+         * @param <T> The object to post. May be null, in which case we do a GET instead
+         *            of post.
+         * @return The T returned by the server, if successful.
+         * @throws HttpClientException
+         */
+        public <T> T doGet(final Type type, String url) throws HttpClientException {
+            return doPost(type, url, null);
+        }
+
+        /**
+         * POSTs the specified object to the specified url, and attempts to cast the response
+         * of the server to the type specified by T and type. (Note: apparently it is not possible
+         * get a Type from T or vice versa, so the type variable T and Type type must both be
+         * given. Fortunately, the T is inferrable so this method can be called like so:<br/>
+         * <code>YourType x = doPost(YourType.class, "http://www.example.com/post", object);</code><br/><br/>
+         *
+         * This method does not (yet) support the posting of generics to the server.
+         *
+         * @param type The type to which the return value should be cast. If the casting fails
+         *             an exception will be raised.
+         * @param url The url to post to.
+         * @param object The object to post. May be null, in which case we do a GET instead
+         *               of post.
+         * @param <T> The type to which the return value should be cast.
+         * @return The T returned by the server, if successful.
+         * @throws HttpClientException If the casting failed, <code>status</code> will be zero.
+         * Otherwise, if the communication with the server failed, <code>status</code> will
+         * be an HTTP status code.
+         */
+        public <T> T doPost(final Type type, String url, Object object) throws HttpClientException {
+            exception = null;
+
+            // We use the returnValue and exception members to store our result.
+            AsyncHttpResponseHandler handler = new AsyncHttpResponseHandler() {
+                @Override
+                public void onSuccess(int statusCode, Header[] headers, byte[] responseBody) {
+                    try {
+                        returnValue = gson.fromJson(new String(responseBody), type);
+                    } catch (JsonParseException e) {
+                        exception = new HttpClientException(0, e);
+                    }
+                }
+                @Override
+                public void onFailure(int statusCode, Header[] headers, byte[] responseBody, Throwable error) {
+                    exception = new HttpClientException(statusCode, error);
+                }
+            };
+
+            // Do the request
+            if (object == null)
+                client.get(Passport.this, url, handler);
+            else {
+                ByteArrayEntity entity = new ByteArrayEntity(gson.toJson(object).getBytes());
+                client.post(Passport.this, url, entity, "application/json", handler);
+            }
+
+            if (exception != null)
+                throw exception;
+
+            @SuppressWarnings("unchecked") // If we got this far, we can be sure returnValue is a T
+                    T r = (T) returnValue;
+            return r;
         }
     }
 
@@ -720,4 +937,6 @@ public class Passport extends Activity {
 
         //endregion
     }
+
+    //endregion
 }

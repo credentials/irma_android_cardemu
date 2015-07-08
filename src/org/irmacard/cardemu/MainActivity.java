@@ -16,6 +16,7 @@ import net.sf.scuba.smartcards.ProtocolCommand;
 import net.sf.scuba.smartcards.ProtocolResponse;
 import net.sf.scuba.smartcards.ProtocolResponses;
 import net.sf.scuba.smartcards.ResponseAPDU;
+import org.apache.http.Header;
 import org.apache.http.entity.StringEntity;
 import org.irmacard.android.util.credentials.AndroidWalker;
 import org.irmacard.android.util.pindialog.EnterPINDialogFragment;
@@ -488,7 +489,8 @@ public class MainActivity extends Activity implements PINDialogListener {
 				
 				client.get(MainActivity.this, currentReaderURL, new AsyncHttpResponseHandler() {
 					@Override
-					public void onSuccess(int arg0, String responseData) {
+					public void onSuccess(int statusCode, Header[] headers, byte[] responseBody) {
+						String responseData = new String(responseBody);
 						if (!responseData.equals("")) {
 							//Toast.makeText(MainActivity.this, responseData, Toast.LENGTH_SHORT).show();
 							handleChannelData(responseData);
@@ -504,7 +506,8 @@ public class MainActivity extends Activity implements PINDialogListener {
 						}
 					}
 					@Override
-					public void onFailure(Throwable arg0, String arg1) {
+					//public void onFailure(Throwable arg0, String arg1) {
+					public void onFailure(int statusCode, Header[] headers, byte[] responseBody, Throwable error) {
 						if(activityState != STATE_CONNECTING_TO_SERVER) {
 							retry_counter = 0;
 							return;
@@ -627,14 +630,14 @@ public class MainActivity extends Activity implements PINDialogListener {
 			try {
 				client.post(MainActivity.this, currentWriteURL, new StringEntity(data) , "application/json",  new AsyncHttpResponseHandler() {
 					@Override
-					public void onSuccess(int arg0, String arg1) {
+					public void onSuccess(int statusCode, Header[] headers, byte[] responseBody) {
 						// TODO: Should there be some simple user feedback?
-						super.onSuccess(arg0, arg1);
+						//super.onSuccess(statusCode, headers, responseBody);
 					}
 					@Override
-					public void onFailure(Throwable arg0, String arg1) {
+					public void onFailure(int statusCode, Header[] headers, byte[] responseBody, Throwable error) {
 						// TODO: Give proper feedback to the user that we are unable to send stuff
-						super.onFailure(arg0, arg1);
+						//super.onFailure(statusCode, headers, responseBody, error);
 					}
 				});
 			} catch (UnsupportedEncodingException e) {
