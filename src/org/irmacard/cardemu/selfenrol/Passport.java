@@ -34,15 +34,6 @@ import org.irmacard.cardemu.ByteArrayToBase64TypeAdapter;
 import org.irmacard.cardemu.ProtocolCommandDeserializer;
 import org.irmacard.cardemu.ProtocolResponseSerializer;
 import org.irmacard.cardemu.R;
-import org.irmacard.cardemu.selfenrol.government.GovernmentEnrol;
-import org.irmacard.cardemu.selfenrol.government.GovernmentEnrolImpl;
-import org.irmacard.cardemu.selfenrol.government.MockupPersonalRecordDatabase;
-import org.irmacard.cardemu.selfenrol.government.PersonalRecordDatabase;
-import org.irmacard.cardemu.selfenrol.mno.MNOEnrol;
-import org.irmacard.cardemu.selfenrol.mno.MNOEnrollImpl;
-import org.irmacard.cardemu.selfenrol.mno.MockupSubscriberDatabase;
-import org.irmacard.cardemu.selfenrol.mno.SubscriberDatabase;
-import org.irmacard.cardemu.selfenrol.mno.SubscriberInfo;
 import org.irmacard.credentials.Attributes;
 import org.irmacard.credentials.CredentialsException;
 import org.irmacard.credentials.idemix.IdemixCredentials;
@@ -100,8 +91,6 @@ public class Passport extends Activity {
     private AlertDialog urldialog = null;
     private String enrollServerUrl;
     private SharedPreferences settings;
-
-    private EnrollClient client;
 
 
     @Override
@@ -170,7 +159,7 @@ public class Passport extends Activity {
     protected void onResume() {
         super.onResume();
         if (NfcAdapter.ACTION_TECH_DISCOVERED.equals(getIntent().getAction())) {
-            processIntent(getIntent());
+            // processIntent(getIntent()); // Not yet implemented
         }
 
         if (nfcA != null) {
@@ -204,8 +193,6 @@ public class Passport extends Activity {
     @Override
     public void onBackPressed() {
         super.onBackPressed();
-        if (client != null)
-            client.closeConnection();
         finish();
     }
 
@@ -253,10 +240,9 @@ public class Passport extends Activity {
 
     public void processIntent(Intent intent) {
         // Only handle this event if we expect it
-        if (screen != SCREEN_START)
+        if (screen != SCREEN_PASSPORT)
             return;
 
-        screen = SCREEN_PASSPORT;
         advanceScreen();
 
         Tag tagFromIntent = intent.getParcelableExtra(NfcAdapter.EXTRA_TAG);
@@ -274,17 +260,7 @@ public class Passport extends Activity {
             showErrorScreen(e.getMessage());
         }
 
-        client = new EnrollClient();
-        client.enroll(passportService, is, new Handler() {
-            @Override
-            public void handleMessage(Message msg) {
-                if (msg.obj == null) {
-                    enableContinueButton();
-                    ((TextView) findViewById(R.id.se_done_text)).setVisibility(View.VISIBLE);
-                } else
-                    showErrorScreen((String) msg.obj);
-            }
-        });
+        // TODO do passport stuff here, using passportService
     }
 
     private void enableContinueButton(){
@@ -355,6 +331,7 @@ public class Passport extends Activity {
             });
             break;
 
+        // This case is currently never reached
         case SCREEN_PASSPORT:
             setContentView(R.layout.enroll_activity_issue);
             screen = SCREEN_ISSUE;
@@ -756,186 +733,6 @@ public class Passport extends Activity {
                     T r = (T) returnValue;
             return r;
         }
-    }
-
-    /**
-     * Contains all the network and issuing code, which it executes on its own
-     * separate thread. See the enroll() method.
-     */
-    private class EnrollClient {
-        private static final String TAG = "cardemu.Passport";
-
-        private static final int MNO_SERVER_PORT = 6789;
-        private static final int GOV_SERVER_PORT = 6788;
-        private HandlerThread dbThread;
-        private Socket clientSocket;
-        private DataOutputStream outToServer;
-        private BufferedReader inFromServer;
-        private Handler networkHandler;
-        private Handler uiHandler;
-
-        private SubscriberDatabase subscribers = new MockupSubscriberDatabase();
-        private MNOEnrol mno = new MNOEnrollImpl(subscribers);
-        private PersonalRecordDatabase personalRecordDatabase = new MockupPersonalRecordDatabase();
-        private GovernmentEnrol governmentEnrol = new GovernmentEnrolImpl(personalRecordDatabase);
-
-        public EnrollClient() {
-            dbThread = new HandlerThread("network");
-            dbThread.start();
-            networkHandler = new Handler(dbThread.getLooper());
-        }
-
-        //region Main method
-
-        /**
-         * The main enrolling method. This method talks to the MNO server and does all the work.
-         * It does so on the networkHandler thread, and when it is done it reports its result
-         * to the specified handler. This handler will receive a message whose .obj is either
-         * null when everything went fine, or a string containing an error message if some
-         * problem occured.
-         *
-         * @param passportService The passport to talk to
-         * @param is The IdemixService to issue the credential to
-         * @param h A handler whose handleMessage() method will be called when done
-         */
-        private void enroll(final PassportService passportService, final IdemixService is, Handler h) {
-            uiHandler = h;
-            // The address in enrollServerUrl should already have been checked on valididy
-            // by the urldialog, so there is no need to check it here
-            Log.d(TAG, "Connecting to: " + enrollServerUrl);
-
-            openConnection(enrollServerUrl, MNO_SERVER_PORT);
-
-            sendAndListen("IMSI: " + imsi, new Handler(dbThread.getLooper()) {
-                @Override
-                public void handleMessage(Message msg) {
-                    String response = (String) msg.obj;
-
-                    if (!response.startsWith("SI: "))
-                        return; // TODO do something here?
-
-                    SimpleDateFormat iso = new SimpleDateFormat("yyyyMMdd");
-                    String[] res = response.substring(4).split(", ");
-                    MNOEnrol.MNOEnrolResult mnoResult;
-
-                    // Get the MNO credential
-                    try {
-                        SubscriberInfo subscriberInfo = new SubscriberInfo(iso.parse(res[0]), iso.parse(res[1]),
-                                res[2]);
-                        send("PASP: found\n");
-                        mnoResult = mno.enroll(imsi, subscriberInfo, "0000".getBytes(), passportService, is);
-                        if (mnoResult == MNOEnrol.MNOEnrolResult.SUCCESS) {
-                            send("PASP: verified");
-                            send("ISSU: succesfull");
-                        }
-                    } catch (ParseException e) {
-                        reportError(e.getMessage());
-                        return;
-                    } finally { // Always close the connection
-                        closeConnection();
-                    }
-
-                    // Get the government credential
-                    final GovernmentEnrol.GovernmentEnrolResult govResult = governmentEnrol.enroll("0000".getBytes(), is);
-                    if (mnoResult != MNOEnrol.MNOEnrolResult.SUCCESS
-                            || govResult != GovernmentEnrol.GovernmentEnrolResult.SUCCESS)
-                        reportError(R.string.error_enroll_issuing_failed);
-                    else {
-                        storeCard();
-                        reportSuccess();
-                    }
-                }
-            });
-        }
-
-        //endregion
-
-        //region Connection methods
-
-        private void openConnection(final String ip, final int port) {
-            inFromServer = null;
-
-            networkHandler.post(new Runnable() {
-                @Override
-                public void run() {
-                    try {
-                        Log.i(TAG, "deInBackground: Creating socket");
-                        InetAddress serverAddr = InetAddress.getByName(ip);
-                        clientSocket = new Socket(serverAddr, port);
-                        outToServer = new DataOutputStream(clientSocket.getOutputStream());
-                        inFromServer = new BufferedReader(new InputStreamReader(clientSocket.getInputStream()));
-                    } catch (IOException e) {
-                        e.printStackTrace();
-                        Log.i(TAG, "doInBackground: Exception");
-                        reportError(R.string.error_enroll_cantconnect);
-                    }
-                }
-            });
-        }
-
-        private void closeConnection() {
-            try {
-                inFromServer.close();
-                outToServer.close();
-                clientSocket.close();
-            } catch (Exception e) {
-                e.printStackTrace();
-            }
-        }
-
-        //endregion
-
-        //region Sending methods
-
-        private void send(final String msg) {
-            if (outToServer == null || inFromServer == null)
-                return;
-            try {
-                outToServer.writeBytes(msg + "\n");
-            } catch (IOException e) {
-                reportError(e.getMessage());
-                e.printStackTrace();
-            }
-        }
-
-        private void sendAndListen(final String msg, final Handler handler) {
-            networkHandler.post(new Runnable() {
-                @Override
-                public void run() {
-                    try {
-                        if (outToServer == null || inFromServer == null)
-                            return;
-                        outToServer.writeBytes(msg + "\n");
-                        String response = inFromServer.readLine();
-                        if (handler != null && response != null) {
-                            Message m = Message.obtain();
-                            m.obj = response;
-                            handler.sendMessage(m);
-                        }
-                    } catch (IOException e) {
-                        reportError(e.getMessage());
-                        e.printStackTrace();
-                    }
-                }
-            });
-        }
-
-        //endregion
-
-        //region Methods for reporting to the handler given to enroll()
-
-        private void reportSuccess() { report(null); }
-        private void reportError(final String msg) { report(msg); }
-        private void reportError(final int msgId) {
-            reportError(getString(msgId));
-        }
-        private void report(final String msg) {
-            Message m = new Message();
-            m.obj = msg;
-            uiHandler.sendMessage(m);
-        }
-
-        //endregion
     }
 
     //endregion
