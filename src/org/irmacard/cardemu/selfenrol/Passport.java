@@ -549,16 +549,16 @@ public class Passport extends Activity {
 
         // Doing HTTP(S) stuff on the main thread is not allowed.
         AsyncTask<Void, Void, Exception> task = new AsyncTask<Void, Void, Exception>() {
+            final Gson gson = new GsonBuilder()
+                    .registerTypeAdapter(ProtocolCommand.class, new ProtocolCommandDeserializer())
+                    .registerTypeAdapter(ProtocolResponse.class, new ProtocolResponseSerializer())
+                    .registerTypeHierarchyAdapter(byte[].class, new ByteArrayToBase64TypeAdapter())
+                    .create();
+            final HttpClient client = new HttpClient(getClient(), gson);
+
             @Override
             protected Exception doInBackground(Void... params) {
                 try {
-                    gson = new GsonBuilder()
-                            .registerTypeAdapter(ProtocolCommand.class, new ProtocolCommandDeserializer())
-                            .registerTypeAdapter(ProtocolResponse.class, new ProtocolResponseSerializer())
-                            .registerTypeHierarchyAdapter(byte[].class, new ByteArrayToBase64TypeAdapter())
-                            .create();
-                    HttpClient client = new HttpClient(getClient(), gson);
-
                     // Get a session token
                     EnrollmentStartMessage session = client.doGet(EnrollmentStartMessage.class, serverUrl + "/start");
 
@@ -570,7 +570,7 @@ public class Passport extends Activity {
 
                     // Get them all!
                     for (String credentialType : credentialList.keySet()) {
-                        issue(credentialType, session, client);
+                        issue(credentialType, session);
                     }
                 } catch (Exception e) {
                     // TODO more specific exception catching and handling
@@ -580,7 +580,7 @@ public class Passport extends Activity {
                 return null;
             }
 
-            private void issue(String credentialType, EnrollmentStartMessage session, HttpClient client)
+            private void issue(String credentialType, EnrollmentStartMessage session)
             throws HttpClientException, CardServiceException, InfoException, CredentialsException {
                 // Get the first batch of commands for issuing
                 RequestStartIssuanceMessage startMsg = new RequestStartIssuanceMessage(
@@ -730,7 +730,7 @@ public class Passport extends Activity {
                 throw exception;
 
             @SuppressWarnings("unchecked") // If we got this far, we can be sure returnValue is a T
-                    T r = (T) returnValue;
+            T r = (T) returnValue;
             return r;
         }
     }
