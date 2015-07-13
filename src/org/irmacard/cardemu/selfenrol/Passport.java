@@ -24,12 +24,16 @@ import android.widget.TextView;
 import com.google.gson.Gson;
 
 import com.google.gson.JsonParseException;
+import com.google.gson.JsonSyntaxException;
 import com.google.gson.reflect.TypeToken;
 import com.loopj.android.http.*;
 import net.sf.scuba.smartcards.*;
 
 import org.apache.http.Header;
+import org.apache.http.conn.ssl.SSLSocketFactory;
 import org.apache.http.entity.ByteArrayEntity;
+import org.apache.http.impl.client.DefaultHttpClient;
+import org.apache.http.util.ExceptionUtils;
 import org.irmacard.cardemu.ByteArrayToBase64TypeAdapter;
 import org.irmacard.cardemu.ProtocolCommandDeserializer;
 import org.irmacard.cardemu.ProtocolResponseSerializer;
@@ -53,6 +57,7 @@ import org.jmrtd.PassportService;
 import java.io.*;
 import java.lang.reflect.Type;
 import java.net.*;
+import java.security.KeyStore;
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
@@ -62,6 +67,10 @@ import java.util.Map;
 import java.util.regex.Pattern;
 
 import com.google.gson.GsonBuilder;
+
+import javax.net.ssl.SSLContext;
+import javax.net.ssl.SSLParameters;
+import javax.net.ssl.TrustManagerFactory;
 
 public class Passport extends Activity {
     private NfcAdapter nfcA;
@@ -257,7 +266,7 @@ public class Passport extends Activity {
             passportService = new PassportService(cs);
         } catch (CardServiceException e) {
             // TODO under what circumstances does this happen? Maybe handle it more intelligently?
-            showErrorScreen(e.getMessage());
+            showErrorScreen(R.string.error_enroll_passporterror, e);
         }
 
         // TODO do passport stuff here, using passportService
@@ -288,28 +297,63 @@ public class Passport extends Activity {
     }
 
     private void showErrorScreen(int errormsgId) {
-        showErrorScreen(getString(errormsgId));
+        showErrorScreen(getString(errormsgId), null);
     }
 
     private void showErrorScreen(String errormsg) {
+        showErrorScreen(errormsg, null);
+    }
+
+    private void showErrorScreen(Exception e) {
+        showErrorScreen(e.getMessage(), e);
+    }
+
+    private void showErrorScreen(int errormsgId, Exception e) {
+        showErrorScreen(getString(errormsgId), e);
+    }
+
+    private void showErrorScreen(String errormsg, Exception e) {
+        prepareErrowScreen();
+
+        TextView view = (TextView)findViewById(R.id.enroll_error_msg);
+        TextView stacktraceView = (TextView)findViewById(R.id.error_stacktrace);
+        Button button = (Button)findViewById(R.id.se_button_continue);
+
+        view.setText(errormsg);
+
+        if (e != null) {
+            StringWriter sw = new StringWriter();
+            e.printStackTrace(new PrintWriter(sw));
+            String stacktrace = sw.toString();
+
+            stacktraceView.setText(stacktrace);
+        }
+        else
+            stacktraceView.setText("");
+
+        button.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                screen = SCREEN_START;
+                finish();
+            }
+        });
+    }
+
+    private void prepareErrowScreen() {
         setContentView(R.layout.enroll_activity_error);
 
         Resources r = getResources();
         switch (screen) {
             case SCREEN_ISSUE:
                 ((TextView)findViewById(R.id.step3_text)).setTextColor(r.getColor(R.color.irmared));
+                break;
             case SCREEN_PASSPORT:
-                ((TextView)findViewById(R.id.step1_text)).setTextColor(r.getColor(R.color.irmared));
                 ((TextView)findViewById(R.id.step2_text)).setTextColor(r.getColor(R.color.irmared));
+                break;
             case SCREEN_START:
                 ((TextView)findViewById(R.id.step_text)).setTextColor(r.getColor(R.color.irmared));
         }
-
-        TextView view = (TextView)findViewById(R.id.enroll_error_msg);
-        view.setText(errormsg);
-
-        screen = SCREEN_ERROR;
-        enableContinueButton();
     }
 
     private void advanceScreen() {
@@ -325,8 +369,13 @@ public class Passport extends Activity {
                     if (msg.obj == null) {
                         enableContinueButton();
                         ((TextView) findViewById(R.id.se_done_text)).setVisibility(View.VISIBLE);
-                    } else
-                        showErrorScreen(((Exception) msg.obj).getMessage());
+                    } else {
+                        String errormsg;
+                        if (msg.what != 0)
+                            showErrorScreen(msg.what, (Exception) msg.obj);
+                        else
+                            showErrorScreen((Exception) msg.obj);
+                    }
                 }
             });
             break;
@@ -527,9 +576,17 @@ public class Passport extends Activity {
             return isValidDomainName(url);
     }
 
+    /**
+     * Helper function to get a SyncHttpClient containing all connection
+     * parameters.
+     * TODO The client retries failed requests up to 5 times, do we want this?
+     * TODO The timeout is set to 5000 ms, is this reasonable?
+     *
+     * @return
+     */
     private SyncHttpClient getClient() {
         SyncHttpClient c = new SyncHttpClient();
-        c.setTimeout(5000); // TODO is this a suitable value?
+        c.setMaxRetriesAndTimeout(AsyncHttpClient.DEFAULT_MAX_RETRIES, 5000);
         c.setUserAgent("org.irmacard.cardemu.enrollclient");
         return c;
     }
@@ -548,7 +605,7 @@ public class Passport extends Activity {
         serverUrl  = "http://" + enrollServerUrl + ":8080/irma_mno_server/api/v1";
 
         // Doing HTTP(S) stuff on the main thread is not allowed.
-        AsyncTask<Void, Void, Exception> task = new AsyncTask<Void, Void, Exception>() {
+        AsyncTask<Void, Void, Message> task = new AsyncTask<Void, Void, Message>() {
             final Gson gson = new GsonBuilder()
                     .registerTypeAdapter(ProtocolCommand.class, new ProtocolCommandDeserializer())
                     .registerTypeAdapter(ProtocolResponse.class, new ProtocolResponseSerializer())
@@ -557,7 +614,8 @@ public class Passport extends Activity {
             final HttpClient client = new HttpClient(getClient(), gson);
 
             @Override
-            protected Exception doInBackground(Void... params) {
+            protected Message doInBackground(Void... params) {
+                Message msg = Message.obtain();
                 try {
                     // Get a session token
                     EnrollmentStartMessage session = client.doGet(EnrollmentStartMessage.class, serverUrl + "/start");
@@ -572,10 +630,18 @@ public class Passport extends Activity {
                     for (String credentialType : credentialList.keySet()) {
                         issue(credentialType, session);
                     }
-                } catch (Exception e) {
-                    // TODO more specific exception catching and handling
+                } catch (CardServiceException // Issuing the credential to the card failed
+                        |InfoException // VerificationDescription not found in configurarion
+                        |CredentialsException e) { // Verification went wrong
                     e.printStackTrace();
-                    return e;
+                    msg.obj = e;
+                    msg.what = R.string.error_enroll_issuing_failed;
+                    return msg;
+                } catch (HttpClientException e) {
+                    e.printStackTrace();
+                    msg.obj = e;
+                    msg.what = R.string.error_enroll_cantconnect;
+                    return msg;
                 }
                 return null;
             }
@@ -616,9 +682,7 @@ public class Passport extends Activity {
             }
 
             @Override
-            protected void onPostExecute(Exception result) {
-                Message msg = Message.obtain();
-                msg.obj = result;
+            protected void onPostExecute(Message msg) {
                 uiHandler.sendMessage(msg);
             }
         }.execute();

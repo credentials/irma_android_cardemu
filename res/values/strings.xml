@@ -54,4 +54,6 @@
     <string name="error_enroll_issuing_failed">Issuing credential failed.</string>
     <string name="error_enroll_cantconnect">Could not connect to the enrollment server.</string>
     <string name="error_enroll_serverdied">Received no response from the enrollment server.</string>
+    <string name="error_enroll_carderror">The issuing of the credential failed.</string>
+    <string name="error_enroll_passporterror">Reading the passport failed.</string>
 </resources>
