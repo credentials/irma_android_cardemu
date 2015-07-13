@@ -23,17 +23,10 @@ import android.widget.TextView;
 
 import com.google.gson.Gson;
 
-import com.google.gson.JsonParseException;
 import com.google.gson.JsonSyntaxException;
 import com.google.gson.reflect.TypeToken;
-import com.loopj.android.http.*;
 import net.sf.scuba.smartcards.*;
 
-import org.apache.http.Header;
-import org.apache.http.conn.ssl.SSLSocketFactory;
-import org.apache.http.entity.ByteArrayEntity;
-import org.apache.http.impl.client.DefaultHttpClient;
-import org.apache.http.util.ExceptionUtils;
 import org.irmacard.cardemu.ByteArrayToBase64TypeAdapter;
 import org.irmacard.cardemu.ProtocolCommandDeserializer;
 import org.irmacard.cardemu.ProtocolResponseSerializer;
@@ -57,9 +50,14 @@ import org.jmrtd.PassportService;
 import java.io.*;
 import java.lang.reflect.Type;
 import java.net.*;
+import java.security.KeyManagementException;
 import java.security.KeyStore;
-import java.text.ParseException;
-import java.text.SimpleDateFormat;
+import java.security.KeyStoreException;
+import java.security.NoSuchAlgorithmException;
+import java.security.cert.Certificate;
+import java.security.cert.CertificateException;
+import java.security.cert.CertificateFactory;
+import java.security.cert.X509Certificate;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -68,8 +66,9 @@ import java.util.regex.Pattern;
 
 import com.google.gson.GsonBuilder;
 
+import javax.net.ssl.HttpsURLConnection;
 import javax.net.ssl.SSLContext;
-import javax.net.ssl.SSLParameters;
+import javax.net.ssl.SSLSocketFactory;
 import javax.net.ssl.TrustManagerFactory;
 
 public class Passport extends Activity {
@@ -576,23 +575,66 @@ public class Passport extends Activity {
             return isValidDomainName(url);
     }
 
-    /**
-     * Helper function to get a SyncHttpClient containing all connection
-     * parameters.
-     * TODO The client retries failed requests up to 5 times, do we want this?
-     * TODO The timeout is set to 5000 ms, is this reasonable?
-     *
-     * @return
-     */
-    private SyncHttpClient getClient() {
-        SyncHttpClient c = new SyncHttpClient();
-        c.setMaxRetriesAndTimeout(AsyncHttpClient.DEFAULT_MAX_RETRIES, 5000);
-        c.setUserAgent("org.irmacard.cardemu.enrollclient");
-        return c;
+    public static String inputStreamToString(InputStream is) throws IOException {
+        BufferedReader br = new BufferedReader(new InputStreamReader(is));
+        StringBuilder sb = new StringBuilder();
+        String line;
+        while ((line = br.readLine()) != null)
+            sb.append(line).append("\n");
+
+        br.close();
+        is.close();
+        return sb.toString();
     }
 
     Gson gson;
     String serverUrl;
+
+    /**
+     * Get a SSLSocketFactory that uses public key pinning: it only accepts the
+     * CA certificate obtained from the file res/raw/ca.cert.
+     * See https://developer.android.com/training/articles/security-ssl.html#Pinning
+     * and https://op-co.de/blog/posts/java_sslsocket_mitm/
+     *
+     * Alternatively, https://github.com/Flowdalic/java-pinning
+     *
+     * If we want to trust our own CA instead, we can import it using
+     * keyStore.setCertificateEntry("ourCa", ca);
+     * instead of using the keyStore.load method. See the first link.
+     *
+     * @return A client whose SSL with our certificate pinnned. Will be null
+     * if something went wrong.
+     */
+    private SSLSocketFactory getSocketFactory() {
+        try {
+            Resources r = getResources();
+
+            // Get the certificate from the res/raw folder and parse it
+            InputStream ins = r.openRawResource(r.getIdentifier("ca", "raw", getPackageName()));
+            Certificate ca;
+            try {
+                ca = CertificateFactory.getInstance("X.509").generateCertificate(ins);
+                System.out.println("ca=" + ((X509Certificate) ca).getSubjectDN());
+            } finally {
+                ins.close();
+            }
+
+            // Put the certificate in the keystore, put that in the TrustManagerFactory,
+            // put that in the SSLContext, from which we get the SSLSocketFactory
+            KeyStore keyStore = KeyStore.getInstance("BKS");
+            keyStore.load(null, null);
+            keyStore.setCertificateEntry("ca", ca);
+            TrustManagerFactory tmf = TrustManagerFactory.getInstance("X509");
+            tmf.init(keyStore);
+            final SSLContext context = SSLContext.getInstance("TLS");
+            context.init(null, tmf.getTrustManagers(), null);
+
+            return context.getSocketFactory();
+        } catch (KeyManagementException|NoSuchAlgorithmException|KeyStoreException|CertificateException|IOException e) {
+            e.printStackTrace();
+            return null;
+        }
+    }
 
     /**
      * Do the enrolling and send a message to uiHandler when done. If something
@@ -611,7 +653,7 @@ public class Passport extends Activity {
                     .registerTypeAdapter(ProtocolResponse.class, new ProtocolResponseSerializer())
                     .registerTypeHierarchyAdapter(byte[].class, new ByteArrayToBase64TypeAdapter())
                     .create();
-            final HttpClient client = new HttpClient(getClient(), gson);
+            final HttpClient client = new HttpClient(gson, getSocketFactory());
 
             @Override
             protected Message doInBackground(Void... params) {
@@ -636,14 +678,15 @@ public class Passport extends Activity {
                     e.printStackTrace();
                     msg.obj = e;
                     msg.what = R.string.error_enroll_issuing_failed;
-                    return msg;
                 } catch (HttpClientException e) {
                     e.printStackTrace();
                     msg.obj = e;
-                    msg.what = R.string.error_enroll_cantconnect;
-                    return msg;
+                    if (e.cause instanceof JsonSyntaxException)
+                        msg.what = R.string.error_enroll_invalidresponse;
+                    else
+                        msg.what = R.string.error_enroll_cantconnect;
                 }
-                return null;
+                return msg;
             }
 
             private void issue(String credentialType, EnrollmentStartMessage session)
@@ -694,11 +737,11 @@ public class Passport extends Activity {
      */
     public class HttpClientException extends Exception {
         public int status;
-        private Throwable e;
+        public Throwable cause;
 
-        public HttpClientException(int status, Throwable e) {
-            super(e);
-            this.e = e;
+        public HttpClientException(int status, Throwable cause) {
+            super(cause);
+            this.cause = cause;
             this.status = status;
         }
     }
@@ -710,22 +753,27 @@ public class Passport extends Activity {
      * as otherwise a NetworkOnMainThreadException will occur.
      */
     public class HttpClient {
-        Gson gson;
-        SyncHttpClient client;
-
-        // The doGet and doPost use these members to temporarily store their result
-        Object returnValue;
-        HttpClientException exception;
+        private Gson gson;
+        private SSLSocketFactory socketFactory;
+        private int timeout = 5000;
 
         /**
          * Instantiate a new HttpClient.
          *
-         * @param client The SyncHttpClient that will be used.
          * @param gson The Gson object that will handle (de)serialization.
          */
-        public HttpClient(SyncHttpClient client, Gson gson) {
-            this.client = client;
+        public HttpClient(Gson gson) {
+            this(gson, null);
+        }
+
+        /**
+         * Instantiate a new HttpClient.
+         * @param gson The Gson object that will handle (de)serialization.
+         * @param socketFactory The SSLSocketFactory to use.
+         */
+        public HttpClient(Gson gson, SSLSocketFactory socketFactory) {
             this.gson = gson;
+            this.socketFactory = socketFactory;
         }
 
         /**
@@ -764,38 +812,59 @@ public class Passport extends Activity {
          * be an HTTP status code.
          */
         public <T> T doPost(final Type type, String url, Object object) throws HttpClientException {
-            exception = null;
+            HttpURLConnection c = null;
+            String method;
 
-            // We use the returnValue and exception members to store our result.
-            AsyncHttpResponseHandler handler = new AsyncHttpResponseHandler() {
-                @Override
-                public void onSuccess(int statusCode, Header[] headers, byte[] responseBody) {
-                    try {
-                        returnValue = gson.fromJson(new String(responseBody), type);
-                    } catch (JsonParseException e) {
-                        exception = new HttpClientException(0, e);
-                    }
-                }
-                @Override
-                public void onFailure(int statusCode, Header[] headers, byte[] responseBody, Throwable error) {
-                    exception = new HttpClientException(statusCode, error);
-                }
-            };
-
-            // Do the request
             if (object == null)
-                client.get(Passport.this, url, handler);
-            else {
-                ByteArrayEntity entity = new ByteArrayEntity(gson.toJson(object).getBytes());
-                client.post(Passport.this, url, entity, "application/json", handler);
+                method = "GET";
+            else
+                method = "POST";
+
+            try {
+                URL u = new URL(url);
+                c = (HttpURLConnection) u.openConnection();
+                if (url.startsWith("https") && socketFactory != null)
+                    ((HttpsURLConnection) c).setSSLSocketFactory(socketFactory);
+                c.setRequestMethod(method);
+                c.setUseCaches(false);
+                c.setConnectTimeout(timeout);
+                c.setReadTimeout(timeout);
+                c.setDoInput(true);
+
+                byte[] objectBytes = new byte[] {};
+
+                if (method.equals("POST")) {
+                    objectBytes = gson.toJson(object).getBytes();
+                    c.setDoOutput(true);
+                    // See http://www.evanjbrunner.info/posts/json-requests-with-httpurlconnection-in-android/
+                    c.setFixedLengthStreamingMode(objectBytes.length);
+                    c.setRequestProperty("Content-Type", "application/json;charset=utf-8");
+                }
+
+                c.connect();
+
+                if (method.equals("POST")) {
+                    OutputStream os = new BufferedOutputStream(c.getOutputStream());
+                    os.write(objectBytes);
+                    os.flush();
+                }
+
+                int status = c.getResponseCode();
+                switch (status) {
+                    case 200:
+                    case 201:
+                        return gson.fromJson(inputStreamToString(c.getInputStream()), type);
+                    default:
+                        throw new HttpClientException(status, null);
+                }
+            } catch (JsonSyntaxException|IOException e) { // IOException includes MalformedURLException
+                e.printStackTrace();
+                throw new HttpClientException(0, e);
+            } finally {
+                if (c != null) {
+                    c.disconnect();
+                }
             }
-
-            if (exception != null)
-                throw exception;
-
-            @SuppressWarnings("unchecked") // If we got this far, we can be sure returnValue is a T
-            T r = (T) returnValue;
-            return r;
         }
     }
 
