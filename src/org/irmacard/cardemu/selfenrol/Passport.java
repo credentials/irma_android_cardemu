@@ -346,10 +346,9 @@ public class Passport extends Activity {
         switch (screen) {
             case SCREEN_ISSUE:
                 ((TextView)findViewById(R.id.step3_text)).setTextColor(r.getColor(R.color.irmared));
-                break;
             case SCREEN_PASSPORT:
                 ((TextView)findViewById(R.id.step2_text)).setTextColor(r.getColor(R.color.irmared));
-                break;
+                ((TextView)findViewById(R.id.step1_text)).setTextColor(r.getColor(R.color.irmared));
             case SCREEN_START:
                 ((TextView)findViewById(R.id.step_text)).setTextColor(r.getColor(R.color.irmared));
         }
