@@ -56,5 +56,10 @@
     <string name="error_enroll_serverdied">Received no response from the enrollment server.</string>
     <string name="error_enroll_invalidresponse">The enrollment server returned an invalid response.</string>
     <string name="error_enroll_carderror">The issuing of the credential failed.</string>
-    <string name="error_enroll_passporterror">Reading the passport failed.</string>
+    <string name="error_enroll_passporterror">Failed to establish contact with the passport.</string>
+    <string name="error_enroll_bacfailed">BAC data seems to be wrong.</string>
+    <string name="error_enroll_nobacdata">Document number, date of birth or date of expiry not set.</string>
+    <string name="enroll_enter_bac_title">Passport photo</string>
+    <string name="enroll_enter_bac_desc">OCR-ing the BAC data is not yet supported. Please enter the BAC data
+        manually here.</string>
 </resources>

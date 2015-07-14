@@ -1,9 +1,7 @@
 package org.irmacard.cardemu.selfenrol;
 
-import android.app.Activity;
-import android.app.AlertDialog;
+import android.app.*;
 import android.content.*;
-import android.app.PendingIntent;
 import android.content.res.Resources;
 import android.nfc.NfcAdapter;
 import android.nfc.Tag;
@@ -14,10 +12,12 @@ import android.telephony.TelephonyManager;
 import android.text.Editable;
 import android.text.Html;
 import android.text.TextWatcher;
+import android.text.method.KeyListener;
 import android.text.method.LinkMovementMethod;
 import android.util.Log;
 import android.view.*;
 import android.widget.Button;
+import android.widget.DatePicker;
 import android.widget.EditText;
 import android.widget.TextView;
 
@@ -42,23 +42,21 @@ import org.irmacard.mno.common.BasicClientMessage;
 import org.irmacard.mno.common.EnrollmentStartMessage;
 import org.irmacard.mno.common.RequestFinishIssuanceMessage;
 import org.irmacard.mno.common.RequestStartIssuanceMessage;
+import org.jmrtd.BACKey;
 import org.jmrtd.PassportService;
 
 import java.io.*;
 import java.lang.reflect.Type;
 import java.net.*;
-import java.security.KeyManagementException;
-import java.security.KeyStore;
-import java.security.KeyStoreException;
-import java.security.NoSuchAlgorithmException;
+import java.security.*;
 import java.security.cert.Certificate;
 import java.security.cert.CertificateException;
 import java.security.cert.CertificateFactory;
 import java.security.cert.X509Certificate;
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
+import java.text.DateFormat;
+import java.text.ParseException;
+import java.text.SimpleDateFormat;
+import java.util.*;
 import java.util.regex.Pattern;
 
 import com.google.gson.GsonBuilder;
@@ -85,9 +83,10 @@ public class Passport extends Activity {
 
     private int screen;
     private static final int SCREEN_START = 1;
-    private static final int SCREEN_PASSPORT = 2;
-    private static final int SCREEN_ISSUE = 3;
-    private static final int SCREEN_ERROR = 4;
+    private static final int SCREEN_BAC = 2;
+    private static final int SCREEN_PASSPORT = 3;
+    private static final int SCREEN_ISSUE = 4;
+    private static final int SCREEN_ERROR = 5;
     private String imsi;
 
     private final String CARD_STORAGE = "card";
@@ -96,6 +95,8 @@ public class Passport extends Activity {
     private AlertDialog urldialog = null;
     private String enrollServerUrl;
     private SharedPreferences settings;
+    private SimpleDateFormat bacDateFormat = new SimpleDateFormat("yyMMdd");
+    private DateFormat hrDateFormat = DateFormat.getDateInstance();
 
 
     @Override
@@ -164,7 +165,7 @@ public class Passport extends Activity {
     protected void onResume() {
         super.onResume();
         if (NfcAdapter.ACTION_TECH_DISCOVERED.equals(getIntent().getAction())) {
-            // processIntent(getIntent()); // Not yet implemented
+             processIntent(getIntent());
         }
 
         if (nfcA != null) {
@@ -248,8 +249,6 @@ public class Passport extends Activity {
         if (screen != SCREEN_PASSPORT)
             return;
 
-        advanceScreen();
-
         Tag tagFromIntent = intent.getParcelableExtra(NfcAdapter.EXTRA_TAG);
         assert (tagFromIntent != null);
 
@@ -257,15 +256,32 @@ public class Passport extends Activity {
         CardService cs = new IsoDepCardService(tag);
         PassportService passportService = null;
 
+        // Spongycastle provides the MAC ISO9797Alg3Mac, which JMRTD uses
+        // in the doBAC method below (at DESedeSecureMessagingWrapper.java,
+        // line 115)
+        // TODO examine if Android's BouncyCastle version causes other problems;
+        // perhaps we should use SpongyCastle over all projects.
+        Security.addProvider(new org.spongycastle.jce.provider.BouncyCastleProvider());
+
         try {
             cs.open();
             passportService = new PassportService(cs);
+            passportService.sendSelectApplet(false);
         } catch (CardServiceException e) {
             // TODO under what circumstances does this happen? Maybe handle it more intelligently?
             showErrorScreen(R.string.error_enroll_passporterror, e);
+            return;
         }
 
-        // TODO do passport stuff here, using passportService
+        try {
+            passportService.doBAC(getBACKey());
+            // TODO Active Authentication
+            advanceScreen();
+        } catch (CardServiceException e) {
+            showErrorScreen(R.string.error_enroll_bacfailed, e);
+        } catch (IOException e) {
+            showErrorScreen(R.string.error_enroll_nobacdata, e);
+        }
     }
 
     private void enableContinueButton(){
@@ -286,9 +302,10 @@ public class Passport extends Activity {
             case SCREEN_ISSUE:
                 ((TextView)findViewById(R.id.step3_text)).setTextColor(r.getColor(R.color.irmadarkblue));
             case SCREEN_PASSPORT:
-                ((TextView)findViewById(R.id.step_text)).setTextColor(r.getColor(R.color.irmadarkblue));
-                ((TextView)findViewById(R.id.step1_text)).setTextColor(r.getColor(R.color.irmadarkblue));
                 ((TextView)findViewById(R.id.step2_text)).setTextColor(r.getColor(R.color.irmadarkblue));
+            case SCREEN_BAC:
+                ((TextView)findViewById(R.id.step1_text)).setTextColor(r.getColor(R.color.irmadarkblue));
+                ((TextView)findViewById(R.id.step_text)).setTextColor(r.getColor(R.color.irmadarkblue));
         }
     }
 
@@ -345,6 +362,7 @@ public class Passport extends Activity {
                 ((TextView)findViewById(R.id.step3_text)).setTextColor(r.getColor(R.color.irmared));
             case SCREEN_PASSPORT:
                 ((TextView)findViewById(R.id.step2_text)).setTextColor(r.getColor(R.color.irmared));
+            case SCREEN_BAC:
                 ((TextView)findViewById(R.id.step1_text)).setTextColor(r.getColor(R.color.irmared));
             case SCREEN_START:
                 ((TextView)findViewById(R.id.step_text)).setTextColor(r.getColor(R.color.irmared));
@@ -354,10 +372,77 @@ public class Passport extends Activity {
     private void advanceScreen() {
         switch (screen) {
         case SCREEN_START:
-            setContentView(R.layout.enroll_activity_issue);
-            screen = SCREEN_ISSUE; // Skip the passport screen for now
+            setContentView(R.layout.enroll_activity_bac);
+            screen = SCREEN_BAC;
+            updateProgressCounter();
+            enableContinueButton();
+
+            // Restore the BAC input fields from the settings, if present
+            long bacDob = settings.getLong("enroll_bac_dob", 0);
+            long bacDoe = settings.getLong("enroll_bac_doe", 0);
+            String docnr = settings.getString("enroll_bac_docnr", "");
+
+            EditText docnrEditText = (EditText) findViewById(R.id.doc_nr_edittext);
+            EditText dobEditText = (EditText) findViewById(R.id.dob_edittext);
+            EditText doeEditText = (EditText) findViewById(R.id.doe_edittext);
+
+            Calendar c = Calendar.getInstance();
+            if (bacDob != 0) {
+                c.setTimeInMillis(bacDob);
+                setDateEditText(dobEditText, c);
+            }
+            if (bacDoe != 0) {
+                c.setTimeInMillis(bacDoe);
+                setDateEditText(doeEditText, c);
+            }
+            if (docnr.length() != 0)
+                docnrEditText.setText(docnr);
+
+            break;
+
+        case SCREEN_BAC:
+            // Store the entered document number in the settings.
+            // (The dates of birth and expiry have already been stored in the settings
+            // by this time by the DatePickerDialog's OnDateSetListener.)
+            docnrEditText = (EditText) findViewById(R.id.doc_nr_edittext);
+            dobEditText = (EditText) findViewById(R.id.dob_edittext);
+            doeEditText = (EditText) findViewById(R.id.doe_edittext);
+
+            bacDob = 0;
+            bacDoe = 0;
+            try {
+                String dobString = dobEditText.getText().toString();
+                String doeString = doeEditText.getText().toString();
+                if (dobString.length() != 0)
+                    bacDob = hrDateFormat.parse(dobString).getTime();
+                if (doeString.length() != 0)
+                    bacDoe = hrDateFormat.parse(doeString).getTime();
+            } catch (ParseException e) {
+                // Should not happen: the DOB and DOE EditTexts are set only by the DatePicker's,
+                // OnDateSetListener, which should always set a properly formatted string.
+                e.printStackTrace();
+            }
+
+            settings.edit()
+                    .putLong("enroll_bac_dob", bacDob)
+                    .putLong("enroll_bac_doe", bacDoe)
+                    .putString("enroll_bac_docnr", docnrEditText.getText().toString())
+                    .apply();
+
+            // Update the UI
+            screen = SCREEN_PASSPORT;
+            setContentView(R.layout.enroll_activity_passport);
             invalidateOptionsMenu();
             updateProgressCounter();
+            break;
+
+        // This case is currently never reached
+        case SCREEN_PASSPORT:
+            setContentView(R.layout.enroll_activity_issue);
+            screen = SCREEN_ISSUE;
+            updateProgressCounter();
+
+            // Do it!
             enroll(new Handler() {
                 @Override
                 public void handleMessage(Message msg) {
@@ -373,13 +458,7 @@ public class Passport extends Activity {
                     }
                 }
             });
-            break;
 
-        // This case is currently never reached
-        case SCREEN_PASSPORT:
-            setContentView(R.layout.enroll_activity_issue);
-            screen = SCREEN_ISSUE;
-            updateProgressCounter();
             break;
 
         case SCREEN_ISSUE:
@@ -405,6 +484,52 @@ public class Passport extends Activity {
         storeCard();
         setResult(RESULT_OK, data);
         super.finish();
+    }
+
+    public void onDateTouch(View v) {
+        final EditText dateView = (EditText) v;
+        final String name = v.getId() == R.id.dob_edittext ? "dob" : "doe";
+        Long current = settings.getLong("enroll_bac_" + name, 0);
+
+        final Calendar c = Calendar.getInstance();
+        if (current != 0)
+            c.setTimeInMillis(current);
+
+        int currentYear = c.get(Calendar.YEAR);
+        int currentMonth = c.get(Calendar.MONTH);
+        int currentDay = c.get(Calendar.DAY_OF_MONTH);
+
+        DatePickerDialog dpd = new DatePickerDialog(this, new DatePickerDialog.OnDateSetListener() {
+            @Override
+            public void onDateSet(DatePicker view, int year, int monthOfYear, int dayOfMonth) {
+                Calendar date = new GregorianCalendar(year, monthOfYear, dayOfMonth);
+                setDateEditText(dateView, date);
+            }
+        }, currentYear, currentMonth, currentDay);
+        dpd.show();
+    }
+
+    private void setDateEditText(EditText dateView, Calendar c) {
+        dateView.setText(hrDateFormat.format(c.getTime()));
+    }
+
+    /**
+     * Get the BAC key using the input from the user from the BAC screen.
+     *
+     * @return The BAC key.
+     * @throws IllegalStateException when the BAC fields in the BAC screen have not been set.
+     */
+    private BACKey getBACKey() throws IOException {
+        long dob = settings.getLong("enroll_bac_dob", 0);
+        long doe = settings.getLong("enroll_bac_doe", 0);
+        String docnr = settings.getString("enroll_bac_docnr", "");
+
+        if (dob == 0 || doe == 0 || docnr.length() == 0)
+            throw new IOException("BAC fields have not been set");
+
+        String dobString = bacDateFormat.format(new Date(dob));
+        String doeString = bacDateFormat.format(new Date(doe));
+        return new BACKey(docnr, dobString, doeString);
     }
 
     @Override

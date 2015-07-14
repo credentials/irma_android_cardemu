@@ -1,0 +1,97 @@
+<?xml version="1.0" encoding="utf-8"?>
+<RelativeLayout xmlns:android="http://schemas.android.com/apk/res/android"
+                android:layout_width="fill_parent"
+                android:layout_height="match_parent"
+                android:background="@color/irmadarkblue">
+
+    <include layout="@layout/irma_background_issue" />
+
+    <RelativeLayout
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:paddingLeft="40dp"
+        android:paddingRight="40dp"
+        android:paddingTop="100dp"
+        android:paddingBottom="60dp">
+
+        <TextView
+            android:id="@+id/bac_title_textview"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:gravity="center"
+            android:textAppearance="?android:attr/textAppearanceLarge"
+            android:textColor="@color/irmadarkblue"
+            android:text="@string/enroll_enter_bac_title"
+            android:textSize="24sp"
+            android:textIsSelectable="true"
+            android:layout_alignParentTop="true"
+            android:layout_centerHorizontal="true"/>
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:textAppearance="?android:attr/textAppearanceMedium"
+            android:text="@string/enroll_enter_bac_desc"
+            android:id="@+id/bac_desc_textview"
+            android:layout_marginTop="20dp"
+            android:textColor="@color/irmadarkblue"
+            android:layout_below="@+id/bac_title_textview"
+            android:layout_alignParentLeft="true"
+            android:layout_alignParentStart="true"/>
+
+        <EditText
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:id="@+id/doc_nr_edittext"
+            android:hint="Document number"
+            android:layout_below="@+id/bac_desc_textview"
+            android:layout_alignParentLeft="true"
+            android:layout_alignParentStart="true"
+            android:layout_marginTop="20dp"
+            android:clickable="false"
+            android:inputType="textCapCharacters"
+            android:layout_alignRight="@+id/dob_edittext"
+            android:layout_alignEnd="@+id/dob_edittext"/>
+
+        <EditText
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:inputType="date"
+            android:ems="10"
+            android:id="@+id/doe_edittext"
+            android:hint="Date of expiry"
+            android:layout_below="@+id/dob_edittext"
+            android:layout_alignParentLeft="true"
+            android:layout_alignParentStart="true"
+            android:onClick="onDateTouch"
+            android:clickable="false"
+            android:focusable="false"/>
+
+        <EditText
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:inputType="date"
+            android:ems="10"
+            android:id="@+id/dob_edittext"
+            android:hint="Date of birth"
+            android:layout_below="@+id/doc_nr_edittext"
+            android:layout_alignParentLeft="true"
+            android:layout_alignParentStart="true"
+            android:onClick="onDateTouch"
+            android:clickable="false"
+            android:focusable="false"
+                />
+
+        <Button
+            style="@style/Irma.Button"
+            android:id="@+id/se_button_continue"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="@string/se_button_continue"
+            android:layout_alignParentBottom="true"
+            android:layout_alignParentRight="true"
+            android:layout_alignParentEnd="true"/>
+
+    </RelativeLayout>
+
+</RelativeLayout>
