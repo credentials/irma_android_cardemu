@@ -27,10 +27,7 @@ import com.google.gson.JsonSyntaxException;
 import com.google.gson.reflect.TypeToken;
 import net.sf.scuba.smartcards.*;
 
-import org.irmacard.cardemu.ByteArrayToBase64TypeAdapter;
-import org.irmacard.cardemu.ProtocolCommandDeserializer;
-import org.irmacard.cardemu.ProtocolResponseSerializer;
-import org.irmacard.cardemu.R;
+import org.irmacard.cardemu.*;
 import org.irmacard.credentials.Attributes;
 import org.irmacard.credentials.CredentialsException;
 import org.irmacard.credentials.idemix.IdemixCredentials;
@@ -628,7 +625,7 @@ public class Passport extends Activity {
             final SSLContext context = SSLContext.getInstance("TLS");
             context.init(null, tmf.getTrustManagers(), null);
 
-            return context.getSocketFactory();
+            return new SecureSSLSocketFactory(context.getSocketFactory());
         } catch (KeyManagementException|NoSuchAlgorithmException|KeyStoreException|CertificateException|IOException e) {
             e.printStackTrace();
             return null;
