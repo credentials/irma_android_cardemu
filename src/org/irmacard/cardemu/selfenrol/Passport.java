@@ -408,9 +408,7 @@ public class Passport extends Activity {
             break;
 
         case SCREEN_BAC:
-            // Store the entered document number in the settings.
-            // (The dates of birth and expiry have already been stored in the settings
-            // by this time by the DatePickerDialog's OnDateSetListener.)
+            // Store the entered document number and dates in the settings.
             docnrEditText = (EditText) findViewById(R.id.doc_nr_edittext);
             dobEditText = (EditText) findViewById(R.id.dob_edittext);
             doeEditText = (EditText) findViewById(R.id.doe_edittext);
