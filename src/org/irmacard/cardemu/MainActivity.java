@@ -8,6 +8,7 @@ import java.io.UnsupportedEncodingException;
 import java.util.*;
 
 import android.text.TextUtils;
+import com.google.gson.JsonElement;
 import net.sf.scuba.smartcards.*;
 import org.apache.http.Header;
 import org.apache.http.entity.StringEntity;
@@ -565,18 +566,26 @@ public class MainActivity extends Activity implements PINDialogListener {
 		if (activityState == STATE_CONNECTING_TO_SERVER) {
 			// this is the message that containts the url to write to
 			JsonParser p = new JsonParser();
-			String write_url = p.parse(data).getAsJsonObject().get("write_url").getAsString();
-			currentWriteURL = write_url;
-			setState(STATE_READY); // This ensures we will be in this block only once
-			postMessage(
-					new ReaderMessage(ReaderMessage.TYPE_EVENT, ReaderMessage.NAME_EVENT_CARDREADERFOUND, null,
-							new EventArguments().withEntry("type", "phone")));
-			postMessage(new ReaderMessage(ReaderMessage.TYPE_EVENT, ReaderMessage.NAME_EVENT_CARDFOUND, null));
+			JsonElement write_url = p.parse(data).getAsJsonObject().get("write_url");
 
-			return;
+			// The server either returns a JSON object containing just the write_url,
+			// or a ReaderMessage which we deal with below. So if we don't find the
+			// write_url, we let the rest of this method deal with it.
+			if (write_url != null) {
+				currentWriteURL = write_url.getAsString();
+				setState(STATE_READY); // This ensures we will be in this block only once
+				postMessage(
+						new ReaderMessage(ReaderMessage.TYPE_EVENT, ReaderMessage.NAME_EVENT_CARDREADERFOUND, null,
+								new EventArguments().withEntry("type", "phone")));
+				postMessage(new ReaderMessage(ReaderMessage.TYPE_EVENT, ReaderMessage.NAME_EVENT_CARDFOUND, null));
+
+				return;
+			}
 		}
 
-		// If we're here, we're done connecting. Parse the data the other end sent to us
+		// If we're here, we're either connecting or received a timeout, and in both
+		// cases we should have received a ReaderMessage. We parse the data the other
+		// end sent to us.
 		ReaderMessage rm;
 		try {
 			Log.i(TAG, "Length (real): " + data);
