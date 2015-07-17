@@ -5,17 +5,10 @@ import java.io.IOException;
 import java.io.InputStreamReader;
 import java.io.StringReader;
 import java.io.UnsupportedEncodingException;
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Timer;
-import java.util.TimerTask;
+import java.util.*;
 
-import net.sf.scuba.smartcards.CardServiceException;
-import net.sf.scuba.smartcards.ProtocolCommand;
-import net.sf.scuba.smartcards.ProtocolResponse;
-import net.sf.scuba.smartcards.ProtocolResponses;
-import net.sf.scuba.smartcards.ResponseAPDU;
+import android.text.TextUtils;
+import net.sf.scuba.smartcards.*;
 import org.apache.http.Header;
 import org.apache.http.entity.StringEntity;
 import org.irmacard.android.util.credentials.AndroidWalker;
@@ -32,7 +25,10 @@ import org.irmacard.credentials.CredentialsException;
 import org.irmacard.credentials.idemix.IdemixCredentials;
 import org.irmacard.credentials.idemix.info.IdemixKeyStore;
 import org.irmacard.credentials.idemix.smartcard.IRMACard;
+import org.irmacard.credentials.idemix.smartcard.IRMAIdemixCredential;
 import org.irmacard.credentials.idemix.smartcard.SmartCardEmulatorService;
+import org.irmacard.credentials.idemix.smartcard.VerificationStartListener;
+import org.irmacard.credentials.info.AttributeDescription;
 import org.irmacard.credentials.info.CredentialDescription;
 import org.irmacard.credentials.info.DescriptionStore;
 import org.irmacard.credentials.info.InfoException;
@@ -72,6 +68,7 @@ import com.google.zxing.integration.android.IntentIntegrator;
 import com.google.zxing.integration.android.IntentResult;
 import com.loopj.android.http.AsyncHttpClient;
 import com.loopj.android.http.AsyncHttpResponseHandler;
+import org.irmacard.idemix.util.VerificationSetupData;
 
 
 public class MainActivity extends Activity implements PINDialogListener {
@@ -87,7 +84,10 @@ public class MainActivity extends Activity implements PINDialogListener {
 
     // Previewed list of credentials
     ExpandableCredentialsAdapter credentialListAdapter;
-	
+
+    // List to temporarily store verification information passed to us by IRMACard
+    List<VerificationSetupData> verificationList = new ArrayList<>();
+
 	// State variables
 	private IsoDep lastTag = null;
     private IRMACard card = null;
@@ -134,6 +134,13 @@ public class MainActivity extends Activity implements PINDialogListener {
 
         if (card == null)
             card = getDefaultCard();
+
+        card.addVerificationListener(new VerificationStartListener() {
+            @Override
+            public void verificationStarting(VerificationSetupData data) {
+                verificationList.add(data);
+            }
+        });
 
         is = new IdemixService(new SmartCardEmulatorService(card));
     }
@@ -724,9 +731,10 @@ public class MainActivity extends Activity implements PINDialogListener {
 	}
 	
 	public void askForPIN() {
-		setState(STATE_WAITING_FOR_PIN);
-		DialogFragment newFragment = EnterPINDialogFragment.getInstance(tries);
-	    newFragment.show(getFragmentManager(), "pinentry");
+//		setState(STATE_WAITING_FOR_PIN);
+//		DialogFragment newFragment = EnterPINDialogFragment.getInstance(tries);
+//	    newFragment.show(getFragmentManager(), "pinentry");
+        onPINEntry("0000");
 	}
 	
 	@Override
@@ -857,10 +865,153 @@ public class MainActivity extends Activity implements PINDialogListener {
 				}
 			}
 
-			// Post result to browser
-			postMessage(result);
+			if (verificationList.size() == 0) {
+				// Post result to browser
+				postMessage(result);
+			} else {
+				// We're doing disclosure proofs: ask for permission first
+				askForVerificationPermission(result);
+			}
 		}
-	}	
+	}
+
+    /**
+     * Show a dialog to the user asking him if he wishes to disclose the credentials
+     * and attributes contained in the verificationList. The disclosure proof(s) are
+     * assumed to be contained in the parameter msg. If the user consents, then
+     * msg will be posted to the server normally. If he answers no, the connection to
+     * the server will be aborted.
+     *
+     * This function supports the simultaneous disclosure of multiple credentials
+     * (although that currently never happens).
+     *
+     * @param msg The disclosure proofs to be sent if the user consents
+     */
+    private void askForVerificationPermission(final ReaderMessage msg) {
+        String question = null;
+        try {
+            question = buildVerificationPermissionQuestion(verificationList);
+        } catch (InfoException|CardServiceException|CredentialsException e) {
+            e.printStackTrace();
+            // If something went wrong we can't properly ask for permission,
+            // so we don't want to send the disclosure proof. So abort the connection.
+            abortConnection(msg);
+            setState(STATE_IDLE);
+        }
+
+        AlertDialog.Builder builder = new AlertDialog.Builder(this);
+        builder.setMessage(question)
+                .setPositiveButton("Yes", new DialogInterface.OnClickListener() {
+                    @Override
+                    public void onClick(DialogInterface dialog, int which) {
+                        postMessage(msg);
+                    }
+                })
+                .setNegativeButton("No", new DialogInterface.OnClickListener() {
+                    @Override
+                    public void onClick(DialogInterface dialog, int which) {
+                        abortConnection(msg);
+                        setState(STATE_IDLE);
+                    }
+                })
+                .show();
+
+        verificationList.clear();
+    }
+
+    /**
+     * Helper function to build the question to be asked to the user.
+     *
+     * @param verificationList The list of credentials that will be verified.
+     * @return The question.
+     * @throws InfoException
+     * @throws CardServiceException
+     * @throws CredentialsException
+     */
+    private String buildVerificationPermissionQuestion(List<VerificationSetupData> verificationList)
+    throws InfoException, CardServiceException, CredentialsException {
+        StringBuilder sb = new StringBuilder();
+        sb.append("The following credential");
+        if (verificationList.size() > 1)
+            sb.append('s');
+        sb.append(" and attributes will be verified:\n\n");
+
+        IdemixCredentials ic = new IdemixCredentials(is);
+
+        for (VerificationSetupData entry: verificationList) {
+            CredentialDescription desc
+                    = DescriptionStore.getInstance().getCredentialDescription(entry.getID());
+            List<AttributeDescription> attrDescs = desc.getAttributes();
+            List<Short> attrIds = disclosureMaskToList(entry.getDisclosureMask());
+            Attributes attrs = ic.getAttributes(desc);
+
+            String credName = desc.getName();
+            sb.append(credName).append("\n");
+            for (short s : attrIds) {
+                String attrValue = new String(attrs.get(attrDescs.get(s).getName()));
+                sb.append(" - ")
+                        .append(attrDescs.get(s).getName())
+                        .append(": ").append(attrValue).append("\n");
+            }
+            sb.append("\n");
+        }
+
+        sb.append("If you agree, this information will be sent to the verifier at ")
+                .append(currentWriteURL)
+                .append(". Proceed?");
+
+        return sb.toString();
+    }
+
+    /**
+     * Aborts the connection to the server: sends ISO7816.SW_COMMAND_NOT_ALLOWED.
+     *
+     * @param msg The message that would have been sent otherwise
+     *            (needed for its id).
+     */
+    private void abortConnection(ReaderMessage msg) {
+        ResponseAPDU response = sw(ISO7816.SW_COMMAND_NOT_ALLOWED); // TODO is this the appropriate response?
+        ProtocolResponses responses = new ProtocolResponses();
+
+        responses.put("startprove", new ProtocolResponse("startprove", response));
+        ReaderMessage rm = new ReaderMessage(
+                ReaderMessage.TYPE_RESPONSE,
+                ReaderMessage.NAME_COMMAND_TRANSMIT,
+                msg.id,
+                new ResponseArguments(responses));
+        postMessage(rm);
+    }
+
+    // Helper function to build a ResponseAPDU from a status message. Copied from IRMACard.java
+    private static ResponseAPDU sw(short status) {
+        byte msbyte = (byte) ((byte) (status >> 8) & ((byte) 0xff));
+        byte lsbyte = (byte) (((byte) status) & ((byte) 0xff));
+        return new ResponseAPDU(new byte[] {msbyte, lsbyte});
+    }
+
+    /**
+     * Converts an attribute disclosure byte mask (from VerificationSetupData)
+     * into a list of shorts containing the IDs of the disclosed attributes.
+     * In this byte mask, the rightmost bit (master secret) is always 0 and the
+     * next bit (metadata) is always 1. These are not taken into account.
+     * E.g. 00101010 will be converted into {1, 3} (note that the IDs are zero-based).
+     *
+     * @param mask The byte mask.
+     * @return The list of disclosed attribute IDs.
+     */
+    private static List<Short> disclosureMaskToList(short mask) {
+        List<Short> list = new ArrayList<>();
+
+        // We start at 2 to skip the master secret and metadata attributes,
+        // which are never and always disclosed, respectively.
+        for (short i = 2; i < 14; i++) { // Currently there can be only six attributes, but that may change
+            if ((mask & (1 << i)) != 0) {
+                list.add((short)(i-2));
+            }
+        }
+
+        return list;
+    }
 
 	@Override
 	public void onPINEntry(String dialogPincode) {
