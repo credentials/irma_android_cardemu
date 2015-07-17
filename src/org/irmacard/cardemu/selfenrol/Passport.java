@@ -28,6 +28,7 @@ import com.google.gson.reflect.TypeToken;
 import net.sf.scuba.smartcards.*;
 
 import org.irmacard.cardemu.*;
+import org.irmacard.cardemu.BuildConfig;
 import org.irmacard.credentials.Attributes;
 import org.irmacard.credentials.CredentialsException;
 import org.irmacard.credentials.idemix.IdemixCredentials;
@@ -102,6 +103,12 @@ public class Passport extends Activity {
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
+
+        // Disable screenshots in release builds
+        if (!BuildConfig.DEBUG) {
+            getWindow().setFlags(WindowManager.LayoutParams.FLAG_SECURE, WindowManager.LayoutParams.FLAG_SECURE);
+        }
+
         // NFC stuff
         nfcA = NfcAdapter.getDefaultAdapter(getApplicationContext());
         mPendingIntent = PendingIntent.getActivity(this, 0,

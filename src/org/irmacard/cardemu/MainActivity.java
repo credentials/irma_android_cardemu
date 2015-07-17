@@ -8,6 +8,7 @@ import java.io.UnsupportedEncodingException;
 import java.util.*;
 
 import android.text.TextUtils;
+import android.view.WindowManager;
 import com.google.gson.JsonElement;
 import net.sf.scuba.smartcards.*;
 import org.apache.http.Header;
@@ -287,6 +288,12 @@ public class MainActivity extends Activity implements PINDialogListener {
 	@Override
 	protected void onCreate(Bundle savedInstanceState) {
 		super.onCreate(savedInstanceState);
+
+		// Disable screenshots in release builds
+		if (!BuildConfig.DEBUG) {
+			getWindow().setFlags(WindowManager.LayoutParams.FLAG_SECURE, WindowManager.LayoutParams.FLAG_SECURE);
+		}
+
 		setContentView(R.layout.activity_main);
 		loadCard();
 
