@@ -18,12 +18,14 @@ public class PassportDataMessageSerializer
         public JsonElement serialize(PassportDataMessage src, Type typeOfSrc, JsonSerializationContext context) {
             JsonObject obj = new JsonObject();
 
+            String sessionToken = src.getSessionToken();
             String imsi = src.getImsi();
             SODFile sodFile = src.getSodFile();
             DG1File dg1File = src.getDg1File();
             DG15File dg15File = src.getDg15File();
             byte[] response = src.getResponse();
 
+            obj.addProperty("sessionToken", sessionToken);
             obj.addProperty("imsi", imsi);
 
             obj.addProperty("sodFile", context.serialize(sodFile.getEncoded()).getAsString());
