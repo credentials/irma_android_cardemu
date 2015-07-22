@@ -12,7 +12,6 @@ import android.telephony.TelephonyManager;
 import android.text.Editable;
 import android.text.Html;
 import android.text.TextWatcher;
-import android.text.method.KeyListener;
 import android.text.method.LinkMovementMethod;
 import android.util.Log;
 import android.view.*;
@@ -127,6 +126,7 @@ public class Passport extends Activity {
         enrollServerUrl = settings.getString("enroll_server_url", "");
         if (enrollServerUrl.length() == 0)
             enrollServerUrl = getString(R.string.enroll_default_url);
+        client = new HttpClient(gson, getSocketFactory());
 
         if(getIntent() != null) {
             onNewIntent(getIntent());
@@ -434,20 +434,43 @@ public class Passport extends Activity {
                     .putString("enroll_bac_docnr", docnrEditText.getText().toString())
                     .apply();
 
+            // Get the BasicClientMessage containing our nonce to send to the passport.
+            getEnrollmentSession(new Handler() {
+                @Override
+                public void handleMessage(Message msg) {
+                    EnrollmentStartResult result = (EnrollmentStartResult) msg.obj;
+
+                    if (result.exception != null) { // Something went wrong
+                        showErrorScreen(result.errorId, result.exception);
+                    }
+                    else {
+                        enrollSession = result.msg;
+                    }
+                }
+            });
+
             // Update the UI
             screen = SCREEN_PASSPORT;
             setContentView(R.layout.enroll_activity_passport);
             invalidateOptionsMenu();
             updateProgressCounter();
+
             break;
 
-        // This case is currently never reached
         case SCREEN_PASSPORT:
             setContentView(R.layout.enroll_activity_issue);
             screen = SCREEN_ISSUE;
             updateProgressCounter();
 
             // Do it!
+            // POSSIBLE CAVEAT: If we are here, then it is because the passport-present-intent called advanceFunction().
+            // In principle, this can happen as soon as the app advances from SCREEN_BAC to SCREEN_PASSPORT - that is,
+            // when the code from the case above this one runs. In that case statement, we fetch an enrollment session
+            // asynchroneously. This means that the enroll() method (which assumes an enrollment session has been
+            // set in the member enrollSession) could conceivably be invoked before this member is set.
+            // However, assuming the server responds to our get-session-request at normal speeds, the user would have
+            // to put his phone on the passport absurdly fast to achieve this, so for now we simply assume this does
+            // not happen. TODO prevent this from going wrong, perhaps using some timer
             enroll(new Handler() {
                 @Override
                 public void handleMessage(Message msg) {
@@ -713,7 +736,6 @@ public class Passport extends Activity {
         return sb.toString();
     }
 
-    Gson gson;
     String serverUrl;
 
     /**
@@ -762,10 +784,74 @@ public class Passport extends Activity {
         }
     }
 
+    final Gson gson = new GsonBuilder()
+            .registerTypeAdapter(ProtocolCommand.class, new ProtocolCommandDeserializer())
+            .registerTypeAdapter(ProtocolResponse.class, new ProtocolResponseSerializer())
+            .registerTypeHierarchyAdapter(byte[].class, new ByteArrayToBase64TypeAdapter())
+            .create();
+    HttpClient client = null;
+    EnrollmentStartMessage enrollSession = null;
+
+    /**
+     * Simple class to store the result of getEnrollmentSession
+     * (either an EnrollmentStartMessage or an exception plus error message id (use R.strings))
+     */
+    private class EnrollmentStartResult {
+        public EnrollmentStartMessage msg = null;
+        public HttpClientException exception = null;
+        public int errorId = 0;
+
+        public EnrollmentStartResult(EnrollmentStartMessage msg) {
+            this(msg, null, 0);
+        }
+
+        public EnrollmentStartResult(HttpClientException exception) {
+            this(null, exception, 0);
+        }
+
+        public EnrollmentStartResult(HttpClientException exception, int errorId) {
+            this(null, exception, errorId);
+        }
+
+        public EnrollmentStartResult(EnrollmentStartMessage msg, HttpClientException exception, int errorId) {
+            this.msg = msg;
+            this.exception = exception;
+            this.errorId = errorId;
+        }
+    }
+
+    public void getEnrollmentSession(final Handler uiHandler) {
+        serverUrl  = "http://" + enrollServerUrl + ":8080/irma_mno_server/api/v1";
+
+        AsyncTask<Void, Void, EnrollmentStartResult> task = new AsyncTask<Void, Void, EnrollmentStartResult>() {
+            @Override
+            protected EnrollmentStartResult doInBackground(Void... params) {
+                try {
+                    EnrollmentStartMessage msg = client.doGet(EnrollmentStartMessage.class, serverUrl + "/start");
+                    return new EnrollmentStartResult(msg);
+                } catch (HttpClientException e) { // TODO
+                    if (e.cause instanceof JsonSyntaxException)
+                        return new EnrollmentStartResult(e, R.string.error_enroll_invalidresponse);
+                    else
+                        return new EnrollmentStartResult(e, R.string.error_enroll_cantconnect);
+                }
+            }
+
+            @Override
+            protected void onPostExecute(EnrollmentStartResult result) {
+                Message msg = Message.obtain();
+                msg.obj = result;
+                uiHandler.sendMessage(msg);
+            }
+        }.execute();
+    }
+
+
     /**
      * Do the enrolling and send a message to uiHandler when done. If something
      * went wrong, the .obj of the message sent to uiHandler will be an exception;
      * if everything went OK the .obj will be null.
+     * TODO return our result properly using a class like EnrollmentStartResult above
      *
      * @param uiHandler The handler to message when done.
      */
@@ -773,20 +859,13 @@ public class Passport extends Activity {
         serverUrl  = "http://" + enrollServerUrl + ":8080/irma_mno_server/api/v1";
 
         // Doing HTTP(S) stuff on the main thread is not allowed.
-        AsyncTask<Void, Void, Message> task = new AsyncTask<Void, Void, Message>() {
-            final Gson gson = new GsonBuilder()
-                    .registerTypeAdapter(ProtocolCommand.class, new ProtocolCommandDeserializer())
-                    .registerTypeAdapter(ProtocolResponse.class, new ProtocolResponseSerializer())
-                    .registerTypeHierarchyAdapter(byte[].class, new ByteArrayToBase64TypeAdapter())
-                    .create();
-            final HttpClient client = new HttpClient(gson, getSocketFactory());
-
+        AsyncTask<EnrollmentStartMessage, Void, Message> task = new AsyncTask<EnrollmentStartMessage, Void, Message>() {
             @Override
-            protected Message doInBackground(Void... params) {
+            protected Message doInBackground(EnrollmentStartMessage... params) {
                 Message msg = Message.obtain();
                 try {
                     // Get a session token
-                    EnrollmentStartMessage session = client.doGet(EnrollmentStartMessage.class, serverUrl + "/start");
+                    EnrollmentStartMessage session = params[0];
 
                     // Get a list of credential that the client can issue
                     BasicClientMessage bcm = new BasicClientMessage(session.getSessionToken());
@@ -854,7 +933,7 @@ public class Passport extends Activity {
             protected void onPostExecute(Message msg) {
                 uiHandler.sendMessage(msg);
             }
-        }.execute();
+        }.execute(enrollSession);
     }
 
 
