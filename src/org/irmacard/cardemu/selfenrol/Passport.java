@@ -38,10 +38,7 @@ import org.irmacard.credentials.info.CredentialDescription;
 import org.irmacard.credentials.info.InfoException;
 import org.irmacard.idemix.IdemixService;
 import org.irmacard.idemix.IdemixSmartcard;
-import org.irmacard.mno.common.BasicClientMessage;
-import org.irmacard.mno.common.EnrollmentStartMessage;
-import org.irmacard.mno.common.RequestFinishIssuanceMessage;
-import org.irmacard.mno.common.RequestStartIssuanceMessage;
+import org.irmacard.mno.common.*;
 import org.jmrtd.BACKey;
 import org.jmrtd.PassportService;
 
@@ -282,7 +279,11 @@ public class Passport extends Activity {
 
         try {
             passportService.doBAC(getBACKey());
-            // TODO Active Authentication
+            passportMsg = new PassportDataMessage(enrollSession.getSessionToken(), this.imsi, passportService);
+            if (!passportMsg.readPassport(enrollSession.getNonce())) {
+                showErrorScreen(R.string.error_enroll_passporterror);
+                return;
+            }
             advanceScreen();
         } catch (CardServiceException e) {
             showErrorScreen(R.string.error_enroll_bacfailed, e);
@@ -462,6 +463,10 @@ public class Passport extends Activity {
             screen = SCREEN_ISSUE;
             updateProgressCounter();
 
+            // Save the card before messing with it so we can roll back if
+            // something goes wrong
+            storeCard();
+
             // Do it!
             // POSSIBLE CAVEAT: If we are here, then it is because the passport-present-intent called advanceFunction().
             // In principle, this can happen as soon as the app advances from SCREEN_BAC to SCREEN_PASSPORT - that is,
@@ -475,9 +480,13 @@ public class Passport extends Activity {
                 @Override
                 public void handleMessage(Message msg) {
                     if (msg.obj == null) {
+                        // Success, save our new credentials
+                        storeCard();
                         enableContinueButton();
                         ((TextView) findViewById(R.id.se_done_text)).setVisibility(View.VISIBLE);
                     } else {
+                        // Rollback the card
+                        loadCard();
                         String errormsg;
                         if (msg.what != 0)
                             showErrorScreen(msg.what, (Exception) msg.obj);
@@ -788,9 +797,11 @@ public class Passport extends Activity {
             .registerTypeAdapter(ProtocolCommand.class, new ProtocolCommandDeserializer())
             .registerTypeAdapter(ProtocolResponse.class, new ProtocolResponseSerializer())
             .registerTypeHierarchyAdapter(byte[].class, new ByteArrayToBase64TypeAdapter())
+            .registerTypeAdapter(PassportDataMessage.class, new PassportDataMessageSerializer())
             .create();
     HttpClient client = null;
     EnrollmentStartMessage enrollSession = null;
+    PassportDataMessage passportMsg = null;
 
     /**
      * Simple class to store the result of getEnrollmentSession
@@ -859,23 +870,34 @@ public class Passport extends Activity {
         serverUrl  = "http://" + enrollServerUrl + ":8080/irma_mno_server/api/v1";
 
         // Doing HTTP(S) stuff on the main thread is not allowed.
-        AsyncTask<EnrollmentStartMessage, Void, Message> task = new AsyncTask<EnrollmentStartMessage, Void, Message>() {
+        AsyncTask<PassportDataMessage, Void, Message> task = new AsyncTask<PassportDataMessage, Void, Message>() {
             @Override
-            protected Message doInBackground(EnrollmentStartMessage... params) {
+            protected Message doInBackground(PassportDataMessage... params) {
                 Message msg = Message.obtain();
                 try {
-                    // Get a session token
-                    EnrollmentStartMessage session = params[0];
+                    // Get a passportMsg token
+                    PassportDataMessage passportMsg = params[0];
+
+                    // Send passport response and let server check it
+                    PassportVerificationResultMessage result = client.doPost(
+                            PassportVerificationResultMessage.class,
+                            serverUrl + "/verify-passport",
+                            passportMsg
+                    );
+
+                    if (result.getResult() != PassportVerificationResult.SUCCESS) {
+                        throw new CardServiceException("Server rejected passport proof");
+                    }
 
                     // Get a list of credential that the client can issue
-                    BasicClientMessage bcm = new BasicClientMessage(session.getSessionToken());
+                    BasicClientMessage bcm = new BasicClientMessage(passportMsg.getSessionToken());
                     Type t = new TypeToken<HashMap<String, Map<String, String>>>() {}.getType();
                     HashMap<String, Map<String, String>> credentialList =
                             client.doPost(t, serverUrl + "/issue/credential-list", bcm);
 
                     // Get them all!
                     for (String credentialType : credentialList.keySet()) {
-                        issue(credentialType, session);
+                        issue(credentialType, passportMsg);
                     }
                 } catch (CardServiceException // Issuing the credential to the card failed
                         |InfoException // VerificationDescription not found in configurarion
@@ -894,7 +916,7 @@ public class Passport extends Activity {
                 return msg;
             }
 
-            private void issue(String credentialType, EnrollmentStartMessage session)
+            private void issue(String credentialType, BasicClientMessage session)
             throws HttpClientException, CardServiceException, InfoException, CredentialsException {
                 // Get the first batch of commands for issuing
                 RequestStartIssuanceMessage startMsg = new RequestStartIssuanceMessage(
@@ -933,7 +955,7 @@ public class Passport extends Activity {
             protected void onPostExecute(Message msg) {
                 uiHandler.sendMessage(msg);
             }
-        }.execute(enrollSession);
+        }.execute(passportMsg);
     }
 
 
