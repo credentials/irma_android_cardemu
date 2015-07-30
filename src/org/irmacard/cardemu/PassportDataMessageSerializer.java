@@ -32,10 +32,6 @@ public class PassportDataMessageSerializer
             obj.addProperty("dg1File", context.serialize(dg1File.getEncoded()).getAsString());
             obj.addProperty("dg15File", context.serialize(dg15File.getEncoded()).getAsString());
 
-            // Ik hoop dat die context ook de ByteArrayToBase64TypeAdapter heeft
-            // anders kun je zelf even een new ByteArrayToBase64TypeAdapter(); maken en .serialize aanroepen.
-
-
             obj.addProperty("response", context.serialize(response).getAsString());
 
             return obj;

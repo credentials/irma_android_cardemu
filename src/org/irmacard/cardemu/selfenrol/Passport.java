@@ -57,6 +57,9 @@ import java.util.*;
 import java.util.regex.Pattern;
 
 import com.google.gson.GsonBuilder;
+import org.jmrtd.lds.DG15File;
+import org.jmrtd.lds.DG1File;
+import org.jmrtd.lds.SODFile;
 
 import javax.net.ssl.HttpsURLConnection;
 import javax.net.ssl.SSLContext;
@@ -279,17 +282,55 @@ public class Passport extends Activity {
 
         try {
             passportService.doBAC(getBACKey());
-            passportMsg = new PassportDataMessage(enrollSession.getSessionToken(), this.imsi, passportService);
-            if (!passportMsg.readPassport(enrollSession.getNonce())) {
-                showErrorScreen(R.string.error_enroll_passporterror);
-                return;
-            }
+            passportMsg = generatePassportDataMessage(enrollSession.getNonce(),
+                    enrollSession.getSessionToken(), this.imsi, passportService);
+
+//            if (passportMsg.getResponse().length == 0) {
+//                showErrorScreen(R.string.error_enroll_passporterror);
+//                return;
+//            } // Disabled for now, I want to see what happens next
+
+            passportMsg.verify(enrollSession.getNonce());
             advanceScreen();
         } catch (CardServiceException e) {
             showErrorScreen(R.string.error_enroll_bacfailed, e);
         } catch (IOException e) {
             showErrorScreen(R.string.error_enroll_nobacdata, e);
         }
+    }
+
+    /**
+     * Do the AA protocol with the passport using the passportService, and put the response in a new
+     * PassportDataMessage.
+     */
+    public PassportDataMessage generatePassportDataMessage(byte[] challenge, String sessionToken, String imsi,
+                                                           PassportService passportService)
+    throws CardServiceException, IOException {
+        PassportDataMessage msg = new PassportDataMessage(sessionToken, imsi);
+
+        msg.setDg1File(new DG1File(passportService.getInputStream(PassportService.EF_DG1)));
+        msg.setSodFile(new SODFile(passportService.getInputStream(PassportService.EF_SOD)));
+        msg.setDg15File(new DG15File(passportService.getInputStream(PassportService.EF_DG15)));
+
+        //Active Authentication
+        //The following 5 rules do the same as the following commented out command, but set the expected length field to 0 instead of 256.
+        //This can be replaced by the following rule once JMRTD is fixed.
+        //response = passportService.sendInternalAuthenticate(passportService.getWrapper(), challenge);
+        CommandAPDU capdu = new CommandAPDU(ISO7816.CLA_ISO7816, ISO7816.INS_INTERNAL_AUTHENTICATE, 0x00, 0x00,
+                challenge, 256);
+        // System.out.println("CAPDU: " + Hex.bytesToSpacedHexString(capdu.getBytes()));
+        APDUWrapper wrapper = passportService.getWrapper();
+        CommandAPDU wrappedCApdu = wrapper.wrap(capdu);
+
+        //  System.out.println("CAPDU: " + Hex.bytesToSpacedHexString(wrappedCApdu.getBytes()));
+        ResponseAPDU rapdu = passportService.transmit(wrappedCApdu);
+        // int sw = rapdu.getSW();
+        // System.out.println("STATUS WORDS: "+ sw);
+        rapdu = wrapper.unwrap(rapdu, rapdu.getBytes().length);
+        byte[] response = rapdu.getData();
+        msg.setResponse(response);
+
+        return msg;
     }
 
     private void enableContinueButton(){
