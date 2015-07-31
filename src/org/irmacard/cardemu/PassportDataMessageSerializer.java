@@ -3,6 +3,7 @@ package org.irmacard.cardemu;
 import android.util.Base64;
 import com.google.gson.*;
 import org.irmacard.mno.common.PassportDataMessage;
+import org.jmrtd.lds.DG14File;
 import org.jmrtd.lds.DG15File;
 import org.jmrtd.lds.DG1File;
 import org.jmrtd.lds.SODFile;
@@ -22,6 +23,7 @@ public class PassportDataMessageSerializer
             String imsi = src.getImsi();
             SODFile sodFile = src.getSodFile();
             DG1File dg1File = src.getDg1File();
+            DG14File dg14File = src.getDg14File();
             DG15File dg15File = src.getDg15File();
             byte[] response = src.getResponse();
 
@@ -30,6 +32,7 @@ public class PassportDataMessageSerializer
 
             obj.addProperty("sodFile", context.serialize(sodFile.getEncoded()).getAsString());
             obj.addProperty("dg1File", context.serialize(dg1File.getEncoded()).getAsString());
+            obj.addProperty("dg14File", context.serialize(dg14File.getEncoded()).getAsString());
             obj.addProperty("dg15File", context.serialize(dg15File.getEncoded()).getAsString());
 
             obj.addProperty("response", context.serialize(response).getAsString());

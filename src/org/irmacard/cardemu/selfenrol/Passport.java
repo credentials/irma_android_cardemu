@@ -58,6 +58,7 @@ import java.util.*;
 import java.util.regex.Pattern;
 
 import com.google.gson.GsonBuilder;
+import org.jmrtd.lds.DG14File;
 import org.jmrtd.lds.DG15File;
 import org.jmrtd.lds.DG1File;
 import org.jmrtd.lds.SODFile;
@@ -315,6 +316,7 @@ public class Passport extends Activity {
 
         msg.setDg1File(new DG1File(passportService.getInputStream(PassportService.EF_DG1)));
         msg.setSodFile(new SODFile(passportService.getInputStream(PassportService.EF_SOD)));
+        msg.setDg14File(new DG14File(passportService.getInputStream(PassportService.EF_DG14)));
         msg.setDg15File(new DG15File(passportService.getInputStream(PassportService.EF_DG15)));
 
         // The doAA() method does not use its first three arguments, it only passes the challenge
