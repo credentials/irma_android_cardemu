@@ -5,6 +5,7 @@ import android.content.*;
 import android.content.res.Resources;
 import android.nfc.NfcAdapter;
 import android.nfc.Tag;
+import android.nfc.TagLostException;
 import android.nfc.tech.IsoDep;
 import android.os.*;
 import android.provider.Settings;
@@ -260,6 +261,10 @@ public class Passport extends Activity {
         assert (tagFromIntent != null);
 
         IsoDep tag = IsoDep.get(tagFromIntent);
+        // Prevents "Tag is lost" messages (at least on a Nexus 5)
+        // TODO how about on other devices?
+        tag.setTimeout(1500);
+
         CardService cs = new IsoDepCardService(tag);
         PassportService passportService = null;
 
@@ -285,10 +290,10 @@ public class Passport extends Activity {
             passportMsg = generatePassportDataMessage(enrollSession.getNonce(),
                     enrollSession.getSessionToken(), this.imsi, passportService);
 
-//            if (passportMsg.getResponse().length == 0) {
-//                showErrorScreen(R.string.error_enroll_passporterror);
-//                return;
-//            } // Disabled for now, I want to see what happens next
+            if (passportMsg.getResponse() == null || passportMsg.getResponse().length == 0) {
+                showErrorScreen(R.string.error_enroll_passporterror);
+                return;
+            }
 
             passportMsg.verify(enrollSession.getNonce());
             advanceScreen();
@@ -316,8 +321,7 @@ public class Passport extends Activity {
         //The following 5 rules do the same as the following commented out command, but set the expected length field to 0 instead of 256.
         //This can be replaced by the following rule once JMRTD is fixed.
         //response = passportService.sendInternalAuthenticate(passportService.getWrapper(), challenge);
-        CommandAPDU capdu = new CommandAPDU(ISO7816.CLA_ISO7816, ISO7816.INS_INTERNAL_AUTHENTICATE, 0x00, 0x00,
-                challenge, 256);
+        CommandAPDU capdu = new CommandAPDU(ISO7816.CLA_ISO7816, ISO7816.INS_INTERNAL_AUTHENTICATE, 0x00, 0x00, challenge, 256);
         // System.out.println("CAPDU: " + Hex.bytesToSpacedHexString(capdu.getBytes()));
         APDUWrapper wrapper = passportService.getWrapper();
         CommandAPDU wrappedCApdu = wrapper.wrap(capdu);
