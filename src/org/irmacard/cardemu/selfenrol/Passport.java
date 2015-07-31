@@ -317,22 +317,9 @@ public class Passport extends Activity {
         msg.setSodFile(new SODFile(passportService.getInputStream(PassportService.EF_SOD)));
         msg.setDg15File(new DG15File(passportService.getInputStream(PassportService.EF_DG15)));
 
-        //Active Authentication
-        //The following 5 rules do the same as the following commented out command, but set the expected length field to 0 instead of 256.
-        //This can be replaced by the following rule once JMRTD is fixed.
-        //response = passportService.sendInternalAuthenticate(passportService.getWrapper(), challenge);
-        CommandAPDU capdu = new CommandAPDU(ISO7816.CLA_ISO7816, ISO7816.INS_INTERNAL_AUTHENTICATE, 0x00, 0x00, challenge, 256);
-        // System.out.println("CAPDU: " + Hex.bytesToSpacedHexString(capdu.getBytes()));
-        APDUWrapper wrapper = passportService.getWrapper();
-        CommandAPDU wrappedCApdu = wrapper.wrap(capdu);
-
-        //  System.out.println("CAPDU: " + Hex.bytesToSpacedHexString(wrappedCApdu.getBytes()));
-        ResponseAPDU rapdu = passportService.transmit(wrappedCApdu);
-        // int sw = rapdu.getSW();
-        // System.out.println("STATUS WORDS: "+ sw);
-        rapdu = wrapper.unwrap(rapdu, rapdu.getBytes().length);
-        byte[] response = rapdu.getData();
-        msg.setResponse(response);
+        // The doAA() method does not use its first three arguments, it only passes the challenge
+        // on to another functio within JMRTD.
+        msg.setResponse(passportService.doAA(null, null, null, challenge));
 
         return msg;
     }
