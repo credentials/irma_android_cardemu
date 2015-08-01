@@ -81,6 +81,11 @@ public class ExpandableCredentialsAdapter extends BaseExpandableListAdapter {
         return attribute_idx;
     }
 
+
+    public Attributes getAttributes(CredentialDescription cd) {
+        return credentialAttributes.get(cd);
+    }
+
     @Override
     public boolean hasStableIds() {
         return true;

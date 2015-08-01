@@ -7,15 +7,15 @@ import java.io.StringReader;
 import java.io.UnsupportedEncodingException;
 import java.util.*;
 
-import android.text.TextUtils;
 import android.view.WindowManager;
 import com.google.gson.JsonElement;
 import net.sf.scuba.smartcards.*;
 import org.apache.http.Header;
 import org.apache.http.entity.StringEntity;
 import org.irmacard.android.util.credentials.AndroidWalker;
-import org.irmacard.android.util.pindialog.EnterPINDialogFragment;
+import org.irmacard.android.util.credentials.CredentialPackage;
 import org.irmacard.android.util.pindialog.EnterPINDialogFragment.PINDialogListener;
+import org.irmacard.android.util.credentialdetails.*;
 import org.irmacard.cardemu.messages.EventArguments;
 import org.irmacard.cardemu.messages.PinResultArguments;
 import org.irmacard.cardemu.messages.ReaderMessage;
@@ -27,7 +27,6 @@ import org.irmacard.credentials.CredentialsException;
 import org.irmacard.credentials.idemix.IdemixCredentials;
 import org.irmacard.credentials.idemix.info.IdemixKeyStore;
 import org.irmacard.credentials.idemix.smartcard.IRMACard;
-import org.irmacard.credentials.idemix.smartcard.IRMAIdemixCredential;
 import org.irmacard.credentials.idemix.smartcard.SmartCardEmulatorService;
 import org.irmacard.credentials.idemix.smartcard.VerificationStartListener;
 import org.irmacard.credentials.info.AttributeDescription;
@@ -74,7 +73,9 @@ import org.irmacard.idemix.util.VerificationSetupData;
 
 
 public class MainActivity extends Activity implements PINDialogListener {
-	public static final int REQUEST_CODE = 100;
+	public static final int PASSPORT_REQUEST = 100;
+	private static final int DETAIL_REQUEST = 101;
+
 	private String TAG = "CardEmuMainActivity";
 	private NfcAdapter nfcA;
 	private PendingIntent mPendingIntent;
@@ -104,6 +105,8 @@ public class MainActivity extends Activity implements PINDialogListener {
 	private static final int STATE_READY = 4;
 	private static final int STATE_COMMUNICATING = 5;
 	private static final int STATE_WAITING_FOR_PIN = 6;
+
+
 
 	// Timer for testing card connectivity
 	Timer timer;
@@ -324,8 +327,19 @@ public class MainActivity extends Activity implements PINDialogListener {
 		credentialList.setOnItemLongClickListener(new AdapterView.OnItemLongClickListener() {
 			@Override
 			public boolean onItemLongClick(AdapterView<?> adapterView, View view, int i, long id) {
-				Log.i(TAG, "Credential with index " + i + " and id " + credentialListAdapter.getGroupId(i) + " was longclicked");
-				tryDeleteCredential((CredentialDescription) credentialListAdapter.getGroup(i));
+				try {
+					CredentialDescription cd = (CredentialDescription) adapterView.getItemAtPosition(i);
+					Log.i(TAG, "Credential with index " + i + " containing credential " + cd.getId() + " was " +
+							"longclicked");
+
+					CredentialPackage credential = new CredentialPackage(cd, credentialListAdapter.getAttributes(cd));
+					Intent detailIntent = new Intent(MainActivity.this, CredentialDetailActivity.class);
+					detailIntent.putExtra(CredentialDetailFragment.ARG_ITEM, credential);
+					startActivityForResult(detailIntent, DETAIL_REQUEST);
+				} catch (ClassCastException e) {
+					Log.e(TAG, "Item " + i + " longclicked but was not a CredentialDescription");
+				}
+
 				return true;
 			}
 		});
@@ -731,11 +745,16 @@ public class MainActivity extends Activity implements PINDialogListener {
 	@Override
 	protected void onActivityResult(int requestCode, int resultCode, Intent data) {
 		super.onActivityResult(requestCode, resultCode, data);
-		if (resultCode == RESULT_OK && requestCode == REQUEST_CODE) {
+		if (requestCode == PASSPORT_REQUEST && resultCode == RESULT_OK) {
 			loadCard();
 			updateCardCredentials();
-		} else {
 
+		} else if (requestCode == DETAIL_REQUEST && resultCode == CredentialDetailActivity.RESULT_DELETE) {
+			CredentialDescription cd = (CredentialDescription) data
+					.getSerializableExtra(CredentialDetailActivity.ARG_RESULT_DELETE);
+			tryDeleteCredential(cd);
+
+		} else {
 			IntentResult scanResult = IntentIntegrator
 					.parseActivityResult(requestCode, resultCode, data);
 
@@ -1116,7 +1135,7 @@ public class MainActivity extends Activity implements PINDialogListener {
 				Intent i = new Intent(this, org.irmacard.cardemu.selfenrol.Passport.class);
 				storeCard();
 				i.putExtra("card_json", "loadCard");
-				startActivityForResult(i, REQUEST_CODE);
+				startActivityForResult(i, PASSPORT_REQUEST);
 				return true;
 			case R.id.menu_clear:
 				if (activityState == STATE_IDLE) {

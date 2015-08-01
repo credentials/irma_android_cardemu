@@ -17,4 +17,7 @@
         <!-- All customizations that are NOT specific to a particular API-level can go here. -->
     </style>
 
+    <style name="Irma.Button" parent="@android:style/Widget.Button">
+    </style>
+
 </resources>

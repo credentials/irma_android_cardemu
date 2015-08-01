@@ -11,7 +11,9 @@
 	<string name="pinhint">PIN</string>
 	<string name="pinmessage">Please enter your IRMA pincode</string>
 	<string name="connectserver">Connecting to server</string>
-	
+
+	<string name="title_credential_detail">Credential Detail</string>
+
 	<string name="status_idle">Tap to scan QR</string>
 	<string name="status_connecting">Connecting...</string>
 	<string name="status_connected">Connected to server</string>
