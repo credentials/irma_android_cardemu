@@ -419,6 +419,9 @@ public class Passport extends Activity {
             updateProgressCounter();
             enableContinueButton();
 
+            // Disable context menu, switching enroll server shouldn't be possible here
+            invalidateOptionsMenu();
+
             // Restore the BAC input fields from the settings, if present
             long bacDob = settings.getLong("enroll_bac_dob", 0);
             long bacDoe = settings.getLong("enroll_bac_doe", 0);
@@ -487,7 +490,6 @@ public class Passport extends Activity {
             // Update the UI
             screen = SCREEN_PASSPORT;
             setContentView(R.layout.enroll_activity_passport);
-            invalidateOptionsMenu();
             updateProgressCounter();
 
             break;
