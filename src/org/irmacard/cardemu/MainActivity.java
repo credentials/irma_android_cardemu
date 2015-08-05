@@ -7,13 +7,16 @@ import java.io.StringReader;
 import java.io.UnsupportedEncodingException;
 import java.util.*;
 
-import android.view.WindowManager;
+import android.view.*;
+import android.widget.*;
 import com.google.gson.JsonElement;
 import net.sf.scuba.smartcards.*;
 import org.apache.http.Header;
 import org.apache.http.entity.StringEntity;
 import org.irmacard.android.util.credentials.AndroidWalker;
 import org.irmacard.android.util.credentials.CredentialPackage;
+import org.irmacard.android.util.disclosuredialog.DisclosureDialogFragment;
+import org.irmacard.android.util.disclosuredialog.DisclosureDialogFragment.DisclosureDialogListener;
 import org.irmacard.android.util.pindialog.EnterPINDialogFragment.PINDialogListener;
 import org.irmacard.android.util.credentialdetails.*;
 import org.irmacard.cardemu.messages.EventArguments;
@@ -53,13 +56,6 @@ import android.os.CountDownTimer;
 import android.os.Handler;
 import android.os.Message;
 import android.util.Log;
-import android.view.Menu;
-import android.view.MenuItem;
-import android.view.View;
-import android.widget.AdapterView;
-import android.widget.ExpandableListView;
-import android.widget.ImageView;
-import android.widget.TextView;
 
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
@@ -72,7 +68,7 @@ import com.loopj.android.http.AsyncHttpResponseHandler;
 import org.irmacard.idemix.util.VerificationSetupData;
 
 
-public class MainActivity extends Activity implements PINDialogListener {
+public class MainActivity extends Activity implements PINDialogListener, DisclosureDialogListener {
 	public static final int PASSPORT_REQUEST = 100;
 	private static final int DETAIL_REQUEST = 101;
 
@@ -123,6 +119,8 @@ public class MainActivity extends Activity implements PINDialogListener {
 
 	private final String CARD_STORAGE = "card";
 	private final String SETTINGS = "cardemu";
+
+	private ReaderMessage disclosureproof;
 
 	private void loadCard() {
 		SharedPreferences settings = getSharedPreferences(SETTINGS, 0);
@@ -936,9 +934,33 @@ public class MainActivity extends Activity implements PINDialogListener {
 	 * @param msg The disclosure proofs to be sent if the user consents
 	 */
 	private void askForVerificationPermission(final ReaderMessage msg) {
-		String question = null;
+		IdemixCredentials ic = new IdemixCredentials(is);
+		HashMap<CredentialPackage, Attributes> map = new HashMap<>();
+
+		// Store the ReaderMessage for when the user answered our dialog, see the onDisclose methods below
+		disclosureproof = msg;
+
+		// Build the argument to be passed to the DisclosureDialogFragment
 		try {
-			question = buildVerificationPermissionQuestion(verificationList);
+			for (VerificationSetupData entry : verificationList) {
+				CredentialDescription desc
+						= DescriptionStore.getInstance().getCredentialDescription(entry.getID());
+
+				List<AttributeDescription> attrDescs = desc.getAttributes();
+				List<Short> attrIds = disclosureMaskToList(entry.getDisclosureMask());
+				Attributes attrs = ic.getAttributes(desc);
+				CredentialPackage credential = new CredentialPackage(desc, attrs);
+				Attributes disclosed = new Attributes();
+
+				for (short i = 0; i < desc.getAttributeNames().size(); ++i) {
+					if (attrIds.contains(i)) {
+						String attrname = attrDescs.get(i).getName();
+						disclosed.add(attrname, attrs.get(attrname));
+					}
+				}
+
+				map.put(credential, disclosed);
+			}
 		} catch (InfoException | CardServiceException | CredentialsException e) {
 			e.printStackTrace();
 			// If something went wrong we can't properly ask for permission,
@@ -947,68 +969,26 @@ public class MainActivity extends Activity implements PINDialogListener {
 			setState(STATE_IDLE);
 		}
 
-		AlertDialog.Builder builder = new AlertDialog.Builder(this);
-		builder.setMessage(question)
-				.setPositiveButton("Yes", new DialogInterface.OnClickListener() {
-					@Override
-					public void onClick(DialogInterface dialog, int which) {
-						postMessage(msg);
-					}
-				})
-				.setNegativeButton("No", new DialogInterface.OnClickListener() {
-					@Override
-					public void onClick(DialogInterface dialog, int which) {
-						abortConnection(msg);
-						setState(STATE_IDLE);
-					}
-				})
-				.show();
+		// The end of the verifier url is just a session identifier, of no use to the user
+		String truncatedUrl = currentWriteURL.replaceFirst("/w/\\w+/\\w$", "");
 
+		// Show dialog
+		DisclosureDialogFragment dialog = DisclosureDialogFragment.newInstance(map, truncatedUrl);
+		dialog.show(getFragmentManager(), "disclosuredialog");
+
+		// Be sure that we don't ask permission again for these disclosures
 		verificationList.clear();
 	}
 
-	/**
-	 * Helper function to build the question to be asked to the user.
-	 *
-	 * @param verificationList The list of credentials that will be verified.
-	 * @return The question.
-	 * @throws InfoException
-	 * @throws CardServiceException
-	 * @throws CredentialsException
-	 */
-	private String buildVerificationPermissionQuestion(List<VerificationSetupData> verificationList)
-			throws InfoException, CardServiceException, CredentialsException {
-		StringBuilder sb = new StringBuilder();
-		sb.append("The following credential");
-		if (verificationList.size() > 1)
-			sb.append('s');
-		sb.append(" and attributes will be verified:\n\n");
+	@Override
+	public void onDiscloseOK() {
+		postMessage(disclosureproof);
+	}
 
-		IdemixCredentials ic = new IdemixCredentials(is);
-
-		for (VerificationSetupData entry : verificationList) {
-			CredentialDescription desc
-					= DescriptionStore.getInstance().getCredentialDescription(entry.getID());
-			List<AttributeDescription> attrDescs = desc.getAttributes();
-			List<Short> attrIds = disclosureMaskToList(entry.getDisclosureMask());
-			Attributes attrs = ic.getAttributes(desc);
-
-			String credName = desc.getName();
-			sb.append(credName).append("\n");
-			for (short s : attrIds) {
-				String attrValue = new String(attrs.get(attrDescs.get(s).getName()));
-				sb.append(" - ")
-						.append(attrDescs.get(s).getName())
-						.append(": ").append(attrValue).append("\n");
-			}
-			sb.append("\n");
-		}
-
-		sb.append("If you agree, this information will be sent to the verifier at ")
-				.append(currentWriteURL)
-				.append(". Proceed?");
-
-		return sb.toString();
+	@Override
+	public void onDiscloseCancel() {
+		abortConnection(disclosureproof);
+		setState(STATE_IDLE);
 	}
 
 	/**
