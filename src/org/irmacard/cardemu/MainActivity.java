@@ -969,11 +969,8 @@ public class MainActivity extends Activity implements PINDialogListener, Disclos
 			setState(STATE_IDLE);
 		}
 
-		// The end of the verifier url is just a session identifier, of no use to the user
-		String truncatedUrl = currentWriteURL.replaceFirst("/w/\\w+/\\w$", "");
-
 		// Show dialog
-		DisclosureDialogFragment dialog = DisclosureDialogFragment.newInstance(map, truncatedUrl);
+		DisclosureDialogFragment dialog = DisclosureDialogFragment.newInstance(map);
 		dialog.show(getFragmentManager(), "disclosuredialog");
 
 		// Be sure that we don't ask permission again for these disclosures
