@@ -348,9 +348,6 @@ public class MainActivity extends Activity implements PINDialogListener, Disclos
 
 		setState(STATE_IDLE);
 		clearFeedback();
-
-		timer = new Timer();
-		timer.scheduleAtFixedRate(new CardPollerTask(), CARD_POLL_DELAY, CARD_POLL_DELAY);
 	}
 
 	protected void clearCard() {
@@ -719,29 +716,6 @@ public class MainActivity extends Activity implements PINDialogListener, Disclos
 			setState(STATE_READY);
 			postMessage(new ReaderMessage(ReaderMessage.TYPE_EVENT, ReaderMessage.NAME_EVENT_CARDFOUND, null));
 			lastTag = tag;
-		}
-	}
-
-	class CardPollerTask extends TimerTask {
-		/**
-		 * Dirty Hack. Since android doesn't produce events when an NFC card
-		 * is lost, we send a command to the card, and see if it still responds.
-		 * It is important that this command does not affect the card's state.
-		 * <p/>
-		 * FIXME: The command we sent is IRMA dependent, which is dangerous when
-		 * the proxy is used with other cards/protocols.
-		 */
-		public void run() {
-			// Only in the ready state do we need to actively check for card
-			// presence.
-			if (activityState == STATE_READY) {
-				Log.i("CardPollerTask", "Checking card presence");
-				ReaderMessage rm = new ReaderMessage(
-						ReaderMessage.TYPE_COMMAND,
-						ReaderMessage.NAME_COMMAND_IDLE, "idle");
-
-				new ProcessReaderMessage().execute(new ReaderInput(lastTag, rm));
-			}
 		}
 	}
 
