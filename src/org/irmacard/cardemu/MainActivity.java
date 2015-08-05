@@ -315,6 +315,10 @@ public class MainActivity extends Activity implements PINDialogListener, Disclos
 		// Setup a tech list for all IsoDep cards
 		mTechLists = new String[][]{new String[]{IsoDep.class.getName()}};
 
+		// For some reason this textview ignores the android:textIsSelectable in its xml file, so that it catches
+		// touch events that were meant for its container. Don't know why setting its value here works.
+		((TextView) findViewById(R.id.feedback_text)).setTextIsSelectable(false);
+
 		// Display cool list
 		ExpandableListView credentialList = (ExpandableListView) findViewById(R.id.listView);
 		//ExpandableCredentialsAdapter adapter = new ExpandableCredentialsAdapter(this, credentialDescriptions, credentialAttributes);
