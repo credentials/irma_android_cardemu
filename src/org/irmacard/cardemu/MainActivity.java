@@ -347,6 +347,7 @@ public class MainActivity extends Activity implements PINDialogListener, Disclos
 		});
 
 		setState(STATE_IDLE);
+		clearFeedback();
 
 		timer = new Timer();
 		timer.scheduleAtFixedRate(new CardPollerTask(), CARD_POLL_DELAY, CARD_POLL_DELAY);
