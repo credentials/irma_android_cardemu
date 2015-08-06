@@ -38,6 +38,7 @@ import org.irmacard.credentials.idemix.smartcard.SmartCardEmulatorService;
 import org.irmacard.credentials.info.CredentialDescription;
 import org.irmacard.credentials.info.InfoException;
 import org.irmacard.cardemu.HttpClient.HttpClientException;
+import org.irmacard.cardemu.selfenrol.ServerUrlDialogFragment.ServerUrlDialogListener;
 import org.irmacard.idemix.IdemixService;
 import org.irmacard.idemix.IdemixSmartcard;
 import org.irmacard.mno.common.*;
@@ -69,7 +70,7 @@ import javax.net.ssl.SSLContext;
 import javax.net.ssl.SSLSocketFactory;
 import javax.net.ssl.TrustManagerFactory;
 
-public class Passport extends Activity {
+public class Passport extends Activity implements ServerUrlDialogFragment.ServerUrlDialogListener {
     private NfcAdapter nfcA;
     private PendingIntent mPendingIntent;
     private IntentFilter[] mFilters;
@@ -92,8 +93,8 @@ public class Passport extends Activity {
     private static final int SCREEN_ERROR = 5;
     private String imsi;
 
-    private final String CARD_STORAGE = "card";
-    private final String SETTINGS = "cardemu";
+    public static final String CARD_STORAGE = "card";
+    public static final String SETTINGS = "cardemu";
 
     private AlertDialog urldialog = null;
     private String enrollServerUrl;
@@ -213,7 +214,7 @@ public class Passport extends Activity {
     }
 
     //TODO: move all card functionality to a specific class, so we don't need this ugly code duplication and can do explicit card state checks there.
-    protected void logCard(){
+    protected void logCard() {
         Log.d(TAG, "Current card contents");
         // Retrieve list of credentials from the card
         IdemixCredentials ic = new IdemixCredentials(is);
@@ -626,14 +627,8 @@ public class Passport extends Activity {
         case R.id.set_enroll_url:
             Log.d(TAG, "set_enroll_url pressed");
 
-            // Create the dialog only once
-            if (urldialog == null)
-                urldialog = getUrlDialog();
-
-            // Show the dialog
-            urldialog.show();
-            // Pop up the keyboard
-            urldialog.getWindow().setSoftInputMode(WindowManager.LayoutParams.SOFT_INPUT_STATE_ALWAYS_VISIBLE);
+            ServerUrlDialogFragment dialog = new ServerUrlDialogFragment();
+            dialog.show(getFragmentManager(), "urldialog");
 
             return true;
         default:
@@ -641,134 +636,13 @@ public class Passport extends Activity {
         }
     }
 
-
-    // Helper function to build the URL dialog and set the listeners.
-    private AlertDialog getUrlDialog() {
-        AlertDialog.Builder builder = new AlertDialog.Builder(this);
-
-        // Simple view containing the actual input field
-        View v = this.getLayoutInflater().inflate(R.layout.enroll_url_dialog, null);
-
-        // Set the URL field to the appropriate value
-        final EditText urlfield = (EditText)v.findViewById(R.id.enroll_url_field);
-        urlfield.setText(enrollServerUrl);
-
-        // Build the dialog
-        builder.setTitle(R.string.enroll_url_dialog_title)
-                .setView(v)
-                .setPositiveButton(android.R.string.ok, new DialogInterface.OnClickListener() {
-                    @Override
-                    public void onClick(DialogInterface dialog, int id) {
-                        enrollServerUrl = urlfield.getText().toString();
-                        settings.edit().putString("enroll_server_url", enrollServerUrl).apply();
-                        updateHelpText();
-                        Log.d("Passport", enrollServerUrl);
-                    }
-                }).setNeutralButton(R.string.default_string, null)
-                .setNegativeButton(android.R.string.cancel, new DialogInterface.OnClickListener() {
-                    @Override
-                    public void onClick(DialogInterface dialog, int which) {
-                        // Reset the URL field to the last known valid value
-                        urlfield.setText(enrollServerUrl);
-                    }
-                });
-
-        final AlertDialog urldialog = builder.create();
-
-
-        urldialog.setOnShowListener(new DialogInterface.OnShowListener() {
-            @Override
-            public void onShow(DialogInterface dialog) {
-                // By overriding the neutral button's onClick event in this onShow listener,
-                // we prevent the dialog from closing when the default button is pressed.
-                Button defaultbutton = urldialog.getButton(DialogInterface.BUTTON_NEUTRAL);
-                defaultbutton.setOnClickListener(new View.OnClickListener() {
-                    @Override
-                    public void onClick(View v) {
-                        enrollServerUrl = getString(R.string.enroll_default_url);
-                        urlfield.setText(enrollServerUrl);
-                        settings.edit().putString("enroll_server_url", enrollServerUrl).apply();
-                        // Move cursor to end of field
-                        urlfield.setSelection(urlfield.getText().length());
-                        updateHelpText();
-                    }
-                });
-
-                // Move cursor to end of field
-                urlfield.setSelection(urlfield.getText().length());
-            }
-        });
-
-        // If the text from the input field changes to something that we do not consider valid
-        // (i.e., it is not a valid IP or domain name), we disable the OK button
-        urlfield.addTextChangedListener(new TextWatcher() {
-            @Override
-            public void beforeTextChanged(CharSequence s, int start, int count, int after) {
-            }
-
-            @Override
-            public void onTextChanged(CharSequence s, int start, int before, int count) {
-            }
-
-            @Override
-            public void afterTextChanged(Editable s) {
-                Button okbutton = urldialog.getButton(DialogInterface.BUTTON_POSITIVE);
-                okbutton.setEnabled(isValidURL(s.toString()));
-            }
-        });
-
-        return urldialog;
+    @Override
+    public void onServerUrlEntry(String url) {
+        enrollServerUrl = url;
+        updateHelpText();
     }
 
     //region Network and issuing
-
-    /**
-     * Check if an IP address is valid.
-     *
-     * @param url The IP to check
-     * @return True if valid, false otherwise.
-     */
-    private static Boolean isValidIPAddress(String url) {
-        Pattern IP_ADDRESS = Pattern.compile(
-                "((25[0-5]|2[0-4][0-9]|[0-1][0-9]{2}|[1-9][0-9]|[1-9])\\.(25[0-5]|2[0-4]"
-                        + "[0-9]|[0-1][0-9]{2}|[1-9][0-9]|[1-9]|0)\\.(25[0-5]|2[0-4][0-9]|[0-1]"
-                        + "[0-9]{2}|[1-9][0-9]|[1-9]|0)\\.(25[0-5]|2[0-4][0-9]|[0-1][0-9]{2}"
-                        + "|[1-9][0-9]|[0-9]))");
-        return IP_ADDRESS.matcher(url).matches();
-    }
-
-    /**
-     * Check if a given domain name is valid. We consider it valid if it consists of
-     * alphanumeric characters and dots, and if the first character is not a dot.
-     *
-     * @param url The domain to check
-     * @return True if valid, false otherwise
-     */
-    private static Boolean isValidDomainName(String url) {
-        Pattern VALID_DOMAIN = Pattern.compile("([\\w]+[\\.\\w]*)");
-        return VALID_DOMAIN.matcher(url).matches();
-    }
-
-
-    /**
-     * Check if a given URL is valid. We consider it valid if it is either a valid
-     * IP address or a valid domain name, which is checked using
-     * using {@link #isValidDomainName(String)} Boolean} and
-     * {@link #isValidIPAddress(String) Boolean}.
-     *
-     * @param url The URL to check
-     * @return True if valid, false otherwise
-     */
-    private static Boolean isValidURL(String url) {
-        String[] parts = url.split("\\.");
-
-        // If the part of the url after the rightmost dot consists
-        // only of numbers, it must be an IP address
-        if (Pattern.matches("[\\d]+", parts[parts.length - 1]))
-            return isValidIPAddress(url);
-        else
-            return isValidDomainName(url);
-    }
 
     String serverUrl;
 
