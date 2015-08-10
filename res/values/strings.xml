@@ -13,6 +13,7 @@
 	<string name="connectserver">Connecting to server</string>
 
 	<string name="title_credential_detail">Credential Detail</string>
+    <string name="title_log">Log</string>
 
 	<string name="status_idle">Tap to scan QR</string>
 	<string name="status_connecting">Connecting...</string>
@@ -63,4 +64,5 @@
     <string name="enroll_enter_bac_title">Passport photo</string>
     <string name="enroll_enter_bac_desc">OCR-ing the BAC data is not yet supported. Please enter the BAC data
         manually here.</string>
+    <string name="menu_show_log">Show log</string>
 </resources>

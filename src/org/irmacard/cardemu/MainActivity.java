@@ -19,6 +19,7 @@ import org.irmacard.android.util.disclosuredialog.DisclosureDialogFragment;
 import org.irmacard.android.util.disclosuredialog.DisclosureDialogFragment.DisclosureDialogListener;
 import org.irmacard.android.util.pindialog.EnterPINDialogFragment.PINDialogListener;
 import org.irmacard.android.util.credentialdetails.*;
+import org.irmacard.android.util.cardlog.*;
 import org.irmacard.cardemu.messages.EventArguments;
 import org.irmacard.cardemu.messages.PinResultArguments;
 import org.irmacard.cardemu.messages.ReaderMessage;
@@ -36,6 +37,7 @@ import org.irmacard.credentials.info.AttributeDescription;
 import org.irmacard.credentials.info.CredentialDescription;
 import org.irmacard.credentials.info.DescriptionStore;
 import org.irmacard.credentials.info.InfoException;
+import org.irmacard.credentials.util.log.LogEntry;
 import org.irmacard.idemix.IdemixService;
 
 import android.app.Activity;
@@ -1076,6 +1078,23 @@ public class MainActivity extends Activity implements PINDialogListener, Disclos
 		}
 	}
 
+	private ArrayList<LogEntry> getCardLog() {
+		ArrayList<LogEntry> logs = new ArrayList<>();
+
+		IdemixCredentials ic = new IdemixCredentials(is);
+
+		try {
+			for(LogEntry l : ic.getLog()) {
+				logs.add(l);
+			}
+		} catch (CardServiceException|InfoException e) {
+			e.printStackTrace();
+			return null;
+		}
+
+		return logs;
+	}
+
 
 	@Override
 	public boolean onOptionsItemSelected(MenuItem item) {
@@ -1092,6 +1111,15 @@ public class MainActivity extends Activity implements PINDialogListener, Disclos
 				storeCard();
 				i.putExtra("card_json", "loadCard");
 				startActivityForResult(i, PASSPORT_REQUEST);
+				return true;
+			case R.id.show_card_log:
+				Log.d(TAG, "show_card_log pressed");
+				ArrayList<LogEntry> logs = getCardLog();
+				if (logs != null) {
+					Intent logIntent = new Intent(this, LogActivity.class);
+					logIntent.putExtra(LogFragment.ARG_LOG, logs);
+					startActivity(logIntent);
+				}
 				return true;
 			case R.id.menu_clear:
 				if (activityState == STATE_IDLE) {

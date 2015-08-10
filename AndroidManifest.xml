@@ -68,6 +68,19 @@
             </intent-filter>
         </activity>
 
+        <activity
+                android:name="org.irmacard.android.util.cardlog.LogActivity"
+                android:hardwareAccelerated="false"
+                android:label="@string/title_log"
+                android:screenOrientation="portrait" >
+            <meta-data
+                    android:name="android.support.PARENT_ACTIVITY"
+                    android:value=".MainActivity" />
+            <intent-filter>
+                <action android:name="android.nfc.action.TECH_DISCOVERED" />
+            </intent-filter>
+        </activity>
+
 <!--          <activity android:name="com.google.zxing.client.android.CaptureActivity"
               android:screenOrientation="landscape"
               android:clearTaskOnLaunch="true"
