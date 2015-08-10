@@ -58,7 +58,6 @@ public class ServerUrlDialogFragment extends DialogFragment {
 					public void onClick(DialogInterface dialog, int which) {
 						// Reset the URL field to the last known valid value
 						urlfield.setText(getUrlFromSettings());
-						listener.onServerUrlCancel();
 					}
 				})
 				.create();
