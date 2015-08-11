@@ -15,11 +15,20 @@
         <item name="android:colorAccent">@color/accent</item>
         <item name="android:textColorPrimary">@color/primary_text</item>
         <item name="android:textColorSecondary">@color/secondary_text</item>
+        <item name="android:colorBackground">@color/background</item>
+
+        <item name="android:textViewStyle">@style/Irma.TextViewStyle</item>
+        <item name="android:buttonStyle">@style/Irma.Button</item>
     </style>
-    <style name="Irma.Button" parent="@android:style/Widget.Holo.Button.Borderless">
+
+    <style name="Irma.Button" parent="android:Widget.Material.Light.Button.Borderless.Colored">
         <item name="android:colorButtonNormal">@color/primary</item>
         <item name="android:background">@color/irmadarkblue</item>
-        <item name="android:textColor">#ffffff</item>
+        <item name="android:textColor">@color/background</item>
+    </style>
+
+    <style name="Irma.TextViewStyle" parent="android:Widget.Material.Light.TextView">
+        <item name="android:textColor">?android:textColorPrimary</item>
     </style>
 
 </resources>
