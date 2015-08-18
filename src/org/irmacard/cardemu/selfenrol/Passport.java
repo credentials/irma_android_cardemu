@@ -290,15 +290,14 @@ public class Passport extends Activity implements ServerUrlDialogFragment.Server
 
         try {
             passportService.doBAC(getBACKey());
-            passportMsg = generatePassportDataMessage(enrollSession.getNonce(),
+            boolean readPassport = generatePassportDataMessage(enrollSession.getNonce(),
                     enrollSession.getSessionToken(), this.imsi, passportService);
 
-            if (passportMsg.getResponse() == null || passportMsg.getResponse().length == 0) {
+            if (!readPassport) {
                 showErrorScreen(R.string.error_enroll_passporterror);
                 return;
             }
-
-            passportMsg.verify(enrollSession.getNonce());
+            //passportMsg.verify(enrollSession.getNonce()); // debug method to verify passport on mobile device
             advanceScreen();
         } catch (CardServiceException e) {
             showErrorScreen(R.string.error_enroll_bacfailed, e);
@@ -311,21 +310,37 @@ public class Passport extends Activity implements ServerUrlDialogFragment.Server
      * Do the AA protocol with the passport using the passportService, and put the response in a new
      * PassportDataMessage.
      */
-    public PassportDataMessage generatePassportDataMessage(byte[] challenge, String sessionToken, String imsi,
+    public boolean generatePassportDataMessage(byte[] challenge, String sessionToken, String imsi,
                                                            PassportService passportService)
     throws CardServiceException, IOException {
-        PassportDataMessage msg = new PassportDataMessage(sessionToken, imsi);
+        for (int i = 0; i<=5; i++) {
+            if (passportMsg == null) {
+                passportMsg = new PassportDataMessage(sessionToken, imsi);
+            }
+            if (passportMsg.getDg1File() == null) {
+                passportMsg.setDg1File(new DG1File(passportService.getInputStream(PassportService.EF_DG1)));
+            }
+            if (passportMsg.getSodFile() == null) {
+                passportMsg.setSodFile(new SODFile(passportService.getInputStream(PassportService.EF_SOD)));
+            }
+            if (passportMsg.getDg14File() == null) {
+                passportMsg.setDg14File(new DG14File(passportService.getInputStream(PassportService.EF_DG14)));
+            }
+            if (passportMsg.getDg15File() == null) {
+                passportMsg.setDg15File(new DG15File(passportService.getInputStream(PassportService.EF_DG15)));
+            }
+            // The doAA() method does not use its first three arguments, it only passes the challenge
+            // on to another functio within JMRTD.
+            if (passportMsg.getResponse() == null) {
+                passportMsg.setResponse(passportService.doAA(null, null, null, challenge));
+            }
 
-        msg.setDg1File(new DG1File(passportService.getInputStream(PassportService.EF_DG1)));
-        msg.setSodFile(new SODFile(passportService.getInputStream(PassportService.EF_SOD)));
-        msg.setDg14File(new DG14File(passportService.getInputStream(PassportService.EF_DG14)));
-        msg.setDg15File(new DG15File(passportService.getInputStream(PassportService.EF_DG15)));
-
-        // The doAA() method does not use its first three arguments, it only passes the challenge
-        // on to another functio within JMRTD.
-        msg.setResponse(passportService.doAA(null, null, null, challenge));
-
-        return msg;
+            //Passport reading finished
+            if (passportMsg.isComplete()){
+                return true;
+            }
+        }
+        return false;
     }
 
     private void enableContinueButton(){
