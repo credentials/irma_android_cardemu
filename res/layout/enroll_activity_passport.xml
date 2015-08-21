@@ -39,13 +39,25 @@
             android:text="@string/feedback_waiting_for_passport"
             android:textSize="24sp"
             android:textIsSelectable="true" />
+        <ProgressBar
+            android:id="@+id/se_progress_bar"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_below="@id/se_feedback_text"
+            android:layout_marginTop="10dp"
+            android:layout_centerHorizontal="true"
+            android:indeterminate="false"
+            android:max="6"
+            android:minHeight="20dp"
+            android:minWidth="200dp"
+            style="@android:style/Widget.ProgressBar.Horizontal" />
         <ImageView
             android:id="@+id/se_statusimage"
             android:layout_width="200dp"
             android:layout_height="200dp"
             android:src="@drawable/irma_icon_place_card_520px"
-            android:layout_below="@id/se_feedback_text"
-            android:layout_marginTop="30dp"
+            android:layout_below="@id/se_progress_bar"
+            android:layout_marginTop="20dp"
             android:layout_centerHorizontal="true" />
         <Button
             style="@style/Irma.Button"
