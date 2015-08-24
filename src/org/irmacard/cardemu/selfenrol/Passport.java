@@ -289,6 +289,7 @@ public class Passport extends Activity implements ServerUrlDialogFragment.Server
             return;
         }
 
+        //TODO: if the user is very fast and there is no connection with the server, this will result in a null-pointer deref instead of server-unreachable error.
         if (passportMsg == null) {
             passportMsg = new PassportDataMessage(enrollSession.getSessionToken(), imsi,enrollSession.getNonce());
         }
@@ -296,16 +297,17 @@ public class Passport extends Activity implements ServerUrlDialogFragment.Server
 
     }
 
+    /*
+     * reads the datagroups 1, 14 and 15, and the SOD file and requests an active authentication from an e-passport
+     * in a seperate thread.
+     */
+
     private void readPassport (PassportService ps, PassportDataMessage pdm){
 
         AsyncTask<Object,Void,PassportDataMessage> task = new AsyncTask<Object,Void,PassportDataMessage>(){
             ProgressBar progressBar = (ProgressBar) findViewById(R.id.se_progress_bar);
             Exception exception = null;
             boolean success = false;
- //           @Override
- //           protected void onPreExecute() {
- //               super.onPreExecute();
-//            }
 
             @Override
             protected PassportDataMessage doInBackground(Object... params) {
@@ -324,8 +326,9 @@ public class Passport extends Activity implements ServerUrlDialogFragment.Server
                 return pdm;
             }
 
-            protected void onProgressUpdate() {
-                progressBar.incrementProgressBy(5);
+            @Override
+            protected void onProgressUpdate(Void... values) {
+                progressBar.incrementProgressBy(1);
             }
 
             /**
@@ -373,14 +376,12 @@ public class Passport extends Activity implements ServerUrlDialogFragment.Server
                 //then check for errors or failures.
                 if (exception==null) {
                     if (success) {
-                        runOnUiThread(new Runnable() {
-                            @Override
-                            public void run() {
-                                advanceScreen();
-                            }
-                        });
+                        advanceScreen();
                     } else {
-                            showErrorScreen(R.string.error_enroll_passporterror);
+                        //TODO: at this point (or after ending the thread) we could test if the progress >= 0.
+                        // in that case, some communication with the passport worked, so perhaps offer the user
+                        // a new attempt with the current data?
+                        showErrorScreen(R.string.error_enroll_passporterror);
                     }
 
                 } else {
