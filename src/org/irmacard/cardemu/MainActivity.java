@@ -26,6 +26,8 @@ import org.irmacard.cardemu.messages.ReaderMessage;
 import org.irmacard.cardemu.messages.ReaderMessageDeserializer;
 import org.irmacard.cardemu.messages.ResponseArguments;
 import org.irmacard.cardemu.messages.TransmitCommandSetArguments;
+import org.irmacard.cardemu.updates.AppUpdater;
+import org.irmacard.cardemu.updates.AppVersionInfo;
 import org.irmacard.credentials.Attributes;
 import org.irmacard.credentials.CredentialsException;
 import org.irmacard.credentials.idemix.IdemixCredentials;
@@ -123,6 +125,9 @@ public class MainActivity extends Activity implements PINDialogListener, Disclos
 	private final String SETTINGS = "cardemu";
 
 	private ReaderMessage disclosureproof;
+
+	private static final String updateServer = "https://credentials.github.io/appupdates";
+	AppUpdater updater;
 
 	private void loadCard() {
 		SharedPreferences settings = getSharedPreferences(SETTINGS, 0);
@@ -350,6 +355,8 @@ public class MainActivity extends Activity implements PINDialogListener, Disclos
 
 		setState(STATE_IDLE);
 		clearFeedback();
+
+		updater = new AppUpdater(this, updateServer);
 	}
 
 	protected void clearCard() {
@@ -500,6 +507,8 @@ public class MainActivity extends Activity implements PINDialogListener, Disclos
 		if (nfcA != null) {
 			nfcA.enableForegroundDispatch(this, mPendingIntent, mFilters, mTechLists);
 		}
+
+		updater.updateVersionInfo(false);
 	}
 
 	@Override
@@ -1126,6 +1135,9 @@ public class MainActivity extends Activity implements PINDialogListener, Disclos
 					clearCard();
 					updateCardCredentials();
 				}
+				return true;
+			case R.id.check_for_updates:
+				updater.updateVersionInfo(true);
 				return true;
 			default:
 				return super.onOptionsItemSelected(item);

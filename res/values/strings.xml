@@ -65,4 +65,5 @@
     <string name="enroll_enter_bac_desc">OCR-ing the BAC data is not yet supported. Please enter the BAC data
         manually here.</string>
     <string name="menu_show_log">Show log</string>
+    <string name="check_for_updates">Check for updates</string>
 </resources>
