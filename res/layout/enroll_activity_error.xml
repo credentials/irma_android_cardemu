@@ -24,16 +24,26 @@
             android:textSize="24sp"
             android:textIsSelectable="true"
             android:layout_alignParentTop="true"
-            android:layout_centerHorizontal="true"/>
+            android:layout_centerHorizontal="true"
+            android:layout_marginTop="24dp"/>
         <Button
             style="@style/Irma.Button"
             android:id="@+id/se_button_continue"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:text="@string/se_button_continue"
+            android:text="@string/abort"
             android:layout_alignParentBottom="true"
             android:layout_alignParentRight="true"
             android:layout_alignParentEnd="true" />
+        <Button
+            style="@style/Irma.Button"
+            android:id="@+id/se_button_cancel"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="@string/retry"
+            android:layout_alignParentBottom="true"
+            android:visibility="invisible"
+            android:layout_alignParentLeft="true"/>
         <TextView
             android:id="@+id/enroll_error_msg"
             android:layout_width="wrap_content"
@@ -44,22 +54,9 @@
             android:textColor="@color/irmadarkblue"
             android:textSize="20sp"
             android:textIsSelectable="true"
+            android:layout_marginTop="20dp"
             android:layout_below="@+id/se_connected"
             android:layout_centerHorizontal="true"/>
-
-        <TextView
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:textAppearance="?android:attr/textAppearanceSmall"
-                android:text="Small Text"
-                android:id="@+id/error_stacktrace"
-                android:layout_below="@+id/enroll_error_msg"
-                android:layout_alignParentLeft="true"
-                android:layout_alignParentStart="true"
-                android:layout_above="@+id/se_button_continue"
-                android:layout_alignRight="@+id/se_button_continue"
-                android:layout_alignEnd="@+id/se_button_continue"
-                android:textSize="14sp"/>
 
     </RelativeLayout>
 

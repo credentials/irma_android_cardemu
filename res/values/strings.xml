@@ -28,16 +28,17 @@
     <string name="se_welcome">IRMA self enrollment</string>
     <string name="se_connect_mno"><![CDATA[
     This process consists of the following three steps: <br/><br/>
-    &nbsp;&nbsp;1.&nbsp;&nbsp;Taking a photo of your passport; <br/>
+    &nbsp;&nbsp;1.&nbsp;&nbsp;Entering some data from your passport; <br/>
     &nbsp;&nbsp;2.&nbsp;&nbsp;Reading data from your passport; <br/>
     &nbsp;&nbsp;3.&nbsp;&nbsp;Issuing the credential. <br/><br/>
     During the final process, your name, date and place of birth, and your IMSI will be transmitted to the enrollment server (%1$s).
     <br/><br/>
-    For more invormation, see <a href="https://credentials.github.io/">here</a>.
-    <br/><br/>
     Proceed?
     ]]></string>
-    <string name="se_button_continue">Continue</string>
+    <string name="se_continue">Continue</string> <!-- calling this string "continue" is not allowed -->
+    <string name="back">Back</string>
+    <string name="abort">Abort</string>
+    <string name="retry">Retry</string>
     <string name="se_connected_mno">Connected to server</string>
     <string name="se_passport_verified">Passport data matched to subscriber data. \n Continue to MijnOverheid.nl to receive credentials.</string>
     <string name="se_connected_mijnoverheid">Connected to server</string>
@@ -59,11 +60,12 @@
     <string name="error_enroll_serverdied">Received no response from the enrollment server.</string>
     <string name="error_enroll_invalidresponse">The enrollment server returned an invalid response.</string>
     <string name="error_enroll_passporterror">Failed to establish contact with the passport.</string>
-    <string name="error_enroll_bacfailed">BAC data seems to be wrong.</string>
+    <string name="error_enroll_bacfailed">The passport data you supplied seems to be wrong.</string>
     <string name="error_enroll_nobacdata">Document number, date of birth or date of expiry not set.</string>
-    <string name="enroll_enter_bac_title">Passport photo</string>
-    <string name="enroll_enter_bac_desc">OCR-ing the BAC data is not yet supported. Please enter the BAC data
-        manually here.</string>
+    <string name="unknown_error">An unknown error occurred.</string>
+    <string name="enroll_enter_bac_title">Passport data</string>
+    <string name="enroll_enter_bac_desc">Please enter the following data from your passport, to allow the app
+        to communicate with the passport.</string>
     <string name="menu_show_log">Show log</string>
     <string name="check_for_updates">Check for updates</string>
 </resources>

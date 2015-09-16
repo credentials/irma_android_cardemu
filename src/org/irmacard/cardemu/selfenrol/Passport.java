@@ -5,14 +5,11 @@ import android.content.*;
 import android.content.res.Resources;
 import android.nfc.NfcAdapter;
 import android.nfc.Tag;
-import android.nfc.TagLostException;
 import android.nfc.tech.IsoDep;
 import android.os.*;
 import android.provider.Settings;
 import android.telephony.TelephonyManager;
-import android.text.Editable;
 import android.text.Html;
-import android.text.TextWatcher;
 import android.text.method.LinkMovementMethod;
 import android.util.Log;
 import android.view.*;
@@ -39,7 +36,6 @@ import org.irmacard.credentials.idemix.smartcard.SmartCardEmulatorService;
 import org.irmacard.credentials.info.CredentialDescription;
 import org.irmacard.credentials.info.InfoException;
 import org.irmacard.cardemu.HttpClient.HttpClientException;
-import org.irmacard.cardemu.selfenrol.ServerUrlDialogFragment.ServerUrlDialogListener;
 import org.irmacard.idemix.IdemixService;
 import org.irmacard.idemix.IdemixSmartcard;
 import org.irmacard.mno.common.*;
@@ -48,7 +44,6 @@ import org.jmrtd.PassportService;
 
 import java.io.*;
 import java.lang.reflect.Type;
-import java.net.*;
 import java.security.*;
 import java.security.cert.Certificate;
 import java.security.cert.CertificateException;
@@ -58,7 +53,6 @@ import java.text.DateFormat;
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
 import java.util.*;
-import java.util.regex.Pattern;
 
 import com.google.gson.GsonBuilder;
 import org.jmrtd.lds.DG14File;
@@ -66,7 +60,6 @@ import org.jmrtd.lds.DG15File;
 import org.jmrtd.lds.DG1File;
 import org.jmrtd.lds.SODFile;
 
-import javax.net.ssl.HttpsURLConnection;
 import javax.net.ssl.SSLContext;
 import javax.net.ssl.SSLSocketFactory;
 import javax.net.ssl.TrustManagerFactory;
@@ -148,8 +141,10 @@ public class Passport extends Activity implements ServerUrlDialogFragment.Server
         screen = SCREEN_START;
         enableContinueButton();
 
-        if (nfcA == null)
+        if (nfcA == null) {
             showErrorScreen(R.string.error_nfc_notsupported);
+            return;
+        }
         if (!nfcA.isEnabled())
             showErrorScreen(R.string.error_nfc_disabled);
     }
@@ -283,18 +278,18 @@ public class Passport extends Activity implements ServerUrlDialogFragment.Server
             cs.open();
             passportService = new PassportService(cs);
             passportService.sendSelectApplet(false);
+
+            //TODO: if the user is very fast and there is no connection with the server, this will result in a null-pointer deref instead of server-unreachable error.
+            if (passportMsg == null) {
+                passportMsg = new PassportDataMessage(enrollSession.getSessionToken(), imsi,enrollSession.getNonce());
+            }
+            readPassport(passportService, passportMsg);
         } catch (CardServiceException e) {
             // TODO under what circumstances does this happen? Maybe handle it more intelligently?
-            showErrorScreen(R.string.error_enroll_passporterror, e);
-            return;
+            showErrorScreen(getString(R.string.error_enroll_passporterror),
+                    getString(R.string.abort), 0,
+                    getString(R.string.retry), SCREEN_PASSPORT);
         }
-
-        //TODO: if the user is very fast and there is no connection with the server, this will result in a null-pointer deref instead of server-unreachable error.
-        if (passportMsg == null) {
-            passportMsg = new PassportDataMessage(enrollSession.getSessionToken(), imsi,enrollSession.getNonce());
-        }
-        readPassport(passportService,passportMsg);
-
     }
 
     /*
@@ -387,11 +382,13 @@ public class Passport extends Activity implements ServerUrlDialogFragment.Server
                 } else {
                     //an exception was thrown in the async thread
                     if (exception instanceof CardServiceException){
-                        showErrorScreen(R.string.error_enroll_bacfailed, exception);
+                        showErrorScreen(getString(R.string.error_enroll_bacfailed), getString(R.string.abort), 0,
+                                getString(R.string.retry), SCREEN_BAC);
                     } else if (exception instanceof IOException){
-                        showErrorScreen(R.string.error_enroll_nobacdata, exception);
+                        showErrorScreen(getString(R.string.error_enroll_nobacdata), getString(R.string.abort), 0,
+                                getString(R.string.retry), SCREEN_BAC);
                     } else {
-                       showErrorScreen(exception);
+                       showErrorScreen(R.string.unknown_error);
                     }
                 }
 
@@ -428,47 +425,65 @@ public class Passport extends Activity implements ServerUrlDialogFragment.Server
     }
 
     private void showErrorScreen(int errormsgId) {
-        showErrorScreen(getString(errormsgId), null);
+        showErrorScreen(getString(errormsgId));
     }
 
     private void showErrorScreen(String errormsg) {
-        showErrorScreen(errormsg, null);
+        showErrorScreen(errormsg, getString(R.string.abort), 0, null, 0);
     }
 
-    private void showErrorScreen(Exception e) {
-        showErrorScreen(e.getMessage(), e);
-    }
-
-    private void showErrorScreen(int errormsgId, Exception e) {
-        showErrorScreen(getString(errormsgId), e);
-    }
-
-    private void showErrorScreen(String errormsg, Exception e) {
+    /**
+     * Show the error screen.
+     *
+     * @param errormsg The message to show.
+     * @param rightButtonString The text that the right button should show.
+     * @param leftButtonScreen The screen that we shoul;d go to when the right button is clicked. Pass 0 if the
+     *                         activity should be canceled.
+     * @param leftButtonString The text that the left button should show. Pass null if this button should be hidden.
+     * @param rightButtonScreen The screen that we should go to when the left button is clicked.
+     */
+    private void showErrorScreen(String errormsg, final String rightButtonString, final int rightButtonScreen,
+                                 final String leftButtonString, final int leftButtonScreen) {
         prepareErrowScreen();
 
         TextView view = (TextView)findViewById(R.id.enroll_error_msg);
-        TextView stacktraceView = (TextView)findViewById(R.id.error_stacktrace);
-        Button button = (Button)findViewById(R.id.se_button_continue);
+        Button rightButton = (Button)findViewById(R.id.se_button_continue);
+        Button leftButton = (Button)findViewById(R.id.se_button_cancel);
 
         view.setText(errormsg);
 
-        if (e != null) {
-            StringWriter sw = new StringWriter();
-            e.printStackTrace(new PrintWriter(sw));
-            String stacktrace = sw.toString();
-
-            stacktraceView.setText(stacktrace);
-        }
-        else
-            stacktraceView.setText("");
-
-        button.setOnClickListener(new View.OnClickListener() {
+        rightButton.setText(rightButtonString);
+        rightButton.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
-                screen = SCREEN_START;
-                finish();
+                if (rightButtonScreen == 0) {
+                    screen = SCREEN_START;
+                    finish();
+                } else {
+                    screen = rightButtonScreen - 1;
+                    advanceScreen();
+                }
             }
         });
+
+        if (leftButtonString != null) {
+            leftButton.setText(leftButtonString);
+            leftButton.setVisibility(View.VISIBLE);
+            leftButton.setOnClickListener(new View.OnClickListener() {
+                @Override
+                public void onClick(View v) {
+                    if (leftButtonScreen == 0) {
+                        screen = SCREEN_START;
+                        finish();
+                    } else {
+                        screen = leftButtonScreen - 1;
+                        advanceScreen();
+                    }
+                }
+            });
+        } else {
+            leftButton.setVisibility(View.INVISIBLE);
+        }
     }
 
     private void prepareErrowScreen() {
@@ -527,26 +542,28 @@ public class Passport extends Activity implements ServerUrlDialogFragment.Server
             dobEditText = (EditText) findViewById(R.id.dob_edittext);
             doeEditText = (EditText) findViewById(R.id.doe_edittext);
 
-            bacDob = 0;
-            bacDoe = 0;
-            try {
-                String dobString = dobEditText.getText().toString();
-                String doeString = doeEditText.getText().toString();
-                if (dobString.length() != 0)
-                    bacDob = hrDateFormat.parse(dobString).getTime();
-                if (doeString.length() != 0)
-                    bacDoe = hrDateFormat.parse(doeString).getTime();
-            } catch (ParseException e) {
-                // Should not happen: the DOB and DOE EditTexts are set only by the DatePicker's,
-                // OnDateSetListener, which should always set a properly formatted string.
-                e.printStackTrace();
-            }
+            if (docnrEditText != null && dobEditText != null && doeEditText != null) {
+                bacDob = 0;
+                bacDoe = 0;
+                try {
+                    String dobString = dobEditText.getText().toString();
+                    String doeString = doeEditText.getText().toString();
+                    if (dobString.length() != 0)
+                        bacDob = hrDateFormat.parse(dobString).getTime();
+                    if (doeString.length() != 0)
+                        bacDoe = hrDateFormat.parse(doeString).getTime();
+                } catch (ParseException e) {
+                    // Should not happen: the DOB and DOE EditTexts are set only by the DatePicker's,
+                    // OnDateSetListener, which should always set a properly formatted string.
+                    e.printStackTrace();
+                }
 
-            settings.edit()
-                    .putLong("enroll_bac_dob", bacDob)
-                    .putLong("enroll_bac_doe", bacDoe)
-                    .putString("enroll_bac_docnr", docnrEditText.getText().toString())
-                    .apply();
+                settings.edit()
+                        .putLong("enroll_bac_dob", bacDob)
+                        .putLong("enroll_bac_doe", bacDoe)
+                        .putString("enroll_bac_docnr", docnrEditText.getText().toString())
+                        .apply();
+            }
 
             // Get the BasicClientMessage containing our nonce to send to the passport.
             getEnrollmentSession(new Handler() {
@@ -555,7 +572,7 @@ public class Passport extends Activity implements ServerUrlDialogFragment.Server
                     EnrollmentStartResult result = (EnrollmentStartResult) msg.obj;
 
                     if (result.exception != null) { // Something went wrong
-                        showErrorScreen(result.errorId, result.exception);
+                        showErrorScreen(result.errorId);
                     }
                     else {
                         enrollSession = result.msg;
@@ -600,10 +617,10 @@ public class Passport extends Activity implements ServerUrlDialogFragment.Server
                         // Rollback the card
                         loadCard();
                         String errormsg;
-                        if (msg.what != 0)
-                            showErrorScreen(msg.what, (Exception) msg.obj);
+                        if (msg.what != 0) // .what may contain a string identifier saying what went wrong
+                            showErrorScreen(msg.what);
                         else
-                            showErrorScreen((Exception) msg.obj);
+                            showErrorScreen(R.string.unknown_error);
                     }
                 }
             });
