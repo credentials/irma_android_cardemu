@@ -294,17 +294,17 @@ public class Passport extends Activity implements ServerUrlDialogFragment.Server
         }
     }
 
-    /*
+    /**
      * reads the datagroups 1, 14 and 15, and the SOD file and requests an active authentication from an e-passport
      * in a seperate thread.
      */
-
     private void readPassport (PassportService ps, PassportDataMessage pdm){
 
         AsyncTask<Object,Void,PassportDataMessage> task = new AsyncTask<Object,Void,PassportDataMessage>(){
             ProgressBar progressBar = (ProgressBar) findViewById(R.id.se_progress_bar);
-            Exception exception = null;
             boolean success = false;
+            boolean passportError = false;
+            boolean bacError = false;
 
             @Override
             protected PassportDataMessage doInBackground(Object... params) {
@@ -313,13 +313,24 @@ public class Passport extends Activity implements ServerUrlDialogFragment.Server
                 }
                 PassportService ps = (PassportService) params[0];
                 PassportDataMessage pdm = (PassportDataMessage) params[1];
+
+                // Do the BAC separately from generating the pdm, so we can be specific in our error message if
+                // necessary. (Note: the IllegalStateException should not happen, but if it does for some unforseen
+                // reason there is no need to let it crash the app.)
                 try {
                     ps.doBAC(getBACKey());
-                    success = generatePassportDataMessage(ps,pdm);
-                } catch (Exception e) {
-                    exception = e;
+                } catch (CardServiceException|IllegalStateException e) {
+                    bacError = true;
                     return null;
                 }
+
+                try {
+                    success = generatePassportDataMessage(ps,pdm);
+                } catch (IOException|CardServiceException e) {
+                    passportError = true;
+                    return null;
+                }
+
                 return pdm;
             }
 
@@ -367,11 +378,12 @@ public class Passport extends Activity implements ServerUrlDialogFragment.Server
                 return false;
             }
 
+            @Override
             protected void onPostExecute(PassportDataMessage pdm){
                 //first set the result, since it may be partially okay.
                 passportMsg = pdm;
                 //then check for errors or failures.
-                if (exception==null) {
+                if (!bacError && !passportError) {
                     if (success) {
                         advanceScreen();
                     } else {
@@ -380,22 +392,18 @@ public class Passport extends Activity implements ServerUrlDialogFragment.Server
                         // a new attempt with the current data?
                         showErrorScreen(R.string.error_enroll_passporterror);
                     }
-
-                } else {
-                    //an exception was thrown in the async thread
-                    if (exception instanceof CardServiceException){
-                        showErrorScreen(getString(R.string.error_enroll_bacfailed), getString(R.string.abort), 0,
-                                getString(R.string.retry), SCREEN_BAC);
-                    } else if (exception instanceof IOException){
-                        showErrorScreen(getString(R.string.error_enroll_nobacdata), getString(R.string.abort), 0,
-                                getString(R.string.retry), SCREEN_BAC);
-                    } else {
-                       showErrorScreen(R.string.unknown_error);
-                    }
                 }
 
-            }
+                if (bacError) {
+                    showErrorScreen(getString(R.string.error_enroll_bacfailed),
+                            getString(R.string.abort), 0,
+                            getString(R.string.retry), SCREEN_BAC);
+                }
 
+                if (passportError) {
+                    showErrorScreen(R.string.error_enroll_passporterror);
+                }
+            }
         }.execute(ps,pdm);
     }
 
