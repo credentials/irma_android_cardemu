@@ -13,11 +13,13 @@ import android.net.Uri;
 import android.os.AsyncTask;
 import android.os.Handler;
 import android.util.Log;
+import android.widget.Toast;
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
 import org.irmacard.cardemu.ByteArrayToBase64TypeAdapter;
 import org.irmacard.cardemu.HttpClient;
 import org.irmacard.cardemu.HttpClient.HttpClientException;
+import org.irmacard.cardemu.R;
 
 import java.io.*;
 import java.net.URL;
@@ -114,12 +116,19 @@ public class AppUpdater {
 	 *              checked if the last time we checked was more than updateCheckDelay milliseconds ago.
 	 */
 	public void updateVersionInfo(boolean force) {
+		updateVersionInfo(force, false);
+	}
+
+	public void updateVersionInfo(boolean force, final boolean toast) {
 		// If it's not imperative that we check now, and we already checked recently, don't do anything
 		if (!force && !shouldUpdateVersionInfo())
 			return;
 
 		// AsyncTasks like these can only be executed once, so we have to recreate it each time this method is called.
 		new AsyncTask<Void, Void, Void>() {
+			boolean noneFound = true;
+			boolean serverError = false;
+
 			@Override
 			protected Void doInBackground(Void... params) {
 				try {
@@ -127,7 +136,10 @@ public class AppUpdater {
 					// for connectivity in appropriate ways (e.g. using a ConnectivityManager) seems to be nontrivial.
 					fetchAllVersionInfos();
 				} catch (HttpClientException e) {
-					e.printStackTrace();
+					if (e.status == 404)
+						noneFound = true;
+					else
+						serverError = true;
 				}
 				return null;
 			}
@@ -141,6 +153,7 @@ public class AppUpdater {
 						.apply();
 
 				if (newVersions.size() > 0) {
+					noneFound = false;
 					ConnectivityManager connManager
 							= (ConnectivityManager) context.getSystemService(Context.CONNECTIVITY_SERVICE);
 					NetworkInfo wifi = connManager.getNetworkInfo(ConnectivityManager.TYPE_WIFI);
@@ -161,6 +174,15 @@ public class AppUpdater {
 							askDownloadPermission();
 						}
 					}
+				} else {
+					noneFound = true;
+				}
+
+				if (toast) {
+					if (noneFound)
+						Toast.makeText(context, R.string.no_new_updates, Toast.LENGTH_SHORT).show();
+					if (serverError)
+						Toast.makeText(context, R.string.update_server_error, Toast.LENGTH_SHORT).show();
 				}
 			}
 		}.execute();

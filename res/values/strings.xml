@@ -68,4 +68,6 @@
         to communicate with the passport.</string>
     <string name="menu_show_log">Show log</string>
     <string name="check_for_updates">Check for updates</string>
+    <string name="no_new_updates">No updates found.</string>
+    <string name="update_server_error">Could not connect to the update server.</string>
 </resources>

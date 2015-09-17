@@ -1137,7 +1137,7 @@ public class MainActivity extends Activity implements PINDialogListener, Disclos
 				}
 				return true;
 			case R.id.check_for_updates:
-				updater.updateVersionInfo(true);
+				updater.updateVersionInfo(true, true);
 				return true;
 			default:
 				return super.onOptionsItemSelected(item);
