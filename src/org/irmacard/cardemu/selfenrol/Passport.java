@@ -9,7 +9,9 @@ import android.nfc.tech.IsoDep;
 import android.os.*;
 import android.provider.Settings;
 import android.telephony.TelephonyManager;
+import android.text.Editable;
 import android.text.Html;
+import android.text.TextWatcher;
 import android.text.method.LinkMovementMethod;
 import android.util.Log;
 import android.view.*;
@@ -502,6 +504,31 @@ public class Passport extends Activity implements ServerUrlDialogFragment.Server
         }
     }
 
+    private void setBacFieldWatcher() {
+        final EditText docnrEditText = (EditText) findViewById(R.id.doc_nr_edittext);
+        final EditText dobEditText = (EditText) findViewById(R.id.dob_edittext);
+        final EditText doeEditText = (EditText) findViewById(R.id.doe_edittext);
+        final Button continueButton = (Button) findViewById(R.id.se_button_continue);
+
+        TextWatcher bacFieldWatcher = new TextWatcher() {
+            @Override public void beforeTextChanged(CharSequence s, int start, int count, int after) {}
+            @Override public void afterTextChanged(Editable s) {}
+            @Override
+            public void onTextChanged(CharSequence s, int start, int before, int count) {
+                boolean enableButton = docnrEditText.getText().length() > 0
+                        && dobEditText.getText().length() > 0
+                        && doeEditText.getText().length() > 0;
+                continueButton.setEnabled(enableButton);
+            }
+        };
+
+        docnrEditText.addTextChangedListener(bacFieldWatcher);
+        dobEditText.addTextChangedListener(bacFieldWatcher);
+        doeEditText.addTextChangedListener(bacFieldWatcher);
+
+        bacFieldWatcher.onTextChanged("", 0, 0, 0);
+    }
+
     private void advanceScreen() {
         switch (screen) {
         case SCREEN_START:
@@ -533,6 +560,8 @@ public class Passport extends Activity implements ServerUrlDialogFragment.Server
             }
             if (docnr.length() != 0)
                 docnrEditText.setText(docnr);
+
+            setBacFieldWatcher();
 
             break;
 
@@ -687,13 +716,10 @@ public class Passport extends Activity implements ServerUrlDialogFragment.Server
      * @return The BAC key.
      * @throws IllegalStateException when the BAC fields in the BAC screen have not been set.
      */
-    private BACKey getBACKey() throws IOException {
+    private BACKey getBACKey() {
         long dob = settings.getLong("enroll_bac_dob", 0);
         long doe = settings.getLong("enroll_bac_doe", 0);
         String docnr = settings.getString("enroll_bac_docnr", "");
-
-        if (dob == 0 || doe == 0 || docnr.length() == 0)
-            throw new IOException("BAC fields have not been set");
 
         String dobString = bacDateFormat.format(new Date(dob));
         String doeString = bacDateFormat.format(new Date(doe));
