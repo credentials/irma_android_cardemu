@@ -135,8 +135,18 @@ public class HttpClient {
 	 * Exception class for HttpClient.
 	 */
 	public class HttpClientException extends Exception {
+		private static final long serialVersionUID = -3138843561169048744L;
+
 		public int status;
 		public Throwable cause;
+
+		@Override
+		public String toString() {
+			return "HttpClientException{" +
+					"status=" + status +
+					", cause=" + cause +
+					'}';
+		}
 
 		public HttpClientException(int status, Throwable cause) {
 			super(cause);
