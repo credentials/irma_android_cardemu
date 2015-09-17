@@ -139,6 +139,7 @@ public class AppUpdater {
 					if (e.status == 404)
 						noneFound = true;
 					else
+						// Report this exception
 						serverError = true;
 				}
 				return null;
@@ -328,6 +329,7 @@ public class AppUpdater {
 						context.deleteFile(filename);
 					}
 				} catch (IOException e) {
+					// Report this exception
 					Log.e(TAG, "Update error: ");
 					e.printStackTrace();
 				}
