@@ -1,13 +1,10 @@
 package org.irmacard.cardemu;
 
 import android.app.Application;
-
-import org.acra.*;
-import org.acra.annotation.*;
-
-/**
- * Created by fabianbr on 21-9-15.
- */
+import org.acra.ACRA;
+import org.acra.ReportField;
+import org.acra.ReportingInteractionMode;
+import org.acra.annotation.ReportsCrashes;
 
 @ReportsCrashes(
         formUri = "",//TODO!
@@ -31,10 +28,13 @@ import org.acra.annotation.*;
                 ReportField.USER_CRASH_DATE},
         mode = ReportingInteractionMode.TOAST)
 public class IRMApp extends Application {
+    private final static String metricServer = ""; // TODO!
+    private final static long reportTimeInterval = 1000*60*60*24; // 1 day in milliseconds
 
     @Override
     public void onCreate() {
         super.onCreate();
         ACRA.init(this);
+        MetricsReporter.init(this, metricServer, reportTimeInterval);
     }
 }

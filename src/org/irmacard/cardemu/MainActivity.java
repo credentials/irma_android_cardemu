@@ -129,6 +129,8 @@ public class MainActivity extends Activity implements PINDialogListener, Disclos
 	private static final String updateServer = "https://credentials.github.io/appupdates";
 	AppUpdater updater;
 
+	private long issuingStartTime;
+
 	private void loadCard() {
 		SharedPreferences settings = getSharedPreferences(SETTINGS, 0);
 		String card_json = settings.getString(CARD_STORAGE, "");
@@ -834,6 +836,25 @@ public class MainActivity extends Activity implements PINDialogListener, Disclos
 					}
 				} else if (rm.name.equals(ReaderMessage.NAME_COMMAND_TRANSMIT)) {
 					TransmitCommandSetArguments arg = (TransmitCommandSetArguments) rm.arguments;
+
+					boolean verifying = false;
+					boolean issuingOne = false;
+					boolean issuingTwo = false;
+					long start = 0, stop = 0;
+
+					if (arg.commands.get(0).getKey().equals("startprove")) {
+						verifying = true;
+					}
+					if (arg.commands.get(0).getKey().equals("start_issuance")) {
+						issuingOne = true;
+						MainActivity.this.issuingStartTime = System.currentTimeMillis();
+					}
+					if (arg.commands.get(0).getKey().equals("signature_A")) {
+						issuingTwo = true;
+					}
+
+					start = System.currentTimeMillis();
+
 					ProtocolResponses responses = new ProtocolResponses();
 					for (ProtocolCommand c : arg.commands) {
 						ResponseAPDU apdu_response = is.transmit(c.getAPDU());
@@ -843,6 +864,19 @@ public class MainActivity extends Activity implements PINDialogListener, Disclos
 							break;
 						}
 					}
+
+					stop = System.currentTimeMillis();
+
+					if (verifying) {
+						MetricsReporter.getInstance().reportVerification(stop - start);
+					}
+					if (issuingOne) {
+						MetricsReporter.getInstance().reportIssueOne(stop - start);
+					}
+					if (issuingTwo) {
+						MetricsReporter.getInstance().reportIssueTwo(stop - start, stop - MainActivity.this.issuingStartTime);
+					}
+
 					return new ReaderMessage(ReaderMessage.TYPE_RESPONSE, rm.name, rm.id, new ResponseArguments(responses));
 				} else if (rm.name.equals(ReaderMessage.NAME_COMMAND_IDLE)) {
 					// FIXME: IRMA specific implementation,
