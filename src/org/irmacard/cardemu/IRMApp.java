@@ -15,6 +15,7 @@ import org.acra.annotation.ReportsCrashes;
                 ReportField.REPORT_ID,
                 ReportField.INSTALLATION_ID,
                 ReportField.APP_VERSION_CODE,
+                ReportField.PACKAGE_NAME,
                 ReportField.ANDROID_VERSION,
                 ReportField.BRAND,
                 ReportField.PHONE_MODEL,
