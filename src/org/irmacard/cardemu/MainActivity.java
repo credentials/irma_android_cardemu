@@ -130,6 +130,7 @@ public class MainActivity extends Activity implements PINDialogListener, Disclos
 	AppUpdater updater;
 
 	private long issuingStartTime;
+	private long qrScanStartTime;
 
 	private void loadCard() {
 		SharedPreferences settings = getSharedPreferences(SETTINGS, 0);
@@ -745,6 +746,8 @@ public class MainActivity extends Activity implements PINDialogListener, Disclos
 			tryDeleteCredential(cd);
 
 		} else {
+			MetricsReporter.getInstance().reportAggregrateMeasurement("qr_scan_time", System.currentTimeMillis() - qrScanStartTime);
+
 			IntentResult scanResult = IntentIntegrator
 					.parseActivityResult(requestCode, resultCode, data);
 
@@ -782,6 +785,7 @@ public class MainActivity extends Activity implements PINDialogListener, Disclos
 	}
 
 	public void startQRScanner(String message) {
+		qrScanStartTime = System.currentTimeMillis();
 		IntentIntegrator integrator = new IntentIntegrator(this);
 		integrator.setPrompt(message);
 		integrator.initiateScan();
