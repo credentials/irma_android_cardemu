@@ -868,13 +868,15 @@ public class MainActivity extends Activity implements PINDialogListener, Disclos
 					stop = System.currentTimeMillis();
 
 					if (verifying) {
-						MetricsReporter.getInstance().reportVerification(stop - start);
+						MetricsReporter.getInstance().reportAggregrateMeasurement("verification_time", stop - start);
 					}
 					if (issuingOne) {
-						MetricsReporter.getInstance().reportIssueOne(stop - start);
+						MetricsReporter.getInstance().reportMeasurement("issue_one_time", stop - start, false);
 					}
 					if (issuingTwo) {
-						MetricsReporter.getInstance().reportIssueTwo(stop - start, stop - MainActivity.this.issuingStartTime);
+						MetricsReporter.getInstance().reportMeasurement("issue_two_time", stop - start, false);
+						MetricsReporter.getInstance().reportMeasurement("issue_total_time",
+								stop - MainActivity.this.issuingStartTime, true);
 					}
 
 					return new ReaderMessage(ReaderMessage.TYPE_RESPONSE, rm.name, rm.id, new ResponseArguments(responses));

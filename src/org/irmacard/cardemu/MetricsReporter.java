@@ -21,7 +21,9 @@ import org.irmacard.metrics.common.SessionToken;
 
 import java.lang.reflect.Type;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 /**
  * Metrics reporter class. Use it as follows:
@@ -49,14 +51,15 @@ public class MetricsReporter {
 	// Metrics and meta-informatioon
 	private ApplicationInformation applicationInformation;
 	private SessionToken metricToken = null;
-	private DataLogger dataLogger = null;
+	private Map<String, DataLogger> aggregrates = null;
 	private List<Measurement> measurements = null;
 
 	// Stuff we need to do our work
 	private Context context;
 	private SharedPreferences settings;
 	private Gson gson = new Gson();
-	private Type measurementsType = new TypeToken<ArrayList<DataLogger>>(){}.getType(); // for Gson
+	private Type measurementsType = new TypeToken<ArrayList<Measurement>>(){}.getType(); // for Gson
+	private Type aggregratesType = new TypeToken<HashMap<String,DataLogger>>(){}.getType(); // for Gson
 	private final HttpClient client = new HttpClient(gson);
 
 	// Used to check every 10 mins if we should send something
@@ -107,12 +110,12 @@ public class MetricsReporter {
 	 */
 	private void restoreMetricData() {
 		String metricTokenJson = settings.getString("metricToken", "");
-		String dataLoggerJson = settings.getString("dataLogger", "");
+		String aggregratesJson = settings.getString("aggregrates", "");
 		String measurementsJson = settings.getString("measurements", "");
 
 		try {
 			metricToken = gson.fromJson(metricTokenJson, SessionToken.class);
-			dataLogger = gson.fromJson(dataLoggerJson, DataLogger.class);
+			aggregrates = gson.fromJson(aggregratesJson, aggregratesType);
 			measurements = gson.fromJson(measurementsJson, measurementsType);
 		} catch (JsonSyntaxException e) {
 			e.printStackTrace();
@@ -121,8 +124,8 @@ public class MetricsReporter {
 		if (metricToken == null) {
 			getNewMetricToken();
 		}
-		if (dataLogger == null) {
-			dataLogger = new DataLogger("verification_time");
+		if (aggregrates == null) {
+			aggregrates = new HashMap<>();
 		}
 		if (measurements == null) {
 			measurements = new ArrayList<>();
@@ -187,8 +190,8 @@ public class MetricsReporter {
 			return;
 		}
 
-		if (shouldSendVerificationReport()) {
-			sendVerificationReport();
+		if (shouldSendAggregrates()) {
+			sendAggregrates();
 		}
 
 		if (shouldSendMeasurements()) {
@@ -200,18 +203,23 @@ public class MetricsReporter {
 		return measurements.size() > 0 && isWifiConnected();
 	}
 
-	private boolean shouldSendVerificationReport() {
-		long lastReport = settings.getLong("lastVerificationReport", 0);
+	private boolean shouldSendAggregrates() {
+		long lastReport = settings.getLong("lastAggregratesSent", 0);
 		long time = System.currentTimeMillis();
 
-		return !dataLogger.isEmpty()
+		boolean isNotEmpty = true;
+		for (DataLogger logger : aggregrates.values()) {
+			isNotEmpty = isNotEmpty && !logger.isEmpty();
+		}
+
+		return isNotEmpty
 				&& isWifiConnected()
 				&& time - lastReport > reportTimeInterval;
 	}
 
-	private void clearVerificationLogger() {
-		dataLogger.clear();
-		settings.edit().remove("dataLogger").apply();
+	private void clearAggregrates() {
+		aggregrates.clear();
+		settings.edit().remove("aggregrates").apply();
 	}
 
 	private void clearMeasurements() {
@@ -219,7 +227,7 @@ public class MetricsReporter {
 		settings.edit().remove("measurements").apply();
 	}
 
-	private void sendVerificationReport() {
+	private void sendAggregrates() {
 		new AsyncTask<Void,Void,Boolean>() {
 			@Override
 			protected Boolean doInBackground(Void... params) {
@@ -227,19 +235,21 @@ public class MetricsReporter {
 				String auth = "Bearer " + metricToken.getSessionToken();
 
 				try {
-					client.doPost(Object.class, url, dataLogger.report(), auth);
+					for (DataLogger logger : aggregrates.values()) {
+						client.doPost(Object.class, url, logger.report(), auth);
+					}
+					return true;
 				} catch (HttpClient.HttpClientException e) {
 					e.printStackTrace();
 					return false;
 				}
-				return true;
 			}
 
 			@Override
 			protected void onPostExecute(Boolean success) {
 				if (success) {
-					clearVerificationLogger();
-					settings.edit().putLong("lastVerificationReport", System.currentTimeMillis()).apply();
+					clearAggregrates();
+					settings.edit().putLong("lastAggregratesSent", System.currentTimeMillis()).apply();
 				}
 			}
 		}.execute();
@@ -274,27 +284,46 @@ public class MetricsReporter {
 
 	// Reporting methods
 
-	public void reportIssueOne(double duration) {
-		measurements.add(new Measurement("issueOne", duration));
+	/**
+	 * Save a measurement whose values should be aggregrated.
+	 * @param key The name of the measurement
+	 * @param value The value
+	 */
+	public void reportAggregrateMeasurement(String key, double value) {
+		if (!aggregrates.containsKey(key)) {
+			aggregrates.put(key, new DataLogger(key));
+		}
+
+		aggregrates.get(key).log(value);
+		settings.edit()
+				.putString("aggregrates", gson.toJson(aggregrates, aggregratesType))
+				.apply();
 	}
 
-	public void reportIssueTwo(double duration, double totalDuration) {
-		measurements.add(new Measurement("issueTwo", duration));
-		measurements.add(new Measurement("issueTotal", totalDuration));
+	/**
+	 * Report a measurement. Will be sent to the metrics server immediately.
+	 * @param key The name of the measurement
+	 * @param value The value
+	 */
+	public void reportMeasurement(String key, double value) {
+		reportMeasurement(key, value, true);
+	}
+
+	/**
+	 * Report a measurement.
+	 * @param key The name of the measurement
+	 * @param value The value
+	 * @param sendNow If we should send it now, or save it for later reporting
+	 */
+	public void reportMeasurement(String key, double value, boolean sendNow) {
+		measurements.add(new Measurement(key, value));
 
 		settings.edit()
 				.putString("measurements", gson.toJson(measurements, measurementsType))
 				.apply();
 
-		if (shouldSendMeasurements()) {
+		if (sendNow && shouldSendMeasurements()) {
 			sendMeasurements();
 		}
-	}
-
-	public void reportVerification(double duration) {
-		dataLogger.log(duration);
-		settings.edit()
-				.putString("dataLogger", gson.toJson(dataLogger))
-				.apply();
 	}
 }
