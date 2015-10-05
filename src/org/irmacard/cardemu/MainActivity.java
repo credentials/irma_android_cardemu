@@ -11,6 +11,8 @@ import android.view.*;
 import android.widget.*;
 import com.google.gson.JsonElement;
 import net.sf.scuba.smartcards.*;
+
+import org.acra.ACRA;
 import org.apache.http.Header;
 import org.apache.http.entity.StringEntity;
 import org.irmacard.android.util.credentials.AndroidWalker;
@@ -421,10 +423,9 @@ public class MainActivity extends Activity implements PINDialogListener, Disclos
 							ic.connect();
 							is.sendCardPin("000000".getBytes());
 							ic.removeCredential(cd);
-						} catch (CredentialsException e) {
-							e.printStackTrace();
-						} catch (CardServiceException e) {
-							e.printStackTrace();
+						} catch (CredentialsException | CardServiceException e) {
+							//e.printStackTrace();
+							ACRA.getErrorReporter().handleException(e);
 						}
 						Log.i(TAG, "Updating credential list");
 						updateCardCredentials();
@@ -480,12 +481,8 @@ public class MainActivity extends Activity implements PINDialogListener, Disclos
 			for (CredentialDescription cd : credentialDescriptions) {
 				credentialAttributes.put(cd, ic.getAttributes(cd));
 			}
-		} catch (CardServiceException e) {
-			e.printStackTrace();
-		} catch (InfoException e) {
-			e.printStackTrace();
-		} catch (CredentialsException e) {
-			e.printStackTrace();
+		} catch (CardServiceException|InfoException|CredentialsException e) {
+			ACRA.getErrorReporter().handleException(e);
 		}
 
 		credentialListAdapter.updateData(credentialDescriptions, credentialAttributes);
@@ -639,7 +636,7 @@ public class MainActivity extends Activity implements PINDialogListener, Disclos
 			reader.setLenient(true);
 			rm = gson.fromJson(reader, ReaderMessage.class);
 		} catch (Exception e) {
-			e.printStackTrace();
+			ACRA.getErrorReporter().handleException(e);
 			return;
 		}
 
@@ -705,7 +702,7 @@ public class MainActivity extends Activity implements PINDialogListener, Disclos
 				});
 			} catch (UnsupportedEncodingException e) {
 				// Ignore, shouldn't happen ;)
-				e.printStackTrace();
+				ACRA.getErrorReporter().handleException(e);
 			}
 		}
 	}
@@ -992,7 +989,8 @@ public class MainActivity extends Activity implements PINDialogListener, Disclos
 				map.put(credential, disclosed);
 			}
 		} catch (InfoException | CardServiceException | CredentialsException e) {
-			e.printStackTrace();
+			//e.printStackTrace();
+			ACRA.getErrorReporter().handleException(e);
 			// If something went wrong we can't properly ask for permission,
 			// so we don't want to send the disclosure proof. So abort the connection.
 			abortConnection(msg);

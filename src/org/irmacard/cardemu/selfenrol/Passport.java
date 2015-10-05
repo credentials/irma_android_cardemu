@@ -27,6 +27,7 @@ import com.google.gson.JsonSyntaxException;
 import com.google.gson.reflect.TypeToken;
 import net.sf.scuba.smartcards.*;
 
+import org.acra.ACRA;
 import org.irmacard.cardemu.*;
 import org.irmacard.cardemu.BuildConfig;
 import org.irmacard.credentials.Attributes;
@@ -288,7 +289,7 @@ public class Passport extends Activity implements ServerUrlDialogFragment.Server
             readPassport(passportService, passportMsg);
         } catch (CardServiceException e) {
             // TODO under what circumstances does this happen? Maybe handle it more intelligently?
-            // Report this exception
+            ACRA.getErrorReporter().handleException(e);
             showErrorScreen(getString(R.string.error_enroll_passporterror),
                     getString(R.string.abort), 0,
                     getString(R.string.retry), SCREEN_PASSPORT);
@@ -328,7 +329,7 @@ public class Passport extends Activity implements ServerUrlDialogFragment.Server
                 try {
                     success = generatePassportDataMessage(ps,pdm);
                 } catch (IOException|CardServiceException e) {
-                    // Report this exception
+                    ACRA.getErrorReporter().handleException(e);
                     passportError = true;
                     return null;
                 }
@@ -816,7 +817,7 @@ public class Passport extends Activity implements ServerUrlDialogFragment.Server
 
             return new SecureSSLSocketFactory(context.getSocketFactory());
         } catch (KeyManagementException|NoSuchAlgorithmException|KeyStoreException|CertificateException|IOException e) {
-            // Report this exception
+            ACRA.getErrorReporter().handleException(e);
             e.printStackTrace();
             return null;
         }
@@ -870,7 +871,7 @@ public class Passport extends Activity implements ServerUrlDialogFragment.Server
                     EnrollmentStartMessage msg = client.doGet(EnrollmentStartMessage.class, serverUrl + "/start");
                     return new EnrollmentStartResult(msg);
                 } catch (HttpClientException e) { // TODO
-                    // Report this exception
+                    ACRA.getErrorReporter().handleException(e);
                     if (e.cause instanceof JsonSyntaxException)
                         return new EnrollmentStartResult(e, R.string.error_enroll_invalidresponse);
                     else
@@ -932,13 +933,13 @@ public class Passport extends Activity implements ServerUrlDialogFragment.Server
                 } catch (CardServiceException // Issuing the credential to the card failed
                         |InfoException // VerificationDescription not found in configurarion
                         |CredentialsException e) { // Verification went wrong
-                    // Report this exception
-                    e.printStackTrace();
+                    ACRA.getErrorReporter().handleException(e);
+                    //e.printStackTrace();
                     msg.obj = e;
                     msg.what = R.string.error_enroll_issuing_failed;
                 } catch (HttpClientException e) {
-                    // Report this exception
-                    e.printStackTrace();
+                    ACRA.getErrorReporter().handleException(e);
+                    //e.printStackTrace();
                     msg.obj = e;
                     if (e.cause instanceof JsonSyntaxException)
                         msg.what = R.string.error_enroll_invalidresponse;
