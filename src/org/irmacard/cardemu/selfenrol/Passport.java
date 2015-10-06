@@ -372,6 +372,7 @@ public class Passport extends Activity implements ServerUrlDialogFragment.Server
             public boolean generatePassportDataMessage(PassportService passportService, PassportDataMessage pdm)
                     throws CardServiceException, IOException {
                 publishProgress();
+
                 for (int i = 0; i<=5; i++) {
                     if (pdm.getDg1File() == null) {
                         pdm.setDg1File(new DG1File(passportService.getInputStream(PassportService.EF_DG1)));
@@ -381,7 +382,9 @@ public class Passport extends Activity implements ServerUrlDialogFragment.Server
                         pdm.setSodFile(new SODFile(passportService.getInputStream(PassportService.EF_SOD)));
                         publishProgress();
                     }
-                    if (pdm.getDg14File() == null) {
+                    if (pdm.getSodFile() != null // We need the SOD file to check if DG14 exists
+                        && pdm.getSodFile().getDataGroupHashes().get(14) != null // Checks if DG14 exists
+                        && pdm.getDg14File() == null) {
                         pdm.setDg14File(new DG14File(passportService.getInputStream(PassportService.EF_DG14)));
                         publishProgress();
                     }

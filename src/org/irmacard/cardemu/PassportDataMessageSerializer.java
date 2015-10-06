@@ -32,7 +32,8 @@ public class PassportDataMessageSerializer
 
             obj.addProperty("sodFile", context.serialize(sodFile.getEncoded()).getAsString());
             obj.addProperty("dg1File", context.serialize(dg1File.getEncoded()).getAsString());
-            obj.addProperty("dg14File", context.serialize(dg14File.getEncoded()).getAsString());
+            if (dg14File != null)
+                obj.addProperty("dg14File", context.serialize(dg14File.getEncoded()).getAsString());
             obj.addProperty("dg15File", context.serialize(dg15File.getEncoded()).getAsString());
 
             obj.addProperty("response", context.serialize(response).getAsString());
