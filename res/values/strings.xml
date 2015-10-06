@@ -63,6 +63,7 @@
     <string name="error_enroll_invalidresponse">The enrollment server returned an invalid response.</string>
     <string name="error_enroll_passporterror">Failed to establish contact with the passport.</string>
     <string name="error_enroll_bacfailed">The passport data you supplied seems to be wrong.</string>
+    <string name="error_enroll_passport_expired">You cannot enroll with an expired identity document.</string>
     <string name="unknown_error">An unknown error occurred.</string>
     <string name="enroll_enter_bac_title">Passport data</string>
     <string name="enroll_enter_bac_desc">Please enter the following data from your passport, to allow the app

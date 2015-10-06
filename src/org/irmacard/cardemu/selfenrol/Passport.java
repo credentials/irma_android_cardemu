@@ -625,6 +625,13 @@ public class Passport extends Activity implements ServerUrlDialogFragment.Server
                     e.printStackTrace();
                 }
 
+                if (bacDoe < System.currentTimeMillis()) {
+                    showErrorScreen(getString(R.string.error_enroll_passport_expired),
+                            getString(R.string.abort), 0,
+                            getString(R.string.retry), SCREEN_BAC);
+                    return;
+                }
+
                 settings.edit()
                         .putLong("enroll_bac_dob", bacDob)
                         .putLong("enroll_bac_doe", bacDoe)
