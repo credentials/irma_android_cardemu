@@ -893,12 +893,14 @@ public class Passport extends Activity implements ServerUrlDialogFragment.Server
                 try {
                     EnrollmentStartMessage msg = client.doGet(EnrollmentStartMessage.class, serverUrl + "/start");
                     return new EnrollmentStartResult(msg);
-                } catch (HttpClientException e) { // TODO
-                    ACRA.getErrorReporter().handleException(e);
-                    if (e.cause instanceof JsonSyntaxException)
+                } catch (HttpClientException e) {
+                    if (e.cause instanceof JsonSyntaxException) {
+                        ACRA.getErrorReporter().handleException(e);
                         return new EnrollmentStartResult(e, R.string.error_enroll_invalidresponse);
-                    else
+                    }
+                    else {
                         return new EnrollmentStartResult(e, R.string.error_enroll_cantconnect);
+                    }
                 }
             }
 
@@ -961,13 +963,14 @@ public class Passport extends Activity implements ServerUrlDialogFragment.Server
                     msg.obj = e;
                     msg.what = R.string.error_enroll_issuing_failed;
                 } catch (HttpClientException e) {
-                    ACRA.getErrorReporter().handleException(e);
-                    //e.printStackTrace();
                     msg.obj = e;
-                    if (e.cause instanceof JsonSyntaxException)
+                    if (e.cause instanceof JsonSyntaxException) {
+                        ACRA.getErrorReporter().handleException(e);
                         msg.what = R.string.error_enroll_invalidresponse;
-                    else
+                    }
+                    else {
                         msg.what = R.string.error_enroll_cantconnect;
+                    }
                 }
                 return msg;
             }
