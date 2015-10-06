@@ -99,6 +99,8 @@ public class Passport extends Activity implements ServerUrlDialogFragment.Server
     private SimpleDateFormat bacDateFormat = new SimpleDateFormat("yyMMdd");
     private DateFormat hrDateFormat = DateFormat.getDateInstance();
 
+    private Handler handler = new Handler();
+
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -254,10 +256,25 @@ public class Passport extends Activity implements ServerUrlDialogFragment.Server
         }
     }
 
-    public void processIntent(Intent intent) {
+    public void processIntent(final Intent intent) {
         // Only handle this event if we expect it
         if (screen != SCREEN_PASSPORT)
             return;
+
+        if (enrollSession == null) {
+            // We need to have an enroll session before we can do AA, because the enroll session contains the nonce.
+            // So retry later. This will not cause an endless loop if the server is unreachable, because after a timeout
+            // (5 sec) the getEnrollmentSession method will go to the error screen, so the if-clause above will trigger.
+            handler.postDelayed(new Runnable() {
+                @Override
+                public void run() {
+                    processIntent(intent);
+                }
+            }, 250);
+            return;
+        }
+
+        ((TextView) findViewById(R.id.se_feedback_text)).setText(R.string.feedback_communicating_passport);
 
         Tag tagFromIntent = intent.getParcelableExtra(NfcAdapter.EXTRA_TAG);
         assert (tagFromIntent != null);
@@ -282,7 +299,6 @@ public class Passport extends Activity implements ServerUrlDialogFragment.Server
             passportService = new PassportService(cs);
             passportService.sendSelectApplet(false);
 
-            //TODO: if the user is very fast and there is no connection with the server, this will result in a null-pointer deref instead of server-unreachable error.
             if (passportMsg == null) {
                 passportMsg = new PassportDataMessage(enrollSession.getSessionToken(), imsi,enrollSession.getNonce());
             }
@@ -623,6 +639,13 @@ public class Passport extends Activity implements ServerUrlDialogFragment.Server
                         showErrorScreen(result.errorId);
                     }
                     else {
+                        TextView connectedTextView = (TextView) findViewById(R.id.se_connected);
+                        connectedTextView.setTextColor(getResources().getColor(R.color.irmagreen));
+                        connectedTextView.setText(R.string.se_connected_mno);
+
+                        ((TextView) findViewById(R.id.se_feedback_text)).setVisibility(View.VISIBLE);
+                        ((ProgressBar) findViewById(R.id.se_progress_bar)).setVisibility(View.VISIBLE);
+
                         enrollSession = result.msg;
                     }
                 }
@@ -645,14 +668,6 @@ public class Passport extends Activity implements ServerUrlDialogFragment.Server
             storeCard();
 
             // Do it!
-            // POSSIBLE CAVEAT: If we are here, then it is because the passport-present-intent called advanceFunction().
-            // In principle, this can happen as soon as the app advances from SCREEN_BAC to SCREEN_PASSPORT - that is,
-            // when the code from the case above this one runs. In that case statement, we fetch an enrollment session
-            // asynchroneously. This means that the enroll() method (which assumes an enrollment session has been
-            // set in the member enrollSession) could conceivably be invoked before this member is set.
-            // However, assuming the server responds to our get-session-request at normal speeds, the user would have
-            // to put his phone on the passport absurdly fast to achieve this, so for now we simply assume this does
-            // not happen. TODO prevent this from going wrong, perhaps using some timer
             enroll(new Handler() {
                 @Override
                 public void handleMessage(Message msg) {

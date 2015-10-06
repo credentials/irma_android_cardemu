@@ -8,6 +8,7 @@
 	<string name="credential_info">Card Proxy</string>
 	<string name="feedback_waiting_for_card">Waiting for card</string>
     <string name="feedback_waiting_for_passport">Waiting for Passport</string>
+    <string name="feedback_communicating_passport">Communicating with Passport…</string>
 	<string name="pinhint">PIN</string>
 	<string name="pinmessage">Please enter your IRMA pincode</string>
 	<string name="connectserver">Connecting to server</string>
@@ -16,10 +17,10 @@
     <string name="title_log">Log</string>
 
 	<string name="status_idle">Tap to scan QR</string>
-	<string name="status_connecting">Connecting...</string>
+	<string name="status_connecting">Connecting…</string>
 	<string name="status_connected">Connected to server</string>
 	<string name="status_ready">Card ready</string>
-	<string name="status_communicating">Communicating...</string>
+	<string name="status_communicating">Communicating…</string>
 	<string name="status_waitingforpin">Waiting for PIN</string>
     <string name="menu_enroll">Enroll</string>
     <string name="enroll_expl">You are about to start receiving new (base) IRMA credentials. If you already have a set of credentials, then this step might overwrite some of those.
@@ -40,9 +41,10 @@
     <string name="abort">Abort</string>
     <string name="retry">Retry</string>
     <string name="se_connected_mno">Connected to server</string>
+    <string name="se_connecting_mno">Connecting to server…</string>
     <string name="se_passport_verified">Passport data matched to subscriber data. \n Continue to MijnOverheid.nl to receive credentials.</string>
     <string name="se_connected_mijnoverheid">Connected to server</string>
-    <string name="feedback_issueing">Issuing credentials...</string>
+    <string name="feedback_issueing">Issuing credentials…</string>
     <string name="done">Done.</string>
     <string name="clear_card">Clear card</string>
     <string name="enroll_url_menu_item">Set enroll server</string>

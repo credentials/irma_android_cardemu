@@ -22,8 +22,8 @@
             android:gravity="center"
             android:layout_marginTop="10dp"
             android:textAppearance="?android:attr/textAppearanceLarge"
-            android:textColor="@color/irmagreen"
-            android:text="@string/se_connected_mno"
+            android:textColor="@color/irmadarkblue"
+            android:text="@string/se_connecting_mno"
             android:textSize="24sp"
             android:textIsSelectable="true" />
         <TextView
@@ -38,6 +38,7 @@
             android:textColor="@color/irmadarkblue"
             android:text="@string/feedback_waiting_for_passport"
             android:textSize="24sp"
+            android:visibility="invisible"
             android:textIsSelectable="true" />
         <ProgressBar
             android:id="@+id/se_progress_bar"
@@ -50,6 +51,7 @@
             android:max="6"
             android:minHeight="20dp"
             android:minWidth="200dp"
+            android:visibility="invisible"
             style="@android:style/Widget.ProgressBar.Horizontal" />
         <ImageView
             android:id="@+id/se_statusimage"
