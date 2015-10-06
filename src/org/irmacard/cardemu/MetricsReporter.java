@@ -200,7 +200,9 @@ public class MetricsReporter {
 	}
 
 	private boolean shouldSendMeasurements() {
-		return measurements.size() > 0 && isWifiConnected();
+		return measurements.size() > 0
+				&& isWifiConnected()
+				&& metricToken != null;
 	}
 
 	private boolean shouldSendAggregrates() {
@@ -214,7 +216,8 @@ public class MetricsReporter {
 
 		return isNotEmpty
 				&& isWifiConnected()
-				&& time - lastReport > reportTimeInterval;
+				&& time - lastReport > reportTimeInterval
+				&& metricToken != null;
 	}
 
 	private void clearAggregrates() {
