@@ -308,6 +308,9 @@ public class Passport extends Activity implements ServerUrlDialogFragment.Server
             boolean passportError = false;
             boolean bacError = false;
 
+            long start;
+            long stop;
+
             @Override
             protected PassportDataMessage doInBackground(Object... params) {
                 if (params.length <2) {
@@ -320,6 +323,7 @@ public class Passport extends Activity implements ServerUrlDialogFragment.Server
                 // necessary. (Note: the IllegalStateException should not happen, but if it does for some unforseen
                 // reason there is no need to let it crash the app.)
                 try {
+                    start = System.currentTimeMillis();
                     ps.doBAC(getBACKey());
                 } catch (CardServiceException|IllegalStateException e) {
                     bacError = true;
@@ -332,6 +336,9 @@ public class Passport extends Activity implements ServerUrlDialogFragment.Server
                     ACRA.getErrorReporter().handleException(e);
                     passportError = true;
                     return null;
+                } finally {
+                    stop = System.currentTimeMillis();
+                    MetricsReporter.getInstance().reportMeasurement("passport_data_time", stop-start);
                 }
 
                 return pdm;
@@ -375,6 +382,7 @@ public class Passport extends Activity implements ServerUrlDialogFragment.Server
 
                     //Passport reading finished
                     if (pdm.isComplete()){
+                        MetricsReporter.getInstance().reportMeasurement("passport_data_attempts", i, false);
                         return true;
                     }
                 }
