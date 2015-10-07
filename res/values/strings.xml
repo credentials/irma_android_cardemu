@@ -52,7 +52,7 @@
     <string name="enroll_url_dialog_title">Enter the enrollment server URL</string>
     <string name="default_string">Default</string>
     <string name="step_string">Step</string>
-    <string name="enroll_default_url">enroll.irmacard.org</string>
+    <string name="enroll_default_url">demo.irmacard.org</string>
     <string name="enroll_error_label">Self enrollment failed</string>
     <string name="error_nfc_notsupported">This phone does not support NFC.</string>
     <string name="error_nfc_disabled">NFC is disabled. Please enable NFC in the phone settings before using this

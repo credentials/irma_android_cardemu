@@ -895,7 +895,8 @@ public class Passport extends Activity implements ServerUrlDialogFragment.Server
     }
 
     public void getEnrollmentSession(final Handler uiHandler) {
-        serverUrl  = "http://" + enrollServerUrl + ":8080/irma_mno_server/api/v1";
+        serverUrl  = "https://" + enrollServerUrl + ":80/irma_mno_server/api/v1";
+        Log.d(TAG,"server URL = " +serverUrl);
 
         AsyncTask<Void, Void, EnrollmentStartResult> task = new AsyncTask<Void, Void, EnrollmentStartResult>() {
             @Override
@@ -933,7 +934,7 @@ public class Passport extends Activity implements ServerUrlDialogFragment.Server
      * @param uiHandler The handler to message when done.
      */
     public void enroll(final Handler uiHandler) {
-        serverUrl  = "http://" + enrollServerUrl + ":8080/irma_mno_server/api/v1";
+        serverUrl  = "https://" + enrollServerUrl + ":80/irma_mno_server/api/v1";
 
         // Doing HTTP(S) stuff on the main thread is not allowed.
         AsyncTask<PassportDataMessage, Void, Message> task = new AsyncTask<PassportDataMessage, Void, Message>() {
