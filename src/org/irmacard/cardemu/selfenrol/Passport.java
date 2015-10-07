@@ -833,7 +833,6 @@ public class Passport extends Activity implements ServerUrlDialogFragment.Server
             Certificate ca;
             try {
                 ca = CertificateFactory.getInstance("X.509").generateCertificate(ins);
-                System.out.println("ca=" + ((X509Certificate) ca).getSubjectDN());
             } finally {
                 ins.close();
             }
@@ -895,7 +894,7 @@ public class Passport extends Activity implements ServerUrlDialogFragment.Server
     }
 
     public void getEnrollmentSession(final Handler uiHandler) {
-        serverUrl  = "https://" + enrollServerUrl + ":80/irma_mno_server/api/v1";
+        serverUrl  = "https://" + enrollServerUrl + "/tomcat/irma_mno_server/api/v1";
         Log.d(TAG,"server URL = " +serverUrl);
 
         AsyncTask<Void, Void, EnrollmentStartResult> task = new AsyncTask<Void, Void, EnrollmentStartResult>() {
@@ -934,7 +933,7 @@ public class Passport extends Activity implements ServerUrlDialogFragment.Server
      * @param uiHandler The handler to message when done.
      */
     public void enroll(final Handler uiHandler) {
-        serverUrl  = "https://" + enrollServerUrl + ":80/irma_mno_server/api/v1";
+        serverUrl  = "https://" + enrollServerUrl + "/tomcat/irma_mno_server/api/v1";
 
         // Doing HTTP(S) stuff on the main thread is not allowed.
         AsyncTask<PassportDataMessage, Void, Message> task = new AsyncTask<PassportDataMessage, Void, Message>() {
