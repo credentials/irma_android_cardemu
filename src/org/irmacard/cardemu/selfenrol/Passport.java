@@ -51,7 +51,6 @@ import java.security.*;
 import java.security.cert.Certificate;
 import java.security.cert.CertificateException;
 import java.security.cert.CertificateFactory;
-import java.security.cert.X509Certificate;
 import java.text.DateFormat;
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
@@ -67,7 +66,7 @@ import javax.net.ssl.SSLContext;
 import javax.net.ssl.SSLSocketFactory;
 import javax.net.ssl.TrustManagerFactory;
 
-public class Passport extends Activity implements ServerUrlDialogFragment.ServerUrlDialogListener {
+public class Passport extends Activity {
     private NfcAdapter nfcA;
     private PendingIntent mPendingIntent;
     private IntentFilter[] mFilters;
@@ -94,7 +93,6 @@ public class Passport extends Activity implements ServerUrlDialogFragment.Server
     public static final String SETTINGS = "cardemu";
 
     private AlertDialog urldialog = null;
-    private String enrollServerUrl;
     private SharedPreferences settings;
     private SimpleDateFormat bacDateFormat = new SimpleDateFormat("yyMMdd");
     private DateFormat hrDateFormat = DateFormat.getDateInstance();
@@ -126,9 +124,6 @@ public class Passport extends Activity implements ServerUrlDialogFragment.Server
         // Attempt to get the enroll server URL from the settings. If none is there,
         // use the default value (from res/values/strings.xml)
         settings = getSharedPreferences(SETTINGS, 0);
-        enrollServerUrl = settings.getString("enroll_server_url", "");
-        if (enrollServerUrl.length() == 0)
-            enrollServerUrl = getString(R.string.enroll_default_url);
         client = new HttpClient(gson, getSocketFactory());
 
         if(getIntent() != null) {
@@ -136,12 +131,17 @@ public class Passport extends Activity implements ServerUrlDialogFragment.Server
         }
 
         setContentView(R.layout.enroll_activity_start);
-        updateHelpText();
         setTitle(R.string.app_name_enroll);
 
-        TextView descriptionTextView = (TextView)findViewById(R.id.se_feedback_text);
-        descriptionTextView.setMovementMethod(LinkMovementMethod.getInstance());
-        descriptionTextView.setLinksClickable(true);
+        String enrollServer = IRMApp.enrollServer.substring(8); // Strip "https://"
+        enrollServer = enrollServer.substring(0, enrollServer.indexOf('/')); // Strip path from the url
+        String helpHtml = String.format(getString(R.string.se_connect_mno), enrollServer);
+
+        TextView helpTextView = (TextView)findViewById(R.id.se_feedback_text);
+        helpTextView.setText(Html.fromHtml(helpHtml));
+
+        helpTextView.setMovementMethod(LinkMovementMethod.getInstance());
+        helpTextView.setLinksClickable(true);
 
         screen = SCREEN_START;
         enableContinueButton();
@@ -152,12 +152,6 @@ public class Passport extends Activity implements ServerUrlDialogFragment.Server
         }
         if (!nfcA.isEnabled())
             showErrorScreen(R.string.error_nfc_disabled);
-    }
-
-    private void updateHelpText() {
-        String helpHtml = String.format(getString(R.string.se_connect_mno), enrollServerUrl);
-        TextView helpTextView = (TextView)findViewById(R.id.se_feedback_text);
-        helpTextView.setText(Html.fromHtml(helpHtml));
     }
 
     private void enableForegroundDispatch() {
@@ -196,7 +190,7 @@ public class Passport extends Activity implements ServerUrlDialogFragment.Server
             }
         }
 
-        Context context = getApplicationContext ();
+        Context context = getApplicationContext();
         TelephonyManager telephonyManager = (TelephonyManager) context.getSystemService(Context.TELEPHONY_SERVICE);
         imsi = telephonyManager.getSubscriberId();
 
@@ -575,9 +569,6 @@ public class Passport extends Activity implements ServerUrlDialogFragment.Server
             updateProgressCounter();
             enableContinueButton();
 
-            // Disable context menu, switching enroll server shouldn't be possible here
-            invalidateOptionsMenu();
-
             // Restore the BAC input fields from the settings, if present
             long bacDob = settings.getLong("enroll_bac_dob", 0);
             long bacDoe = settings.getLong("enroll_bac_doe", 0);
@@ -768,41 +759,6 @@ public class Passport extends Activity implements ServerUrlDialogFragment.Server
         String dobString = bacDateFormat.format(new Date(dob));
         String doeString = bacDateFormat.format(new Date(doe));
         return new BACKey(docnr, dobString, doeString);
-    }
-
-    @Override
-    public boolean onCreateOptionsMenu(Menu menu) {
-        if (screen == SCREEN_START) {
-            // Inflate the menu; this adds items to the action bar if it is present.
-            getMenuInflater().inflate(R.menu.enroll_activity_start, menu);
-            return true;
-        }
-
-        return false;
-    }
-
-    @Override
-    public boolean onOptionsItemSelected(MenuItem item) {
-        Log.d(TAG, "enroll menu press registered");
-
-        // Handle item selection
-        switch (item.getItemId()) {
-        case R.id.set_enroll_url:
-            Log.d(TAG, "set_enroll_url pressed");
-
-            ServerUrlDialogFragment dialog = new ServerUrlDialogFragment();
-            dialog.show(getFragmentManager(), "urldialog");
-
-            return true;
-        default:
-            return super.onOptionsItemSelected(item);
-        }
-    }
-
-    @Override
-    public void onServerUrlEntry(String url) {
-        enrollServerUrl = url;
-        updateHelpText();
     }
 
     //region Network and issuing
