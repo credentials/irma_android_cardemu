@@ -807,8 +807,6 @@ public class Passport extends Activity implements ServerUrlDialogFragment.Server
 
     //region Network and issuing
 
-    String serverUrl;
-
     /**
      * Get a SSLSocketFactory that uses public key pinning: it only accepts the
      * CA certificate obtained from the file res/raw/ca.cert.
@@ -894,8 +892,7 @@ public class Passport extends Activity implements ServerUrlDialogFragment.Server
     }
 
     public void getEnrollmentSession(final Handler uiHandler) {
-        serverUrl  = "https://" + enrollServerUrl + "/tomcat/irma_mno_server/api/v1";
-        Log.d(TAG,"server URL = " +serverUrl);
+        final String serverUrl = IRMApp.enrollServer;
 
         AsyncTask<Void, Void, EnrollmentStartResult> task = new AsyncTask<Void, Void, EnrollmentStartResult>() {
             @Override
@@ -933,7 +930,7 @@ public class Passport extends Activity implements ServerUrlDialogFragment.Server
      * @param uiHandler The handler to message when done.
      */
     public void enroll(final Handler uiHandler) {
-        serverUrl  = "https://" + enrollServerUrl + "/tomcat/irma_mno_server/api/v1";
+        final String serverUrl = IRMApp.enrollServer;
 
         // Doing HTTP(S) stuff on the main thread is not allowed.
         AsyncTask<PassportDataMessage, Void, Message> task = new AsyncTask<PassportDataMessage, Void, Message>() {

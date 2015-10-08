@@ -7,8 +7,7 @@ import org.acra.ReportingInteractionMode;
 import org.acra.annotation.ReportsCrashes;
 
 @ReportsCrashes(
-        formUri = "https://demo.irmacard.org/crashreportsviewer/www/submit.php",
-        //formUri = "https://demo.irmacard.org/crashreportsviewer/www/test.php",
+        formUri = IRMApp.acraServer,
         formUriBasicAuthLogin = "irma",
         formUriBasicAuthPassword = "test",
         customReportContent = {
@@ -20,7 +19,6 @@ import org.acra.annotation.ReportsCrashes;
                 ReportField.BRAND,
                 ReportField.PHONE_MODEL,
                 ReportField.DEVICE_FEATURES,
-                //ReportField.PRODUCT,
                 ReportField.INITIAL_CONFIGURATION,
                 ReportField.CRASH_CONFIGURATION,
                 ReportField.DISPLAY,
@@ -36,7 +34,9 @@ import org.acra.annotation.ReportsCrashes;
         mode = ReportingInteractionMode.TOAST,
         resToastText = R.string.crash_toast_text)
 public class IRMApp extends Application {
-    private final static String metricServer = ""; // TODO!
+    public final static String metricServer = ""; // TODO!
+    public final static String enrollServer = "https://demo.irmacard.org/tomcat/irma_mno_server/api/v1";
+    public final static String acraServer = "https://demo.irmacard.org/crashreportsviewer/www/submit.php";
     private final static long reportTimeInterval = 1000*60*60*24; // 1 day in milliseconds
 
     @Override
