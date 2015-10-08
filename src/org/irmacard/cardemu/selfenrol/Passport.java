@@ -124,7 +124,7 @@ public class Passport extends Activity {
         // Attempt to get the enroll server URL from the settings. If none is there,
         // use the default value (from res/values/strings.xml)
         settings = getSharedPreferences(SETTINGS, 0);
-        client = new HttpClient(gson, getSocketFactory());
+        client = new HttpClient(gson, new SecureSSLSocketFactory(getSocketFactory()));
 
         if(getIntent() != null) {
             onNewIntent(getIntent());
