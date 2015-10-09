@@ -80,13 +80,15 @@ public class MetricsReporter {
 		restoreMetricData();
 
 		// Check every 10 minutes if there are metrics to be sent, and if we should send them
-		handler.post(new Runnable() {
+		// We wait 5 seconds before doing this for the first time in order to give restoreMetricData() some time to
+		// fetch a new metrictoken, if we don't yet have one.
+		handler.postDelayed(new Runnable() {
 			@Override
 			public void run() {
 				sendAll();
 				handler.postDelayed(this, 1000 * 60 * 10);
 			}
-		});
+		}, 5*1000);
 	}
 
 	public static void init(Application application, String server, long interval) {
