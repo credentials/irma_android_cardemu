@@ -128,7 +128,7 @@ public class MainActivity extends Activity implements PINDialogListener, Disclos
 
 	private ReaderMessage disclosureproof;
 
-	private static final String updateServer = "https://credentials.github.io/appupdates";
+
 	AppUpdater updater;
 
 	private long issuingStartTime;
@@ -333,7 +333,7 @@ public class MainActivity extends Activity implements PINDialogListener, Disclos
 		setState(STATE_IDLE);
 		clearFeedback();
 
-		updater = new AppUpdater(this, updateServer);
+		updater = new AppUpdater(this, IRMApp.updateServer);
 	}
 
 	protected void clearCard() {

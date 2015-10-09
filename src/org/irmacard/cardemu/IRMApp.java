@@ -37,6 +37,8 @@ public class IRMApp extends Application {
     public final static String metricServer = ""; // TODO!
     public final static String enrollServer = "https://demo.irmacard.org/tomcat/irma_mno_server/api/v1";
     public final static String acraServer = "https://demo.irmacard.org/crashreportsviewer/www/submit.php";
+    public static final String updateServer = "https://credentials.github.io/appupdates";
+
     private final static long reportTimeInterval = 1000*60*60*24; // 1 day in milliseconds
 
     @Override
