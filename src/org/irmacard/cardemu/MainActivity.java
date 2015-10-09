@@ -144,12 +144,12 @@ public class MainActivity extends Activity implements PINDialogListener, Disclos
 			try {
 				card = gson.fromJson(card_json, IRMACard.class);
 			} catch (Exception e) {
-				card = getDefaultCard();
+				card = new IRMACard();
 			}
 		}
 
 		if (card == null)
-			card = getDefaultCard();
+			card = new IRMACard();
 
 		card.addVerificationListener(new VerificationStartListener() {
 			@Override
@@ -161,17 +161,6 @@ public class MainActivity extends Activity implements PINDialogListener, Disclos
 		is = new IdemixService(new SmartCardEmulatorService(card));
 	}
 
-	private IRMACard getDefaultCard() {
-		try {
-			Gson gson = new Gson();
-			BufferedReader reader = new BufferedReader(new InputStreamReader(getAssets().open("card.json")));
-			return gson.fromJson(reader, IRMACard.class);
-		} catch (IOException e) {
-			e.printStackTrace();
-			return null;
-		}
-	}
-
 	private void storeCard() {
 		Log.d(TAG, "Storing card");
 		SharedPreferences settings = getSharedPreferences(SETTINGS, 0);
@@ -179,23 +168,6 @@ public class MainActivity extends Activity implements PINDialogListener, Disclos
 		Gson gson = new Gson();
 		editor.putString(CARD_STORAGE, gson.toJson(card));
 		editor.commit();
-	}
-
-	private void resetCard() {
-		Log.d(TAG, "Resetting card");
-
-		SharedPreferences settings = getSharedPreferences(SETTINGS, 0);
-		SharedPreferences.Editor editor = settings.edit();
-
-		// FIXME: this is a bit of a hack, ideally we'd directly store the file as as a property
-		IRMACard tmp_card = getDefaultCard();
-
-		Gson gson = new Gson();
-		editor.putString(CARD_STORAGE, gson.toJson(tmp_card));
-		editor.commit();
-
-		loadCard();
-		updateCardCredentials();
 	}
 
 	private void setState(int state) {
@@ -1148,10 +1120,6 @@ public class MainActivity extends Activity implements PINDialogListener, Disclos
 		Log.d(TAG, "menu press registered");
 		// Handle item selection
 		switch (item.getItemId()) {
-			case R.id.menu_reset:
-				Log.d(TAG, "menu_reset pressed");
-				resetCard();
-				return true;
 			case R.id.enroll:
 				Log.d(TAG, "enroll pressed");
 				Intent i = new Intent(this, org.irmacard.cardemu.selfenrol.Passport.class);
@@ -1180,26 +1148,6 @@ public class MainActivity extends Activity implements PINDialogListener, Disclos
 			default:
 				return super.onOptionsItemSelected(item);
 		}
-	}
-
-
-	@Override
-	public boolean onPrepareOptionsMenu(Menu menu) {
-
-		MenuItem item = menu.findItem(R.id.menu_reset);
-		//TODO: fix hele menu idem.
-
-		if (activityState == STATE_IDLE) {
-			item.setEnabled(true);
-			// item.setVisible(true);
-			//item.getIcon().setAlpha(255);
-		} else {
-			// disabled
-			item.setEnabled(false);
-			// item.setVisible(false);
-			//item.getIcon().setAlpha(130);
-		}
-		return super.onPrepareOptionsMenu(menu);
 	}
 
 }
