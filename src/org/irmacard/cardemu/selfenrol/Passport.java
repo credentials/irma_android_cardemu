@@ -950,6 +950,7 @@ public class Passport extends Activity {
 
                 // Execute the retrieved commands
                 is.sendCardPin("000000".getBytes());
+                is.sendCredentialPin("0000".getBytes());
                 ProtocolResponses responses = is.execute(issueCommands);
 
                 // Get the second batch of commands for issuing
