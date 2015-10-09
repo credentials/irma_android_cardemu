@@ -140,7 +140,7 @@ public class MetricsReporter {
 		new AsyncTask<Void,Void,SessionToken>() {
 			@Override
 			protected SessionToken doInBackground(Void... params) {
-				String url = metricServer + "/irma_metrics_server/api/v1/register";
+				String url = metricServer + "/register";
 				try {
 					return client.doPost(SessionToken.class, url, applicationInformation);
 				} catch (HttpClient.HttpClientException e) {
@@ -234,7 +234,7 @@ public class MetricsReporter {
 		new AsyncTask<Void,Void,Boolean>() {
 			@Override
 			protected Boolean doInBackground(Void... params) {
-				String url = metricServer + "/irma_metrics_server/api/v1/aggregate";
+				String url = metricServer + "/aggregate";
 				String auth = "Bearer " + metricToken.getSessionToken();
 
 				try {
@@ -262,7 +262,7 @@ public class MetricsReporter {
 		new AsyncTask<Void,Void,Boolean>() {
 			@Override
 			protected Boolean doInBackground(Void... params) {
-				String url = metricServer + "/irma_metrics_server/api/v1/measurement";
+				String url = metricServer + "/measurement";
 				String auth = "Bearer " + metricToken.getSessionToken();
 
 				try {

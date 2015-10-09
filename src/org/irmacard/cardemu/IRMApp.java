@@ -34,7 +34,7 @@ import org.acra.annotation.ReportsCrashes;
         mode = ReportingInteractionMode.TOAST,
         resToastText = R.string.crash_toast_text)
 public class IRMApp extends Application {
-    public final static String metricServer = ""; // TODO!
+    public final static String metricServer = "https://demo.irmacard.org/tomcat/irma_metrics_server/api/v1";
     public final static String enrollServer = "https://demo.irmacard.org/tomcat/irma_mno_server/api/v1";
     public final static String acraServer = "https://demo.irmacard.org/crashreportsviewer/www/submit.php";
     public static final String updateServer = "https://credentials.github.io/appupdates";
