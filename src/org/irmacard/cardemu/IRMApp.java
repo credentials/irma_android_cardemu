@@ -52,5 +52,6 @@ public class IRMApp extends Application {
         } catch (Exception e) {
         }
         MetricsReporter.init(this, metricServer, reportTimeInterval);
+        CardManager.init(getSharedPreferences("cardemu", 0));
     }
 }

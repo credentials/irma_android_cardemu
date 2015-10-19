@@ -192,7 +192,9 @@ public class Passport extends Activity {
         Intent intent = getIntent();
         Log.i(TAG, "Action: " + intent.getAction());
         if (intent.hasExtra("card_json")) {
-            loadCard();
+            card = CardManager.loadCard();
+            is = new IdemixService(new SmartCardEmulatorService(card));
+
             Log.d(TAG,"loaded card");
             try {
                 is.open ();
@@ -206,40 +208,6 @@ public class Passport extends Activity {
     public void onBackPressed() {
         super.onBackPressed();
         finish();
-    }
-
-    //TODO: move all card functionality to a specific class, so we don't need this ugly code duplication and can do explicit card state checks there.
-    protected void logCard() {
-        Log.d(TAG, "Current card contents");
-        // Retrieve list of credentials from the card
-        IdemixCredentials ic = new IdemixCredentials(is);
-        List<CredentialDescription> credentialDescriptions = new ArrayList<CredentialDescription>();
-        // HashMap<CredentialDescription,Attributes> credentialAttributes = new HashMap<CredentialDescription,Attributes>();
-        try {
-            ic.connect();
-            is.sendCardPin("000000".getBytes());
-            credentialDescriptions = ic.getCredentials();
-            for(CredentialDescription cd : credentialDescriptions) {
-                Log.d(TAG,cd.getName());
-            }
-        } catch (CardServiceException|InfoException|CredentialsException e) {
-            e.printStackTrace();
-        }
-    }
-
-    private void storeCard() {
-        Log.d(TAG, "Storing card");
-        SharedPreferences.Editor editor = settings.edit();
-        Gson gson = new Gson();
-        editor.putString(CARD_STORAGE, gson.toJson(card));
-        editor.commit();
-    }
-
-    private void loadCard() {
-        String card_json = settings.getString(CARD_STORAGE, "");
-        Gson gson = new Gson();
-        card = gson.fromJson(card_json, IRMACard.class);
-        is = new IdemixService(new SmartCardEmulatorService(card));
     }
 
     @Override
@@ -669,7 +637,7 @@ public class Passport extends Activity {
 
             // Save the card before messing with it so we can roll back if
             // something goes wrong
-            storeCard();
+            CardManager.storeCard();
 
             // Do it!
             enroll(new Handler() {
@@ -677,12 +645,14 @@ public class Passport extends Activity {
                 public void handleMessage(Message msg) {
                     if (msg.obj == null) {
                         // Success, save our new credentials
-                        storeCard();
+                        CardManager.storeCard();
                         enableContinueButton();
                         ((TextView) findViewById(R.id.se_done_text)).setVisibility(View.VISIBLE);
                     } else {
                         // Rollback the card
-                        loadCard();
+                        card = CardManager.loadCard();
+                        is = new IdemixService(new SmartCardEmulatorService(card));
+
                         String errormsg;
                         if (msg.what != 0) // .what may contain a string identifier saying what went wrong
                             showErrorScreen(msg.what);
@@ -716,7 +686,7 @@ public class Passport extends Activity {
         passportMsg = null;
         Intent data = new Intent();
         Log.d(TAG,"Storing card");
-        storeCard();
+        CardManager.storeCard();
         setResult(RESULT_OK, data);
         super.finish();
     }

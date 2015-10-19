@@ -126,49 +126,13 @@ public class MainActivity extends Activity implements PINDialogListener, Disclos
 	private final String CARD_STORAGE = "card";
 	private final String SETTINGS = "cardemu";
 
+	private VerificationStartListener verificationListener;
 	private ReaderMessage disclosureproof;
-
 
 	AppUpdater updater;
 
 	private long issuingStartTime;
 	private long qrScanStartTime;
-
-	private void loadCard() {
-		SharedPreferences settings = getSharedPreferences(SETTINGS, 0);
-		String card_json = settings.getString(CARD_STORAGE, "");
-
-		Gson gson = new Gson();
-
-		if (!card_json.equals("")) {
-			try {
-				card = gson.fromJson(card_json, IRMACard.class);
-			} catch (Exception e) {
-				card = new IRMACard();
-			}
-		}
-
-		if (card == null)
-			card = new IRMACard();
-
-		card.addVerificationListener(new VerificationStartListener() {
-			@Override
-			public void verificationStarting(VerificationSetupData data) {
-				verificationList.add(data);
-			}
-		});
-
-		is = new IdemixService(new SmartCardEmulatorService(card));
-	}
-
-	private void storeCard() {
-		Log.d(TAG, "Storing card");
-		SharedPreferences settings = getSharedPreferences(SETTINGS, 0);
-		SharedPreferences.Editor editor = settings.edit();
-		Gson gson = new Gson();
-		editor.putString(CARD_STORAGE, gson.toJson(card));
-		editor.commit();
-	}
 
 	private void setState(int state) {
 		Log.i(TAG, "Set state: " + state);
@@ -280,7 +244,15 @@ public class MainActivity extends Activity implements PINDialogListener, Disclos
 		}
 
 		setContentView(R.layout.activity_main);
-		loadCard();
+
+		verificationListener = new VerificationStartListener() {
+			@Override
+			public void verificationStarting(VerificationSetupData data) {
+				verificationList.add(data);
+			}
+		};
+		card = CardManager.loadCard(verificationListener);
+		is = new IdemixService(new SmartCardEmulatorService(card));
 
 		// Setup the DescriptionStore
 		AndroidWalker aw = new AndroidWalker(getResources().getAssets());
@@ -353,18 +325,14 @@ public class MainActivity extends Activity implements PINDialogListener, Disclos
 								for (CredentialDescription cd : credentialDescriptions) {
 									ic.removeCredential(cd);
 								}
-							} catch (CardServiceException e) {
-								e.printStackTrace();
-							} catch (InfoException e) {
-								e.printStackTrace();
-							} catch (CredentialsException e) {
+							} catch (CardServiceException|InfoException|CredentialsException e) {
 								e.printStackTrace();
 							}
+
 							updateCardCredentials();
 							is.close();
-							storeCard();
-							// loadCard();
-							logCard();
+							CardManager.storeCard();
+							CardManager.logCard(is);
 						}
 					})
 					.setNegativeButton("Cancel", new DialogInterface.OnClickListener() {
@@ -402,7 +370,7 @@ public class MainActivity extends Activity implements PINDialogListener, Disclos
 						Log.i(TAG, "Updating credential list");
 						updateCardCredentials();
 						is.close();
-						storeCard();
+						CardManager.storeCard();
 					}
 				})
 				.setNegativeButton("Cancel", new DialogInterface.OnClickListener() {
@@ -412,28 +380,6 @@ public class MainActivity extends Activity implements PINDialogListener, Disclos
 				});
 		AlertDialog dialog = builder.create();
 		dialog.show();
-	}
-
-	protected void logCard() {
-		Log.d(TAG, "Current card contents");
-		// Retrieve list of credentials from the card
-		IdemixCredentials ic = new IdemixCredentials(is);
-		List<CredentialDescription> credentialDescriptions = new ArrayList<CredentialDescription>();
-		// HashMap<CredentialDescription,Attributes> credentialAttributes = new HashMap<CredentialDescription,Attributes>();
-		try {
-			ic.connect();
-			is.sendCardPin("000000".getBytes());
-			credentialDescriptions = ic.getCredentials();
-			for (CredentialDescription cd : credentialDescriptions) {
-				Log.d(TAG, cd.getName());
-			}
-		} catch (CardServiceException e) {
-			e.printStackTrace();
-		} catch (InfoException e) {
-			e.printStackTrace();
-		} catch (CredentialsException e) {
-			e.printStackTrace();
-		}
 	}
 
 	protected void updateCardCredentials() {
@@ -485,7 +431,7 @@ public class MainActivity extends Activity implements PINDialogListener, Disclos
 
 	@Override
 	protected void onDestroy() {
-		storeCard();
+		CardManager.storeCard();
 		super.onDestroy();
 	}
 
@@ -644,7 +590,7 @@ public class MainActivity extends Activity implements PINDialogListener, Disclos
 			} else if (rm.name.equals(ReaderMessage.NAME_EVENT_TIMEOUT)) {
 				setState(STATE_IDLE);
 			} else if (rm.name.equals(ReaderMessage.NAME_EVENT_DONE)) {
-				storeCard();
+				CardManager.storeCard();
 				setState(STATE_IDLE);
 			}
 		}
@@ -706,7 +652,8 @@ public class MainActivity extends Activity implements PINDialogListener, Disclos
 	protected void onActivityResult(int requestCode, int resultCode, Intent data) {
 		super.onActivityResult(requestCode, resultCode, data);
 		if (requestCode == PASSPORT_REQUEST && resultCode == RESULT_OK) {
-			loadCard();
+			card = CardManager.loadCard(verificationListener);
+			is = new IdemixService(new SmartCardEmulatorService(card));
 			updateCardCredentials();
 
 		} else if (requestCode == DETAIL_REQUEST && resultCode == CredentialDetailActivity.RESULT_DELETE) {
@@ -1123,7 +1070,7 @@ public class MainActivity extends Activity implements PINDialogListener, Disclos
 			case R.id.enroll:
 				Log.d(TAG, "enroll pressed");
 				Intent i = new Intent(this, org.irmacard.cardemu.selfenrol.Passport.class);
-				storeCard();
+				CardManager.storeCard();
 				i.putExtra("card_json", "loadCard");
 				startActivityForResult(i, PASSPORT_REQUEST);
 				return true;
