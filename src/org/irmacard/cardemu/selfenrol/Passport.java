@@ -327,7 +327,9 @@ public class Passport extends Activity {
 
             @Override
             protected void onProgressUpdate(Void... values) {
-                progressBar.incrementProgressBy(1);
+                if (progressBar != null) { // progressBar can vanish if the progress goes wrong halfway through
+                    progressBar.incrementProgressBy(1);
+                }
             }
 
             /**
