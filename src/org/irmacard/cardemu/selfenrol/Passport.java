@@ -143,6 +143,17 @@ public class Passport extends Activity {
         helpTextView.setMovementMethod(LinkMovementMethod.getInstance());
         helpTextView.setLinksClickable(true);
 
+        Context context = getApplicationContext();
+        TelephonyManager telephonyManager = (TelephonyManager) context.getSystemService(Context.TELEPHONY_SERVICE);
+        imsi = telephonyManager.getSubscriberId();
+
+        if (imsi == null)
+            imsi = "FAKE_IMSI_" +  Settings.Secure.getString(
+                    context.getContentResolver(), Settings.Secure.ANDROID_ID);
+        if (screen == SCREEN_START) {
+            ((TextView) findViewById(R.id.IMSI)).setText("IMSI: " + imsi);
+        }
+
         screen = SCREEN_START;
         enableContinueButton();
 
@@ -188,17 +199,6 @@ public class Passport extends Activity {
             } catch (CardServiceException e) {
                 e.printStackTrace();
             }
-        }
-
-        Context context = getApplicationContext();
-        TelephonyManager telephonyManager = (TelephonyManager) context.getSystemService(Context.TELEPHONY_SERVICE);
-        imsi = telephonyManager.getSubscriberId();
-
-        if (imsi == null)
-            imsi = "FAKE_IMSI_" +  Settings.Secure.getString(
-                    context.getContentResolver(), Settings.Secure.ANDROID_ID);
-        if (screen == SCREEN_START) {
-            ((TextView) findViewById(R.id.IMSI)).setText("IMSI: " + imsi);
         }
     }
 
@@ -268,7 +268,10 @@ public class Passport extends Activity {
             return;
         }
 
-        ((TextView) findViewById(R.id.se_feedback_text)).setText(R.string.feedback_communicating_passport);
+        TextView feedbackTextView = (TextView) findViewById(R.id.se_feedback_text);
+        if (feedbackTextView != null) {
+            feedbackTextView.setText(R.string.feedback_communicating_passport);
+        }
 
         Tag tagFromIntent = intent.getParcelableExtra(NfcAdapter.EXTRA_TAG);
         assert (tagFromIntent != null);
