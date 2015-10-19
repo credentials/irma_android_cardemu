@@ -161,9 +161,10 @@ public class AppUpdater {
 
 					// We might already have downloaded the newest version earlier
 					String filename = String.format(apkFileName, newestVersionCode);
-					if (context.getFileStreamPath(filename).exists()) {
+					if (context.getFileStreamPath(filename).exists() && newestVersionCode > getCurrentVersionCode()) {
 						showUpdateDialog();
-					} else {
+					}
+					else {
 						if (wifi.isConnected()) {
 							// We're on wifi, just download the new version using another AsyncTask.
 							// The corresponding onPostExecute() method will show a dialog informing the user the app
