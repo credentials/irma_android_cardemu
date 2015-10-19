@@ -37,7 +37,7 @@ public class IRMApp extends Application {
     public final static String metricServer = "https://demo.irmacard.org/tomcat/irma_metrics_server/api/v1";
     public final static String enrollServer = "https://demo.irmacard.org/tomcat/irma_mno_server/api/v1";
     public final static String acraServer = "https://demo.irmacard.org/crashreportsviewer/www/submit.php";
-    public static final String updateServer = "https://credentials.github.io/appupdates";
+    public final static String updateServer = "https://credentials.github.io/appupdates";
 
     private final static long reportTimeInterval = 1000*60*60*24; // 1 day in milliseconds
 
@@ -46,6 +46,7 @@ public class IRMApp extends Application {
         super.onCreate();
         ACRA.init(this);
         try {
+            ACRA.getErrorReporter().putCustomData("IS_DEBUG_BUILD", Boolean.toString(BuildConfig.DEBUG));
             ACRA.getErrorReporter().putCustomData("MAX_HEAP", Long.valueOf(Runtime.getRuntime().maxMemory()/1024/1024).toString());
             ACRA.getErrorReporter().putCustomData("CORES", Integer.valueOf(Runtime.getRuntime().availableProcessors()).toString());
         } catch (Exception e) {
