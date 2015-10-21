@@ -159,9 +159,12 @@ public class AppUpdater {
 							= (ConnectivityManager) context.getSystemService(Context.CONNECTIVITY_SERVICE);
 					NetworkInfo wifi = connManager.getNetworkInfo(ConnectivityManager.TYPE_WIFI);
 
+					if (newestVersionCode <= getCurrentVersionCode())
+						return; // No need to do anything
+
 					// We might already have downloaded the newest version earlier
 					String filename = String.format(apkFileName, newestVersionCode);
-					if (context.getFileStreamPath(filename).exists() && newestVersionCode > getCurrentVersionCode()) {
+					if (context.getFileStreamPath(filename).exists()) {
 						showUpdateDialog();
 					}
 					else {
