@@ -121,8 +121,6 @@ public class Passport extends Activity {
         // Setup a tech list for all IsoDep cards
         mTechLists = new String[][] { new String[] { IsoDep.class.getName() } };
 
-        // Attempt to get the enroll server URL from the settings. If none is there,
-        // use the default value (from res/values/strings.xml)
         settings = getSharedPreferences(SETTINGS, 0);
         client = new HttpClient(gson, new SecureSSLSocketFactory(getSocketFactory()));
 
@@ -237,6 +235,11 @@ public class Passport extends Activity {
         TextView feedbackTextView = (TextView) findViewById(R.id.se_feedback_text);
         if (feedbackTextView != null) {
             feedbackTextView.setText(R.string.feedback_communicating_passport);
+        } else {
+            // Judging from some crash reports, the se_feedback_text textview is not always here at this point.
+            // If so, report it. This may be an old problem that now does not occur anymore (in which case this line
+            // should disappear at some point).
+            ACRA.getErrorReporter().handleException(new Exception("se_feedback_text not found in passport screen"));
         }
 
         Tag tagFromIntent = intent.getParcelableExtra(NfcAdapter.EXTRA_TAG);
