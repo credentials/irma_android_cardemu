@@ -341,39 +341,45 @@ public class Passport extends Activity {
                     throws CardServiceException, IOException {
                 publishProgress();
 
-                for (int i = 0; i<=5; i++) {
-                    if (pdm.getDg1File() == null) {
-                        pdm.setDg1File(new DG1File(passportService.getInputStream(PassportService.EF_DG1)));
-                        publishProgress();
-                    }
-                    if (pdm.getSodFile() == null) {
-                        pdm.setSodFile(new SODFile(passportService.getInputStream(PassportService.EF_SOD)));
-                        publishProgress();
-                    }
-                    if (pdm.getSodFile() != null // We need the SOD file to check if DG14 exists
-                        && pdm.getSodFile().getDataGroupHashes().get(14) != null // Checks if DG14 exists
-                        && pdm.getDg14File() == null) {
-                        pdm.setDg14File(new DG14File(passportService.getInputStream(PassportService.EF_DG14)));
-                        publishProgress();
-                    }
-                    if (pdm.getDg15File() == null) {
-                        pdm.setDg15File(new DG15File(passportService.getInputStream(PassportService.EF_DG15)));
-                        publishProgress();
-                    }
-                    // The doAA() method does not use its first three arguments, it only passes the challenge
-                    // on to another functio within JMRTD.
-                    if (pdm.getResponse() == null) {
-                        pdm.setResponse(passportService.doAA(null, null, null, pdm.getChallenge()));
-                        publishProgress();
-                    }
+                try {
+                    for (int i = 0; i <= 5; i++) {
+                        if (pdm.getDg1File() == null) {
+                            pdm.setDg1File(new DG1File(passportService.getInputStream(PassportService.EF_DG1)));
+                            publishProgress();
+                        }
+                        if (pdm.getSodFile() == null) {
+                            pdm.setSodFile(new SODFile(passportService.getInputStream(PassportService.EF_SOD)));
+                            publishProgress();
+                        }
+                        if (pdm.getSodFile() != null // We need the SOD file to check if DG14 exists
+                                && pdm.getSodFile().getDataGroupHashes().get(14) != null // Checks if DG14 exists
+                                && pdm.getDg14File() == null) {
+                            pdm.setDg14File(new DG14File(passportService.getInputStream(PassportService.EF_DG14)));
+                            publishProgress();
+                        }
+                        if (pdm.getDg15File() == null) {
+                            pdm.setDg15File(new DG15File(passportService.getInputStream(PassportService.EF_DG15)));
+                            publishProgress();
+                        }
+                        // The doAA() method does not use its first three arguments, it only passes the challenge
+                        // on to another functio within JMRTD.
+                        if (pdm.getResponse() == null) {
+                            pdm.setResponse(passportService.doAA(null, null, null, pdm.getChallenge()));
+                            publishProgress();
+                        }
 
-                    //Passport reading finished
-                    if (pdm.isComplete()){
-                        MetricsReporter.getInstance().reportMeasurement("passport_data_attempts", i, false);
-                        return true;
+                        //Passport reading finished
+                        if (pdm.isComplete()) {
+                            MetricsReporter.getInstance().reportMeasurement("passport_data_attempts", i, false);
+                            return true;
+                        }
                     }
+                    return false;
+                } catch (NullPointerException e) {
+                    // JMRTD sometimes throws a nullpointer exception if the passport communcation goes wrong
+                    // (I've seen it happening if the passport is removed from the device halfway through)
+                    throw new IOException("Error during passport communication", e);
                 }
-                return false;
             }
 
             @Override
