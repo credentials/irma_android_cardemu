@@ -150,9 +150,7 @@ public class Passport extends Activity {
         if (imsi == null)
             imsi = "FAKE_IMSI_" +  Settings.Secure.getString(
                     context.getContentResolver(), Settings.Secure.ANDROID_ID);
-        if (screen == SCREEN_START) {
-            ((TextView) findViewById(R.id.IMSI)).setText("IMSI: " + imsi);
-        }
+        ((TextView) findViewById(R.id.IMSI)).setText("IMSI: " + imsi);
 
         screen = SCREEN_START;
         enableContinueButton();
