@@ -104,6 +104,8 @@ public class Passport extends Activity {
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
 
+        Log.i(TAG, "onCreate() called");
+
         // Disable screenshots in release builds
         if (!BuildConfig.DEBUG) {
             getWindow().setFlags(WindowManager.LayoutParams.FLAG_SECURE, WindowManager.LayoutParams.FLAG_SECURE);
@@ -177,16 +179,18 @@ public class Passport extends Activity {
     @Override
     protected void onResume() {
         super.onResume();
-        if (NfcAdapter.ACTION_TECH_DISCOVERED.equals(getIntent().getAction())) {
-             processIntent(getIntent());
+
+        Intent intent = getIntent();
+        Log.i(TAG, "onResume() called, action: " + intent.getAction());
+
+        if (NfcAdapter.ACTION_TECH_DISCOVERED.equals(intent.getAction())) {
+             processIntent(intent);
         }
 
         if (nfcA != null) {
             nfcA.enableForegroundDispatch(this, mPendingIntent, mFilters, mTechLists);
         }
 
-        Intent intent = getIntent();
-        Log.i(TAG, "Action: " + intent.getAction());
         if (intent.hasExtra("card_json")) {
             card = CardManager.loadCard();
             is = new IdemixService(new SmartCardEmulatorService(card));
@@ -203,12 +207,16 @@ public class Passport extends Activity {
     @Override
     public void onBackPressed() {
         super.onBackPressed();
+        Log.i(TAG, "onBackPressed() called");
         finish();
     }
 
     @Override
     public void onPause() {
         super.onPause();
+
+        Log.i(TAG, "onPause() called");
+
         if (nfcA != null) {
             nfcA.disableForegroundDispatch(this);
         }

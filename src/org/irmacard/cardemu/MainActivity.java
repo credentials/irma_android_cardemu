@@ -238,6 +238,8 @@ public class MainActivity extends Activity implements PINDialogListener, Disclos
 	protected void onCreate(Bundle savedInstanceState) {
 		super.onCreate(savedInstanceState);
 
+		Log.i(TAG, "onCreate() called");
+
 		// Disable screenshots in release builds
 		if (!BuildConfig.DEBUG) {
 			getWindow().setFlags(WindowManager.LayoutParams.FLAG_SECURE, WindowManager.LayoutParams.FLAG_SECURE);
@@ -410,6 +412,9 @@ public class MainActivity extends Activity implements PINDialogListener, Disclos
 	@Override
 	protected void onPause() {
 		super.onPause();
+
+		Log.i(TAG, "onDestroy() called");
+
 		if (nfcA != null) {
 			nfcA.disableForegroundDispatch(this);
 		}
@@ -418,8 +423,11 @@ public class MainActivity extends Activity implements PINDialogListener, Disclos
 	@Override
 	protected void onResume() {
 		super.onResume();
-		Log.i(TAG, "Action: " + getIntent().getAction());
-		if (NfcAdapter.ACTION_TECH_DISCOVERED.equals(getIntent().getAction())) {
+
+		Intent intent = getIntent();
+		Log.i(TAG, "onResume() called, action: " + intent.getAction());
+
+		if (NfcAdapter.ACTION_TECH_DISCOVERED.equals(intent.getAction())) {
 			processIntent(getIntent());
 		}
 		if (nfcA != null) {
@@ -431,6 +439,7 @@ public class MainActivity extends Activity implements PINDialogListener, Disclos
 
 	@Override
 	protected void onDestroy() {
+		Log.i(TAG, "onDestroy() called");
 		CardManager.storeCard();
 		super.onDestroy();
 	}
