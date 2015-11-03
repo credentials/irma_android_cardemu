@@ -504,6 +504,7 @@ public class Passport extends Activity {
 
     private void prepareErrowScreen() {
         setContentView(R.layout.enroll_activity_error);
+        screen = SCREEN_ERROR;
 
         Resources r = getResources();
         switch (screen) {
