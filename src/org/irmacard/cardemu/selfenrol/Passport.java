@@ -126,8 +126,13 @@ public class Passport extends Activity {
         settings = getSharedPreferences(SETTINGS, 0);
         client = new HttpClient(gson, new SecureSSLSocketFactory(getSocketFactory()));
 
-        if(getIntent() != null) {
-            onNewIntent(getIntent());
+        // Load the card and open the IdemixService
+        card = CardManager.loadCard();
+        is = new IdemixService(new SmartCardEmulatorService(card));
+        try {
+            is.open ();
+        } catch (CardServiceException e) {
+            e.printStackTrace();
         }
 
         setContentView(R.layout.enroll_activity_start);
@@ -172,6 +177,7 @@ public class Passport extends Activity {
         adapter.enableForegroundDispatch(this, pendingIntent, null, filter);
     }
 
+    @Override
     public void onNewIntent(Intent intent) {
         setIntent(intent);
     }
@@ -189,18 +195,6 @@ public class Passport extends Activity {
 
         if (nfcA != null) {
             nfcA.enableForegroundDispatch(this, mPendingIntent, mFilters, mTechLists);
-        }
-
-        if (intent.hasExtra("card_json")) {
-            card = CardManager.loadCard();
-            is = new IdemixService(new SmartCardEmulatorService(card));
-
-            Log.d(TAG,"loaded card");
-            try {
-                is.open ();
-            } catch (CardServiceException e) {
-                e.printStackTrace();
-            }
         }
     }
 
