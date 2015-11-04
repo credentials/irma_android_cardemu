@@ -80,6 +80,10 @@ public class Passport extends Activity {
     // State variables
     private IRMACard card = null;
     private IdemixService is = null;
+    private int passportAttempts = 0;
+
+    private final static int MAX_PASSPORT_ATTEMPTS = 5;
+    private final static int MAX_PASSPORT_TIME = 15 * 1000;
 
     private int screen;
     private static final int SCREEN_START = 1;
@@ -216,6 +220,14 @@ public class Passport extends Activity {
         }
     }
 
+    /*
+     * Process NFC intents. If we're on the passport screen, and there's an enroll session containing a nonce, this
+     * method asynchroniously does BAC and AA with the passport, also extracting some necessary data files.
+     *
+     * As the ACTION_TECH_DISCOVERED intent can occur multiple times, this method can be called multiple times
+     * without problems. If it is called for the MAX_PASSPORT_ATTEMPTS's time, however, it will advance the screen
+     * either to the issue screen or the error screen, depending if we've successfully read the passport or not.
+     */
     public void processIntent(final Intent intent) {
         // Only handle this event if we expect it
         if (screen != SCREEN_PASSPORT)
@@ -255,13 +267,6 @@ public class Passport extends Activity {
         CardService cs = new IsoDepCardService(tag);
         PassportService passportService = null;
 
-        // Spongycastle provides the MAC ISO9797Alg3Mac, which JMRTD uses
-        // in the doBAC method below (at DESedeSecureMessagingWrapper.java,
-        // line 115)
-        // TODO examine if Android's BouncyCastle version causes other problems;
-        // perhaps we should use SpongyCastle over all projects.
-        Security.addProvider(new org.spongycastle.jce.provider.BouncyCastleProvider());
-
         try {
             cs.open();
             passportService = new PassportService(cs);
@@ -281,14 +286,12 @@ public class Passport extends Activity {
     }
 
     /**
-     * reads the datagroups 1, 14 and 15, and the SOD file and requests an active authentication from an e-passport
+     * Reads the datagroups 1, 14 and 15, and the SOD file and requests an active authentication from an e-passport
      * in a seperate thread.
      */
-    private void readPassport (PassportService ps, PassportDataMessage pdm){
-
+    private void readPassport(PassportService ps, PassportDataMessage pdm) {
         AsyncTask<Object,Void,PassportDataMessage> task = new AsyncTask<Object,Void,PassportDataMessage>(){
             ProgressBar progressBar = (ProgressBar) findViewById(R.id.se_progress_bar);
-            boolean success = false;
             boolean passportError = false;
             boolean bacError = false;
 
@@ -303,26 +306,45 @@ public class Passport extends Activity {
                 PassportService ps = (PassportService) params[0];
                 PassportDataMessage pdm = (PassportDataMessage) params[1];
 
+                if (passportAttempts == 0) {
+                    start = System.currentTimeMillis();
+                }
+                passportAttempts++;
+
                 // Do the BAC separately from generating the pdm, so we can be specific in our error message if
                 // necessary. (Note: the IllegalStateException should not happen, but if it does for some unforseen
                 // reason there is no need to let it crash the app.)
                 try {
-                    start = System.currentTimeMillis();
                     ps.doBAC(getBACKey());
-                } catch (CardServiceException|IllegalStateException e) {
+                    Log.i(TAG, "Passport: doing BAC");
+                } catch (CardServiceException | IllegalStateException e) {
                     bacError = true;
+                    Log.e(TAG, "Passport: doing BAC failed");
                     return null;
                 }
 
+                Exception ex = null;
                 try {
-                    success = generatePassportDataMessage(ps,pdm);
+                    Log.i(TAG, "Passport: reading attempt " + passportAttempts);
+                    generatePassportDataMessage(ps, pdm);
                 } catch (IOException|CardServiceException e) {
-                    ACRA.getErrorReporter().handleException(e);
-                    passportError = true;
-                    return null;
-                } finally {
-                    stop = System.currentTimeMillis();
-                    MetricsReporter.getInstance().reportMeasurement("passport_data_time", stop-start);
+                    Log.w(TAG, "Passport: reading attempt " + passportAttempts + " failed, stack trace:");
+                    Log.w(TAG, "          " + e.getMessage());
+                    ex = e;
+                }
+
+                passportError = !pdm.isComplete();
+                if (!pdm.isComplete() && passportAttempts == MAX_PASSPORT_ATTEMPTS && ex != null) {
+                    // Build a fancy report saying which fields we did and which we did not manage to get
+                    Log.e(TAG, "Passport: too many attempts failed, aborting");
+                    ACRA.getErrorReporter().reportBuilder()
+                            .customData("sod", String.valueOf(pdm.getSodFile() == null))
+                            .customData("dg1File", String.valueOf(pdm.getDg1File() == null))
+                            .customData("dg14File", String.valueOf(pdm.getDg14File() == null))
+                            .customData("dg15File", String.valueOf(pdm.getDg15File() == null))
+                            .customData("response", String.valueOf(pdm.getResponse() == null))
+                            .exception(ex)
+                            .send();
                 }
 
                 return pdm;
@@ -339,65 +361,73 @@ public class Passport extends Activity {
              * Do the AA protocol with the passport using the passportService, and put the response in a new
              * PassportDataMessage. Also read some data groups.
              */
-            public boolean generatePassportDataMessage(PassportService passportService, PassportDataMessage pdm)
+            public void generatePassportDataMessage(PassportService passportService, PassportDataMessage pdm)
                     throws CardServiceException, IOException {
                 publishProgress();
 
                 try {
-                    for (int i = 0; i <= 5; i++) {
-                        if (pdm.getDg1File() == null) {
-                            pdm.setDg1File(new DG1File(passportService.getInputStream(PassportService.EF_DG1)));
+                    if (pdm.getDg1File() == null) {
+                        pdm.setDg1File(new DG1File(passportService.getInputStream(PassportService.EF_DG1)));
+                        Log.i(TAG, "Passport: reading DG1");
+                        publishProgress();
+                    }
+                    if (pdm.getSodFile() == null) {
+                        pdm.setSodFile(new SODFile(passportService.getInputStream(PassportService.EF_SOD)));
+                        Log.i(TAG, "Passport: reading SOD");
+                        publishProgress();
+                    }
+                    if (pdm.getSodFile() != null) { // We need the SOD file to check if DG14 exists
+                        if (pdm.getSodFile().getDataGroupHashes().get(14) != null) { // Checks if DG14 exists
+                            if (pdm.getDg14File() == null) {
+                                pdm.setDg14File(new DG14File(passportService.getInputStream(PassportService.EF_DG14)));
+                                Log.i(TAG, "Passport: reading DG14");
+                                publishProgress();
+                            }
+                        } else { // If DG14 does not exist, just advance the progress bar
+                            Log.i(TAG, "Passport: reading DG14 not necessary, skipping");
                             publishProgress();
-                        }
-                        if (pdm.getSodFile() == null) {
-                            pdm.setSodFile(new SODFile(passportService.getInputStream(PassportService.EF_SOD)));
-                            publishProgress();
-                        }
-                        if (pdm.getSodFile() != null // We need the SOD file to check if DG14 exists
-                                && pdm.getSodFile().getDataGroupHashes().get(14) != null // Checks if DG14 exists
-                                && pdm.getDg14File() == null) {
-                            pdm.setDg14File(new DG14File(passportService.getInputStream(PassportService.EF_DG14)));
-                            publishProgress();
-                        }
-                        if (pdm.getDg15File() == null) {
-                            pdm.setDg15File(new DG15File(passportService.getInputStream(PassportService.EF_DG15)));
-                            publishProgress();
-                        }
-                        // The doAA() method does not use its first three arguments, it only passes the challenge
-                        // on to another functio within JMRTD.
-                        if (pdm.getResponse() == null) {
-                            pdm.setResponse(passportService.doAA(null, null, null, pdm.getChallenge()));
-                            publishProgress();
-                        }
-
-                        //Passport reading finished
-                        if (pdm.isComplete()) {
-                            MetricsReporter.getInstance().reportMeasurement("passport_data_attempts", i, false);
-                            return true;
                         }
                     }
-                    return false;
+                    if (pdm.getDg15File() == null) {
+                        pdm.setDg15File(new DG15File(passportService.getInputStream(PassportService.EF_DG15)));
+                        Log.i(TAG, "Passport: reading DG15");
+                        publishProgress();
+                    }
+                    // The doAA() method does not use its first three arguments, it only passes the challenge
+                    // on to another functio within JMRTD.
+                    if (pdm.getResponse() == null) {
+                        pdm.setResponse(passportService.doAA(null, null, null, pdm.getChallenge()));
+                        Log.i(TAG, "Passport: doing AA");
+                        publishProgress();
+                    }
                 } catch (NullPointerException e) {
                     // JMRTD sometimes throws a nullpointer exception if the passport communcation goes wrong
                     // (I've seen it happening if the passport is removed from the device halfway through)
-                    throw new IOException("Error during passport communication", e);
+                    throw new IOException("NullPointerException during passport communication", e);
                 }
             }
 
             @Override
-            protected void onPostExecute(PassportDataMessage pdm){
-                //first set the result, since it may be partially okay.
+            protected void onPostExecute(PassportDataMessage pdm) {
+                // First set the result, since it may be partially okay
                 passportMsg = pdm;
-                //then check for errors or failures.
+
+                Boolean done = pdm != null && pdm.isComplete();
+
+                Log.i(TAG, "Passport: attempt " + passportAttempts + " finished, done: " + done);
+
+                // If we're not yet done, we should not advance the screen but just wait for further attempts
+                if (passportAttempts < MAX_PASSPORT_ATTEMPTS && !done) {
+                    return;
+                }
+
+                stop = System.currentTimeMillis();
+                MetricsReporter.getInstance().reportMeasurement("passport_data_attempts", passportAttempts, false);
+                MetricsReporter.getInstance().reportMeasurement("passport_data_time", stop-start);
+
+                // If we're here, we're done. Check for errors or failures, and advance the screen
                 if (!bacError && !passportError) {
-                    if (success) {
-                        advanceScreen();
-                    } else {
-                        //TODO: at this point (or after ending the thread) we could test if the progress >= 0.
-                        // in that case, some communication with the passport worked, so perhaps offer the user
-                        // a new attempt with the current data?
-                        showErrorScreen(R.string.error_enroll_passporterror);
-                    }
+                    advanceScreen();
                 }
 
                 if (bacError) {
@@ -621,8 +651,7 @@ public class Passport extends Activity {
 
                     if (result.exception != null) { // Something went wrong
                         showErrorScreen(result.errorId);
-                    }
-                    else {
+                    } else {
                         TextView connectedTextView = (TextView) findViewById(R.id.se_connected);
                         connectedTextView.setTextColor(getResources().getColor(R.color.irmagreen));
                         connectedTextView.setText(R.string.se_connected_mno);
@@ -635,10 +664,26 @@ public class Passport extends Activity {
                 }
             });
 
+            // Spongycastle provides the MAC ISO9797Alg3Mac, which JMRTD usesin the doBAC method below (at
+            // DESedeSecureMessagingWrapper.java, line 115)
+            Security.addProvider(new org.spongycastle.jce.provider.BouncyCastleProvider());
+
             // Update the UI
-            screen = SCREEN_PASSPORT;
             setContentView(R.layout.enroll_activity_passport);
+            screen = SCREEN_PASSPORT;
             updateProgressCounter();
+
+            // The next advanceScreen() is called when the passport reading was successful (see onPostExecute() in
+            // readPassport() above). Thus, if no passport arrives or we can't successfully read it, we have to
+            // ensure here that we don't stay on the passport screen forever with this timeout.
+            new Handler().postDelayed(new Runnable() {
+                @Override
+                public void run() {
+                    if (screen == SCREEN_PASSPORT && (passportMsg == null || !passportMsg.isComplete())) {
+                        showErrorScreen(getString(R.string.error_enroll_passporterror));
+                    }
+                }
+            }, MAX_PASSPORT_TIME);
 
             break;
 
