@@ -534,7 +534,6 @@ public class Passport extends Activity {
 
     private void prepareErrowScreen() {
         setContentView(R.layout.enroll_activity_error);
-        screen = SCREEN_ERROR;
 
         Resources r = getResources();
         switch (screen) {
@@ -547,6 +546,8 @@ public class Passport extends Activity {
             case SCREEN_START:
                 ((TextView)findViewById(R.id.step_text)).setTextColor(r.getColor(R.color.irmared));
         }
+
+        screen = SCREEN_ERROR;
     }
 
     private void setBacFieldWatcher() {
