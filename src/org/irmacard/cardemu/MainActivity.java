@@ -423,7 +423,7 @@ public class MainActivity extends Activity implements PINDialogListener, Disclos
 	protected void onPause() {
 		super.onPause();
 
-		Log.i(TAG, "onDestroy() called");
+		Log.i(TAG, "onPause() called");
 
 		if (nfcA != null) {
 			nfcA.disableForegroundDispatch(this);
