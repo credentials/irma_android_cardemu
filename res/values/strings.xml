@@ -73,4 +73,6 @@
     <string name="no_new_updates">No updates found.</string>
     <string name="update_server_error">Could not connect to the update server.</string>
     <string name="crash_toast_text">transmitting crash report</string>
+    <string name="no_credentials">You don\'t have any credentials yet.</string>
+    <string name="enroll">Enroll</string>
 </resources>

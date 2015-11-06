@@ -28,6 +28,7 @@ import org.irmacard.cardemu.messages.ReaderMessage;
 import org.irmacard.cardemu.messages.ReaderMessageDeserializer;
 import org.irmacard.cardemu.messages.ResponseArguments;
 import org.irmacard.cardemu.messages.TransmitCommandSetArguments;
+import org.irmacard.cardemu.selfenrol.Passport;
 import org.irmacard.cardemu.updates.AppUpdater;
 import org.irmacard.cardemu.updates.AppVersionInfo;
 import org.irmacard.credentials.Attributes;
@@ -406,6 +407,15 @@ public class MainActivity extends Activity implements PINDialogListener, Disclos
 		}
 
 		credentialListAdapter.updateData(credentialDescriptions, credentialAttributes);
+
+		TextView noCredsText = (TextView) findViewById(R.id.no_credentials_text);
+		Button enrollButton = (Button) findViewById(R.id.enroll_button);
+		int visibility = credentialDescriptions.isEmpty() ? View.VISIBLE : View.INVISIBLE;
+
+		if (noCredsText != null && enrollButton != null) {
+			noCredsText.setVisibility(visibility);
+			enrollButton.setVisibility(visibility);
+		}
 	}
 
 
@@ -639,6 +649,13 @@ public class MainActivity extends Activity implements PINDialogListener, Disclos
 			lastTag = null;
 			startQRScanner("Scan the QR image in the browser.");
 		}
+	}
+
+	public void onEnrollButtonTouch(View v) {
+		Intent i = new Intent(this, Passport.class);
+		CardManager.storeCard();
+		i.putExtra("card_json", "loadCard");
+		startActivityForResult(i, PASSPORT_REQUEST);
 	}
 
 	@Override
@@ -1077,11 +1094,8 @@ public class MainActivity extends Activity implements PINDialogListener, Disclos
 		// Handle item selection
 		switch (item.getItemId()) {
 			case R.id.enroll:
-				Log.d(TAG, "enroll pressed");
-				Intent i = new Intent(this, org.irmacard.cardemu.selfenrol.Passport.class);
-				CardManager.storeCard();
-				i.putExtra("card_json", "loadCard");
-				startActivityForResult(i, PASSPORT_REQUEST);
+				Log.d(TAG, "enroll menu item pressed");
+				onEnrollButtonTouch(null);
 				return true;
 			case R.id.show_card_log:
 				Log.d(TAG, "show_card_log pressed");

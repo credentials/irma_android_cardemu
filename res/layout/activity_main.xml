@@ -96,5 +96,30 @@
         android:layout_marginTop="5dp"
         android:layout_marginBottom="20dp"/>
 
+    <TextView
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="@string/no_credentials"
+        android:id="@+id/no_credentials_text"
+        android:layout_alignTop="@+id/listView"
+        android:layout_centerHorizontal="true"
+        android:layout_marginTop="15dp"
+        android:layout_marginLeft="40dp"
+        android:layout_marginRight="40dp"
+        android:textAppearance="?android:attr/textAppearanceLarge"
+        android:textColor="@color/irmadarkblue"
+        android:textSize="20sp"
+        android:gravity="center"/>
+
+    <Button
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="@string/enroll"
+        android:id="@+id/enroll_button"
+        android:layout_marginTop="15dp"
+        android:layout_below="@+id/no_credentials_text"
+        android:layout_centerHorizontal="true"
+        android:onClick="onEnrollButtonTouch"/>
+
 
 </RelativeLayout>
