@@ -35,15 +35,13 @@ import java.util.*;
 import android.view.*;
 import android.widget.*;
 
-import org.irmacard.android.util.credentials.AndroidWalker;
 import org.irmacard.android.util.credentials.CredentialPackage;
 import org.irmacard.android.util.credentialdetails.*;
 import org.irmacard.android.util.cardlog.*;
 import org.irmacard.cardemu.selfenrol.Passport;
 import org.irmacard.cardemu.updates.AppUpdater;
-import org.irmacard.credentials.idemix.info.IdemixKeyStore;
+import org.irmacard.credentials.Attributes;
 import org.irmacard.credentials.info.CredentialDescription;
-import org.irmacard.credentials.info.DescriptionStore;
 import org.irmacard.credentials.util.log.LogEntry;
 
 import android.app.Activity;
@@ -99,14 +97,13 @@ public class MainActivity extends Activity {
 
 		setContentView(R.layout.activity_main);
 
-		// Setup the DescriptionStore
-		AndroidWalker aw = new AndroidWalker(getResources().getAssets());
-		DescriptionStore.setTreeWalker(aw);
-		IdemixKeyStore.setTreeWalker(aw);
-
 		// For some reason this textview ignores the android:textIsSelectable in its xml file, so that it catches
 		// touch events that were meant for its container. Don't know why setting its value here works.
 		((TextView) findViewById(R.id.feedback_text)).setTextIsSelectable(false);
+
+//		CredentialManager.load();
+//		if (CredentialManager.isEmpty())
+		CredentialManager.loadFromCard();
 
 		// Display cool list
 		ExpandableListView credentialList = (ExpandableListView) findViewById(R.id.listView);
@@ -248,7 +245,7 @@ public class MainActivity extends Activity {
 						public void onClick(DialogInterface dialog, int id) {
 							Log.i(TAG, "We're idle, attempting removal of all credentials");
 
-							// TODO
+							CredentialManager.deleteAll();
 
 							updateCredentialList();
 						}
@@ -277,7 +274,7 @@ public class MainActivity extends Activity {
 					public void onClick(DialogInterface dialog, int id) {
 						Log.i(TAG, "We're idle, attempting removal of credential " + cd.getName());
 
-						// TODO
+						CredentialManager.delete(cd);
 
 						Log.i(TAG, "Updating credential list");
 						updateCredentialList();
@@ -298,9 +295,21 @@ public class MainActivity extends Activity {
 			return;
 		}
 
+		HashMap<CredentialDescription, Attributes> credentials = CredentialManager.getAllAttributes();
+		List<CredentialDescription> cds = new ArrayList<>(credentials.keySet());
+
+		Collections.sort(cds, new Comparator<CredentialDescription>() {
+			@Override
+			public int compare(CredentialDescription lhs, CredentialDescription rhs) {
+				return lhs.getName().compareTo(rhs.getName());
+			}
+		});
+
+		credentialListAdapter.updateData(cds, credentials);
+
 		TextView noCredsText = (TextView) findViewById(R.id.no_credentials_text);
 		Button enrollButton = (Button) findViewById(R.id.enroll_button);
-		int visibility = View.VISIBLE; // TODO
+		int visibility = cds.isEmpty() ? View.VISIBLE : View.INVISIBLE;
 
 		if (noCredsText != null && enrollButton != null) {
 			noCredsText.setVisibility(visibility);
@@ -314,8 +323,6 @@ public class MainActivity extends Activity {
 		super.onPause();
 
 		Log.i(TAG, "onPause() called");
-
-		// TODO
 	}
 
 	@Override
@@ -430,7 +437,10 @@ public class MainActivity extends Activity {
 		switch (item.getItemId()) {
 			case R.id.menu_reset:
 				Log.d(TAG, "menu_reset pressed");
-				// TODO
+				CardManager.loadDefaultCard();
+				CardManager.storeCard();
+				CredentialManager.loadFromCard();
+				updateCredentialList();
 				return true;
 			case R.id.enroll:
 				Log.d(TAG, "enroll menu item pressed");
@@ -438,12 +448,10 @@ public class MainActivity extends Activity {
 				return true;
 			case R.id.show_card_log:
 				Log.d(TAG, "show_card_log pressed");
-				ArrayList<LogEntry> logs = null; // TODO
-				if (logs != null) {
-					Intent logIntent = new Intent(this, LogActivity.class);
-					logIntent.putExtra(LogFragment.ARG_LOG, logs);
-					startActivity(logIntent);
-				}
+				ArrayList<LogEntry> logs = new ArrayList<LogEntry>(CredentialManager.getLog());
+				Intent logIntent = new Intent(this, LogActivity.class);
+				logIntent.putExtra(LogFragment.ARG_LOG, logs);
+				startActivity(logIntent);
 				return true;
 			case R.id.menu_clear:
 				if (activityState == STATE_IDLE) {

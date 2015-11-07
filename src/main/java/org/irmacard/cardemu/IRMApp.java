@@ -35,6 +35,9 @@ import org.acra.ACRA;
 import org.acra.ACRAConfiguration;
 import org.acra.ReportField;
 import org.acra.annotation.ReportsCrashes;
+import org.irmacard.android.util.credentials.AndroidWalker;
+import org.irmacard.credentials.idemix.info.IdemixKeyStore;
+import org.irmacard.credentials.info.DescriptionStore;
 
 @ReportsCrashes(
         formUri = BuildConfig.acraServer,
@@ -68,6 +71,7 @@ public class IRMApp extends Application {
     @Override
     public void onCreate() {
         super.onCreate();
+
         ACRA.init(this);
         try {
             // In the annotation above we can set the mode only to literal enums, as opposed to the BuildConfig
@@ -83,7 +87,13 @@ public class IRMApp extends Application {
             e.printStackTrace();
         }
 
+        // Setup the DescriptionStore
+        AndroidWalker aw = new AndroidWalker(getResources().getAssets());
+        DescriptionStore.setTreeWalker(aw);
+        IdemixKeyStore.setTreeWalker(aw);
+
         MetricsReporter.init(this, BuildConfig.metricServer, reportTimeInterval);
         CardManager.init(this);
+        CredentialManager.init(getSharedPreferences("cardemu", 0));
     }
 }
