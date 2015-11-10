@@ -8,4 +8,4 @@ build/
 *.iml
 *.class
 *.jar
-assets/irma_configuration
+src/main/assets/irma_configuration
