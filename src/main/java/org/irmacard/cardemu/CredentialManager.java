@@ -38,6 +38,7 @@ import net.sf.scuba.smartcards.CardServiceException;
 import org.irmacard.credentials.Attributes;
 import org.irmacard.credentials.idemix.IdemixCredential;
 import org.irmacard.credentials.idemix.IdemixCredentials;
+import org.irmacard.credentials.idemix.proofs.ProofD;
 import org.irmacard.credentials.idemix.smartcard.IRMACard;
 import org.irmacard.credentials.idemix.smartcard.IRMAIdemixCredential;
 import org.irmacard.credentials.idemix.smartcard.SmartCardEmulatorService;
@@ -47,7 +48,9 @@ import org.irmacard.credentials.info.InfoException;
 import org.irmacard.credentials.util.log.LogEntry;
 import org.irmacard.credentials.util.log.RemoveLogEntry;
 import org.irmacard.idemix.IdemixService;
-import org.irmacard.idemix.util.IdemixLogEntry;
+import org.irmacard.verification.common.AttributeDisjunction;
+import org.irmacard.verification.common.AttributeIdentifier;
+import org.irmacard.verification.common.DisclosureProofRequest;
 
 import java.lang.reflect.Field;
 import java.lang.reflect.Type;
@@ -285,5 +288,49 @@ public class CredentialManager {
 
 	public static List<LogEntry> getLog() {
 		return logs;
+	}
+
+	public static ProofD getProof(DisclosureProofRequest request) {
+		if (!request.isSimple())
+			return null;
+
+		List<AttributeDisjunction> content = request.getContent();
+
+		// Since isSimple() returned true, the request concerns one credential. Fetch its issuer and name
+		AttributeIdentifier identifier = content.get(0).get(0);
+		String issuer = identifier.getIssuerName();
+		String credentialName = identifier.getCredentialName();
+
+		// Find the corresponding CredentialDescription
+		CredentialDescription cd;
+		try {
+			cd = DescriptionStore.getInstance().getCredentialDescriptionByName(issuer, credentialName);
+		} catch (InfoException e) {
+			e.printStackTrace();
+			return null;
+		}
+		if (cd == null)
+			return null;
+
+		// See if we have the corresponding credential
+		IRMAIdemixCredential credential = credentials.get(cd.getId());
+		if (credential == null)
+			return null;
+
+		// Convert the requested attributes to a List<Integer>
+		List<Integer> disclosed = new ArrayList<>(5);
+		disclosed.add(1); // Always disclose metadata attribute
+
+		for (AttributeDisjunction disjunction : content) {
+			String attribute = disjunction.get(0).getAttributeName();
+			int j = cd.getAttributeNames().indexOf(attribute);
+
+			if (j == -1) // our CredentialDescription does not contain the asked-for attribute
+				return null;
+
+			disclosed.add(j + 2);
+		}
+
+		return credential.getCredential().createDisclosureProof(disclosed, request.getContext(), request.getNonce());
 	}
 }

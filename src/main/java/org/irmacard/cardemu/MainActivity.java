@@ -32,6 +32,7 @@ package org.irmacard.cardemu;
 
 import java.util.*;
 
+import android.os.AsyncTask;
 import android.view.*;
 import android.widget.*;
 
@@ -41,6 +42,7 @@ import org.irmacard.android.util.cardlog.*;
 import org.irmacard.cardemu.selfenrol.Passport;
 import org.irmacard.cardemu.updates.AppUpdater;
 import org.irmacard.credentials.Attributes;
+import org.irmacard.credentials.idemix.proofs.ProofD;
 import org.irmacard.credentials.info.CredentialDescription;
 import org.irmacard.credentials.util.log.LogEntry;
 
@@ -54,6 +56,8 @@ import android.util.Log;
 
 import com.google.zxing.integration.android.IntentIntegrator;
 import com.google.zxing.integration.android.IntentResult;
+import org.irmacard.verification.common.DisclosureProofRequest;
+import org.irmacard.verification.common.util.GsonUtil;
 
 public class MainActivity extends Activity {
 	public static final int PASSPORT_REQUEST = 100;
@@ -389,9 +393,48 @@ public class MainActivity extends Activity {
 	private void gotoConnectingState(String url) {
 		Log.i(TAG, "Start channel listening: " + url);
 
-		setState(STATE_CONNECTING_TO_SERVER);
+		if (!url.endsWith("/"))
+			url = url + "/";
 
-		// TODO
+		setState(STATE_CONNECTING_TO_SERVER);
+		final String server = url;
+		final HttpClient client = new HttpClient(GsonUtil.getGson());
+
+		new AsyncTask<Void,Void,Boolean>() {
+			@Override
+			protected Boolean doInBackground(Void[] params) {
+				try {
+					// Fetch the request again from the server; it now has a nonce
+					DisclosureProofRequest request = client.doGet(DisclosureProofRequest.class, server);
+
+					publishProgress();
+
+					ProofD proof = CredentialManager.getProof(request);
+
+					if (proof != null)
+						client.doPost(server + "proof", proof);
+					else
+						client.doDelete(server);
+				} catch (HttpClient.HttpClientException e) {
+					e.printStackTrace();
+					return false;
+				}
+				return true;
+			}
+
+			@Override
+			protected void onPostExecute(Boolean success) {
+				setState(STATE_IDLE);
+				String status = success ? "success" : "failure";
+				if (!success)
+					setFeedback("Done", status);
+			}
+
+			@Override
+			protected void onProgressUpdate(Void... values) {
+				setState(STATE_COMMUNICATING);
+			}
+		}.execute();
 	}
 
 	@Override

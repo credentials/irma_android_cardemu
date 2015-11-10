@@ -2,6 +2,10 @@
 
 This android app emulates an IRMA card. Credentials can be issued to it using self-enrollment.
 
+## This is an experimental branch!
+
+We are currently in the process of switching to a new verification protocol (see the [verification_server project](https://github.com/credentials/irma_verification_server/)), and therefore not everything will work normally. Use at your own risk.
+
 ## Prerequisites
 
 This application has the following dependencies.  All these dependencies will be automatically downloaded by gradle when building or installing the library.

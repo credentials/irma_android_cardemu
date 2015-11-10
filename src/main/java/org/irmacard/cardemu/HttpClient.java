@@ -82,7 +82,7 @@ public class HttpClient {
 	 * @throws HttpClientException
 	 */
 	public <T> T doGet(final Type type, String url) throws HttpClientException {
-		return doPost(type, url, null, "");
+		return doRequest(type, url, null, "", "GET");
 	}
 
 	/**
@@ -106,7 +106,23 @@ public class HttpClient {
 	 * be an HTTP status code.
 	 */
 	public <T> T doPost(final Type type, String url, Object object) throws HttpClientException {
-		return doPost(type, url, object, "");
+		return doRequest(type, url, object, "", "POST");
+	}
+
+	/**
+	 * POSTs the specified object to the specified url, ignoring the output of the server.<br/><br/>
+	 *
+	 * This method does not (yet) support the posting of generics to the server.
+	 *
+	 * @param url The url to post to.
+	 * @param object The object to post. May be null, in which case we do a GET instead
+	 *               of post.
+	 * @throws HttpClientException If the casting failed, <code>status</code> will be zero.
+	 * Otherwise, if the communication with the server failed, <code>status</code> will
+	 * be an HTTP status code.
+	 */
+	public void doPost(String url, Object object) throws HttpClientException {
+		doRequest(Object.class, url, object, "", "POST");
 	}
 
 	/**
@@ -131,14 +147,26 @@ public class HttpClient {
 	 * Otherwise, if the communication with the server failed, <code>status</code> will
 	 * be an HTTP status code.
 	 */
-	public <T> T doPost(final Type type, String url, Object object, String authorization) throws HttpClientException {
-		HttpURLConnection c = null;
-		String method;
+	public <T> T doPost(Type type, String url, Object object, String authorization) throws HttpClientException {
+		return doRequest(type, url, object, authorization, "POST");
+	}
 
-		if (object == null)
-			method = "GET";
-		else
-			method = "POST";
+	/**
+	 * Performs a DELETE request.
+	 *
+	 * @param url The url to DELETE
+	 * @throws HttpClientException
+	 */
+	public void doDelete(String url) throws HttpClientException {
+		doRequest(Object.class, url, null, "", "DELETE");
+	}
+
+	/**
+	 * Worker method
+	 */
+	private <T> T doRequest(Type type, String url, Object object, String authorization, String method)
+	throws HttpClientException {
+		HttpURLConnection c = null;
 
 		try {
 			URL u = new URL(url);
@@ -177,6 +205,7 @@ public class HttpClient {
 			switch (status) {
 				case 200:
 				case 201:
+				case 204:
 					return gson.fromJson(inputStreamToString(c.getInputStream()), type);
 				default:
 					throw new HttpClientException(status, null);
