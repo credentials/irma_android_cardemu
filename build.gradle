@@ -43,6 +43,37 @@ android {
     }
 }
 
+if (project.file('acra.gradle').exists()) {
+    apply from: 'acra.gradle'
+} else {
+    android {
+        buildTypes.all { type ->
+            type.buildConfigField "String", "acraServer", '""'
+            type.buildConfigField "String", "acraLogin", '""'
+            type.buildConfigField "String", "acraPassword", '""'
+            type.buildConfigField "org.acra.ReportingInteractionMode", "acraMode",
+                    "org.acra.ReportingInteractionMode.SILENT"
+            type.resValue "string", "crash_toast_text", ""
+        }
+    }
+}
+
+android {
+    buildTypes.all { type ->
+        type.buildConfigField "String", "enrollServer", '"https://demo.irmacard.org/tomcat/irma_mno_server/api/v1"'
+    }
+    buildTypes {
+        release {
+            buildConfigField "String", "metricServer", '"https://demo.irmacard.org/tomcat/irma_metrics_server/api/v1"'
+            buildConfigField "String", "updateServer", '"https://credentials.github.io/appupdates"'
+        }
+        debug {
+            buildConfigField "String", "metricServer", '""'
+            buildConfigField "String", "updateServer", '""'
+        }
+    }
+}
+
 if(project.hasProperty("cardemuSigning") && new File((String)project.property("cardemuSigning")).exists()) {
     Properties props = new Properties()
     props.load(new FileInputStream(file(project.property("cardemuSigning"))))

@@ -308,7 +308,7 @@ public class MainActivity extends Activity implements PINDialogListener, Disclos
 		setState(STATE_IDLE);
 		clearFeedback();
 
-		updater = new AppUpdater(this, IRMApp.updateServer);
+		updater = new AppUpdater(this, BuildConfig.updateServer);
 	}
 
 	protected void clearCard() {

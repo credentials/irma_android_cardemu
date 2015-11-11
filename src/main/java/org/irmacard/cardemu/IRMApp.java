@@ -2,14 +2,14 @@ package org.irmacard.cardemu;
 
 import android.app.Application;
 import org.acra.ACRA;
+import org.acra.ACRAConfiguration;
 import org.acra.ReportField;
-import org.acra.ReportingInteractionMode;
 import org.acra.annotation.ReportsCrashes;
 
 @ReportsCrashes(
-        formUri = IRMApp.acraServer,
-        formUriBasicAuthLogin = "irma",
-        formUriBasicAuthPassword = "test",
+        formUri = BuildConfig.acraServer,
+        formUriBasicAuthLogin = BuildConfig.acraLogin,
+        formUriBasicAuthPassword = BuildConfig.acraPassword,
         customReportContent = {
                 ReportField.REPORT_ID,
                 ReportField.INSTALLATION_ID,
@@ -31,14 +31,8 @@ import org.acra.annotation.ReportsCrashes;
                 ReportField.CUSTOM_DATA,
                 ReportField.USER_APP_START_DATE,
                 ReportField.USER_CRASH_DATE},
-        mode = ReportingInteractionMode.TOAST,
         resToastText = R.string.crash_toast_text)
 public class IRMApp extends Application {
-    public final static String metricServer = "https://demo.irmacard.org/tomcat/irma_metrics_server/api/v1";
-    public final static String enrollServer = "https://demo.irmacard.org/tomcat/irma_mno_server/api/v1";
-    public final static String acraServer = "https://demo.irmacard.org/crashreportsviewer/www/submit.php";
-    public final static String updateServer = "https://credentials.github.io/appupdates";
-
     private final static long reportTimeInterval = 1000*60*60*24; // 1 day in milliseconds
 
     @Override
@@ -46,12 +40,20 @@ public class IRMApp extends Application {
         super.onCreate();
         ACRA.init(this);
         try {
+            // In the annotation above we can set the mode only to literal enums, as opposed to the BuildConfig
+            // expression below. So we extract the annotation and fix it manually
+            final ACRAConfiguration configuration = new ACRAConfiguration(IRMApp.class.getAnnotation(ReportsCrashes.class));
+            configuration.setMode(BuildConfig.acraMode);
+            ACRA.init(this, configuration);
+
             ACRA.getErrorReporter().putCustomData("IS_DEBUG_BUILD", Boolean.toString(BuildConfig.DEBUG));
             ACRA.getErrorReporter().putCustomData("MAX_HEAP", Long.valueOf(Runtime.getRuntime().maxMemory()/1024/1024).toString());
             ACRA.getErrorReporter().putCustomData("CORES", Integer.valueOf(Runtime.getRuntime().availableProcessors()).toString());
         } catch (Exception e) {
+            e.printStackTrace();
         }
-        MetricsReporter.init(this, metricServer, reportTimeInterval);
+
+        MetricsReporter.init(this, BuildConfig.metricServer, reportTimeInterval);
         CardManager.init(getSharedPreferences("cardemu", 0));
     }
 }

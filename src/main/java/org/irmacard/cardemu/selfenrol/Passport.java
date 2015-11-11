@@ -142,7 +142,7 @@ public class Passport extends Activity {
         setContentView(R.layout.enroll_activity_start);
         setTitle(R.string.app_name_enroll);
 
-        String enrollServer = IRMApp.enrollServer.substring(8); // Strip "https://"
+        String enrollServer = BuildConfig.enrollServer.substring(8); // Strip "https://"
         enrollServer = enrollServer.substring(0, enrollServer.indexOf('/')); // Strip path from the url
         String helpHtml = String.format(getString(R.string.se_connect_mno), enrollServer);
 
@@ -879,7 +879,7 @@ public class Passport extends Activity {
     }
 
     public void getEnrollmentSession(final Handler uiHandler) {
-        final String serverUrl = IRMApp.enrollServer;
+        final String serverUrl = BuildConfig.enrollServer;
 
         AsyncTask<Void, Void, EnrollmentStartResult> task = new AsyncTask<Void, Void, EnrollmentStartResult>() {
             @Override
@@ -917,7 +917,7 @@ public class Passport extends Activity {
      * @param uiHandler The handler to message when done.
      */
     public void enroll(final Handler uiHandler) {
-        final String serverUrl = IRMApp.enrollServer;
+        final String serverUrl = BuildConfig.enrollServer;
 
         // Doing HTTP(S) stuff on the main thread is not allowed.
         AsyncTask<PassportDataMessage, Void, Message> task = new AsyncTask<PassportDataMessage, Void, Message>() {

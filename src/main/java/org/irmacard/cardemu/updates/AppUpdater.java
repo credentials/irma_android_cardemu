@@ -73,7 +73,7 @@ public class AppUpdater {
 	 * @throws IllegalArgumentException if the serverUrl doesn't start with https
 	 */
 	public AppUpdater(final Context context, String serverUrl) throws IllegalArgumentException {
-		if (!serverUrl.startsWith("https")) {
+		if (!serverUrl.equals("") && !serverUrl.startsWith("https")) {
 			throw new IllegalArgumentException("Non-HTTPS updating is a bad idea");
 		}
 

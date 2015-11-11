@@ -9,3 +9,4 @@ build/
 *.class
 *.jar
 src/main/assets/irma_configuration
+acra.gradle
