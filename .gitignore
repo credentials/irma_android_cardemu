@@ -9,4 +9,5 @@ build/
 *.class
 *.jar
 src/main/assets/irma_configuration
+src/main/assets/card.json
 acra.gradle

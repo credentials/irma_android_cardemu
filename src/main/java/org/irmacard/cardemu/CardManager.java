@@ -30,6 +30,8 @@
 
 package org.irmacard.cardemu;
 
+import android.app.Application;
+import android.content.Context;
 import android.content.SharedPreferences;
 import android.util.Log;
 import com.google.gson.Gson;
@@ -42,6 +44,8 @@ import org.irmacard.credentials.info.CredentialDescription;
 import org.irmacard.credentials.info.InfoException;
 import org.irmacard.idemix.IdemixService;
 
+import java.io.InputStream;
+import java.util.Arrays;
 import java.util.List;
 
 /**
@@ -49,12 +53,14 @@ import java.util.List;
  */
 public class CardManager {
 	private static SharedPreferences settings;
+	private static Context context;
 	private static IRMACard card;
 	private static final String TAG = "CardManager";
 	private static final String CARD_STORAGE = "card";
 
-	public static void init(SharedPreferences s) {
-		settings = s;
+	public static void init(Application app) {
+		settings = app.getSharedPreferences("cardemu", 0);
+		context = app.getApplicationContext();
 	}
 
 	public static void logCard(IdemixService is) {
@@ -83,18 +89,43 @@ public class CardManager {
 			.apply();
 	}
 
+	public static boolean hasDefaultCard() {
+		try {
+			return Arrays.asList(context.getAssets().list("")).contains("card.json");
+		} catch (Exception e) {
+			return false;
+		}
+	}
+
+	public static IRMACard loadDefaultCard() {
+		return loadDefaultCard(null);
+	}
+
+	public static IRMACard loadDefaultCard(VerificationStartListener listener) {
+		try {
+			InputStream is = context.getAssets().open("card.json");
+			java.util.Scanner s = new java.util.Scanner(is).useDelimiter("\\A");
+			String json = s.hasNext() ? s.next() : "";
+			return loadCard(listener, json);
+		} catch (Exception e) {
+			card = new IRMACard();
+			card.addVerificationListener(listener);
+			return card;
+		}
+	}
+
 	public static IRMACard loadCard() {
 		return loadCard(null);
 	}
 
 	public static IRMACard loadCard(VerificationStartListener listener) {
-		String card_json = settings.getString(CARD_STORAGE, "");
+		return loadCard(listener, settings.getString(CARD_STORAGE, ""));
+	}
 
-		Gson gson = new Gson();
-
+	public static IRMACard loadCard(VerificationStartListener listener, String card_json) {
 		if (!card_json.equals("")) {
 			try {
-				card = gson.fromJson(card_json, IRMACard.class);
+				card = new Gson().fromJson(card_json, IRMACard.class);
 			} catch (Exception e) {
 				card = new IRMACard();
 			}
