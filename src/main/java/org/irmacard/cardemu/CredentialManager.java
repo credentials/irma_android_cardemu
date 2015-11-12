@@ -36,6 +36,7 @@ import com.google.gson.Gson;
 import com.google.gson.reflect.TypeToken;
 import net.sf.scuba.smartcards.CardServiceException;
 import org.irmacard.credentials.Attributes;
+import org.irmacard.credentials.CredentialsException;
 import org.irmacard.credentials.idemix.IdemixCredential;
 import org.irmacard.credentials.idemix.IdemixCredentials;
 import org.irmacard.credentials.idemix.proofs.ProofD;
@@ -290,9 +291,9 @@ public class CredentialManager {
 		return logs;
 	}
 
-	public static ProofD getProof(DisclosureProofRequest request) {
+	public static ProofD getProof(DisclosureProofRequest request) throws CredentialsException {
 		if (!request.isSimple())
-			return null;
+			throw new CredentialsException("Request not supported");
 
 		List<AttributeDisjunction> content = request.getContent();
 
@@ -305,17 +306,17 @@ public class CredentialManager {
 		CredentialDescription cd;
 		try {
 			cd = DescriptionStore.getInstance().getCredentialDescriptionByName(issuer, credentialName);
-		} catch (InfoException e) {
+		} catch (InfoException e) { // Should not happen
 			e.printStackTrace();
-			return null;
+			throw new CredentialsException("Could not read DescriptionStore");
 		}
 		if (cd == null)
-			return null;
+			throw new CredentialsException("Unknown issuer or credential");
 
 		// See if we have the corresponding credential
 		IRMAIdemixCredential credential = credentials.get(cd.getId());
 		if (credential == null)
-			return null;
+			throw new CredentialsException("Credential \"" + cd.getName() + "\" not found");
 
 		// Convert the requested attributes to a List<Integer>
 		List<Integer> disclosed = new ArrayList<>(5);
@@ -326,7 +327,7 @@ public class CredentialManager {
 			int j = cd.getAttributeNames().indexOf(attribute);
 
 			if (j == -1) // our CredentialDescription does not contain the asked-for attribute
-				return null;
+				throw new CredentialsException("Attribute \"" + attribute + "\" not found");
 
 			disclosed.add(j + 2);
 		}

@@ -39,9 +39,11 @@ import android.widget.*;
 import org.irmacard.android.util.credentials.CredentialPackage;
 import org.irmacard.android.util.credentialdetails.*;
 import org.irmacard.android.util.cardlog.*;
+import org.irmacard.cardemu.HttpClient.HttpClientException;
 import org.irmacard.cardemu.selfenrol.Passport;
 import org.irmacard.cardemu.updates.AppUpdater;
 import org.irmacard.credentials.Attributes;
+import org.irmacard.credentials.CredentialsException;
 import org.irmacard.credentials.idemix.proofs.ProofD;
 import org.irmacard.credentials.info.CredentialDescription;
 import org.irmacard.credentials.util.log.LogEntry;
@@ -415,34 +417,49 @@ public class MainActivity extends Activity {
 		setState(STATE_CONNECTING_TO_SERVER);
 		final String server = url;
 		final HttpClient client = new HttpClient(GsonUtil.getGson());
+		final String successMessage = "Done";
 
-		new AsyncTask<Void,Void,Boolean>() {
+		new AsyncTask<Void,Void,String>() {
 			@Override
-			protected Boolean doInBackground(Void[] params) {
+			protected String doInBackground(Void[] params) {
 				try {
 					// Fetch the request from the server
 					DisclosureProofRequest request = client.doGet(DisclosureProofRequest.class, server);
 
 					publishProgress();
 
-					ProofD proof = CredentialManager.getProof(request);
-
-					if (proof != null)
-						client.doPost(server + "proof", proof);
-					else
+					ProofD proof;
+					try {
+						proof = CredentialManager.getProof(request);
+					} catch (CredentialsException e) {
 						client.doDelete(server);
-				} catch (HttpClient.HttpClientException e) {
+						e.printStackTrace();
+						return e.getMessage();
+					}
+
+					client.doPost(server + "proof", proof);
+				} catch (HttpClientException e) {
 					e.printStackTrace();
-					return false;
+					if (e.cause != null)
+						return e.cause.getMessage();
+					else
+						return e.getMessage();
 				}
-				return true;
+				return successMessage;
 			}
 
 			@Override
-			protected void onPostExecute(Boolean success) {
+			protected void onPostExecute(String result) {
 				setState(STATE_IDLE);
-				String status = success ? "success" : "failure";
-				setFeedback("Done", status);
+				String status = result.equals(successMessage) ? "success" : "failure";
+
+				// Translate some possible problems to more human-readable versions
+				if (result.startsWith("failed to connect"))
+					result = "Could not connect";
+				if (result.startsWith("Supplied sessionToken not found or expired"))
+					result = "Server refused connection";
+
+				setFeedback(result, status);
 			}
 
 			@Override
