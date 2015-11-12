@@ -208,11 +208,17 @@ public class HttpClient {
 				case 204:
 					return gson.fromJson(inputStreamToString(c.getInputStream()), type);
 				default:
-					throw new HttpClientException(status, null);
+					String error;
+					try {
+						error = inputStreamToString(c.getErrorStream());
+					} catch (Exception e) {
+						error = "";
+					}
+					throw new HttpClientException(status, error);
 			}
-		} catch (JsonSyntaxException |IOException e) { // IOException includes MalformedURLException
+		} catch (JsonSyntaxException|IOException e) { // IOException includes MalformedURLException
 			e.printStackTrace();
-			throw new HttpClientException(0, e);
+			throw new HttpClientException(e);
 		} finally {
 			if (c != null) {
 				c.disconnect();
@@ -226,7 +232,7 @@ public class HttpClient {
 	public class HttpClientException extends Exception {
 		private static final long serialVersionUID = -3138843561169048744L;
 
-		public int status;
+		public int status = 0;
 		public Throwable cause;
 
 		@Override
@@ -237,9 +243,13 @@ public class HttpClient {
 					'}';
 		}
 
-		public HttpClientException(int status, Throwable cause) {
+		public HttpClientException(Throwable cause) {
 			super(cause);
 			this.cause = cause;
+		}
+
+		public HttpClientException(int status, String message) {
+			super(message);
 			this.status = status;
 		}
 	}
