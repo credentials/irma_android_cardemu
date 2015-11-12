@@ -57,6 +57,7 @@ import android.util.Log;
 import com.google.zxing.integration.android.IntentIntegrator;
 import com.google.zxing.integration.android.IntentResult;
 import org.irmacard.verification.common.DisclosureProofRequest;
+import org.irmacard.verification.common.DisclosureQr;
 import org.irmacard.verification.common.util.GsonUtil;
 
 public class MainActivity extends Activity {
@@ -390,7 +391,22 @@ public class MainActivity extends Activity {
 		}
 	}
 
-	private void gotoConnectingState(String url) {
+	private void gotoConnectingState(String json) {
+		String url = "";
+		try {
+			DisclosureQr contents = GsonUtil.getGson().fromJson(json, DisclosureQr.class);
+			if (!contents.getVersion().equals("1.0")) {
+				setFeedback("Protocol not supported", "failure");
+				return;
+			}
+
+			url = contents.getUrl();
+		} catch (Exception e) {
+			setFeedback("Failed to parse QR", "failure");
+			return;
+		}
+
+
 		Log.i(TAG, "Start channel listening: " + url);
 
 		if (!url.endsWith("/"))
@@ -404,7 +420,7 @@ public class MainActivity extends Activity {
 			@Override
 			protected Boolean doInBackground(Void[] params) {
 				try {
-					// Fetch the request again from the server; it now has a nonce
+					// Fetch the request from the server
 					DisclosureProofRequest request = client.doGet(DisclosureProofRequest.class, server);
 
 					publishProgress();
@@ -426,8 +442,7 @@ public class MainActivity extends Activity {
 			protected void onPostExecute(Boolean success) {
 				setState(STATE_IDLE);
 				String status = success ? "success" : "failure";
-				if (!success)
-					setFeedback("Done", status);
+				setFeedback("Done", status);
 			}
 
 			@Override
