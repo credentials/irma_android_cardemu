@@ -1,0 +1,26 @@
+/*
+ * Sample ACRA configuration file
+ *
+ * In this example, sending ACRA reports is disabled in debug builds. If you want to send a report regardless
+ * of the build type, you can use the "buildTypes.all { type -> " syntax (see build.gradle).
+ */
+android {
+    buildTypes {
+        debug { // No need to constantly report exceptions during testing,
+            buildConfigField "String", "acraServer", '""'
+            buildConfigField "String", "acraLogin", '""'
+            buildConfigField "String", "acraPassword", '""'
+            buildConfigField "org.acra.ReportingInteractionMode", "acraMode",
+                    "org.acra.ReportingInteractionMode.TOAST"
+            resValue "string", "crash_toast_text", "An error occured! Debug build -> won\\'t send report"
+        }
+        release {
+            buildConfigField "String", "acraServer", '"https://www.example.com/AcraSubmit"'
+            buildConfigField "String", "acraLogin", '"username"'
+            buildConfigField "String", "acraPassword", '"secret"'
+            buildConfigField "org.acra.ReportingInteractionMode", "acraMode",
+                    "org.acra.ReportingInteractionMode.TOAST"
+            resValue "string", "crash_toast_text", "Transmitting error report"
+        }
+    }
+}
