@@ -36,6 +36,7 @@ import android.os.AsyncTask;
 import android.view.*;
 import android.widget.*;
 
+import org.acra.ACRA;
 import org.irmacard.android.util.credentials.CredentialPackage;
 import org.irmacard.android.util.credentialdetails.*;
 import org.irmacard.android.util.cardlog.*;
@@ -59,6 +60,7 @@ import android.util.Log;
 import com.google.zxing.integration.android.IntentIntegrator;
 import com.google.zxing.integration.android.IntentResult;
 import org.irmacard.verification.common.DisclosureProofRequest;
+import org.irmacard.verification.common.DisclosureProofResult;
 import org.irmacard.verification.common.DisclosureQr;
 import org.irmacard.verification.common.util.GsonUtil;
 
@@ -422,6 +424,8 @@ public class MainActivity extends Activity {
 		new AsyncTask<Void,Void,String>() {
 			@Override
 			protected String doInBackground(Void[] params) {
+				DisclosureProofResult.Status status;
+
 				try {
 					// Fetch the request from the server
 					DisclosureProofRequest request = client.doGet(DisclosureProofRequest.class, server);
@@ -437,7 +441,7 @@ public class MainActivity extends Activity {
 						return e.getMessage();
 					}
 
-					client.doPost(server + "proof", proof);
+					status = client.doPost(DisclosureProofResult.Status.class, server + "proof", proof);
 				} catch (HttpClientException e) {
 					e.printStackTrace();
 					if (e.cause != null)
@@ -445,7 +449,14 @@ public class MainActivity extends Activity {
 					else
 						return e.getMessage();
 				}
-				return successMessage;
+
+				if (status == DisclosureProofResult.Status.VALID)
+					return successMessage;
+				else { // We successfully computed a proof but server rejects it? That's fishy, report it
+					String feedback = "Server rejected proof: " + status.name().toLowerCase();
+					ACRA.getErrorReporter().handleException(new Exception(feedback));
+					return feedback;
+				}
 			}
 
 			@Override
