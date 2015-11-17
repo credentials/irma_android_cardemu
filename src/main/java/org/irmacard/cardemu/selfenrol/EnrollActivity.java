@@ -96,13 +96,13 @@ import javax.net.ssl.SSLContext;
 import javax.net.ssl.SSLSocketFactory;
 import javax.net.ssl.TrustManagerFactory;
 
-public class Passport extends Activity {
+public class EnrollActivity extends Activity {
     private NfcAdapter nfcA;
     private PendingIntent mPendingIntent;
     private IntentFilter[] mFilters;
     private String[][] mTechLists;
 
-    private String TAG = "cardemu.Passport";
+    private String TAG = "cardemu.EnrollActivity";
 
     // PIN handling
     private int tries = -1;
@@ -346,19 +346,19 @@ public class Passport extends Activity {
                 // reason there is no need to let it crash the app.)
                 try {
                     ps.doBAC(getBACKey());
-                    Log.i(TAG, "Passport: doing BAC");
+                    Log.i(TAG, "EnrollActivity: doing BAC");
                 } catch (CardServiceException | IllegalStateException e) {
                     bacError = true;
-                    Log.e(TAG, "Passport: doing BAC failed");
+                    Log.e(TAG, "EnrollActivity: doing BAC failed");
                     return null;
                 }
 
                 Exception ex = null;
                 try {
-                    Log.i(TAG, "Passport: reading attempt " + passportAttempts);
+                    Log.i(TAG, "EnrollActivity: reading attempt " + passportAttempts);
                     generatePassportDataMessage(ps, pdm);
                 } catch (IOException|CardServiceException e) {
-                    Log.w(TAG, "Passport: reading attempt " + passportAttempts + " failed, stack trace:");
+                    Log.w(TAG, "EnrollActivity: reading attempt " + passportAttempts + " failed, stack trace:");
                     Log.w(TAG, "          " + e.getMessage());
                     ex = e;
                 }
@@ -366,7 +366,7 @@ public class Passport extends Activity {
                 passportError = !pdm.isComplete();
                 if (!pdm.isComplete() && passportAttempts == MAX_PASSPORT_ATTEMPTS && ex != null) {
                     // Build a fancy report saying which fields we did and which we did not manage to get
-                    Log.e(TAG, "Passport: too many attempts failed, aborting");
+                    Log.e(TAG, "EnrollActivity: too many attempts failed, aborting");
                     ACRA.getErrorReporter().reportBuilder()
                             .customData("sod", String.valueOf(pdm.getSodFile() == null))
                             .customData("dg1File", String.valueOf(pdm.getDg1File() == null))
@@ -398,36 +398,36 @@ public class Passport extends Activity {
                 try {
                     if (pdm.getDg1File() == null) {
                         pdm.setDg1File(new DG1File(passportService.getInputStream(PassportService.EF_DG1)));
-                        Log.i(TAG, "Passport: reading DG1");
+                        Log.i(TAG, "EnrollActivity: reading DG1");
                         publishProgress();
                     }
                     if (pdm.getSodFile() == null) {
                         pdm.setSodFile(new SODFile(passportService.getInputStream(PassportService.EF_SOD)));
-                        Log.i(TAG, "Passport: reading SOD");
+                        Log.i(TAG, "EnrollActivity: reading SOD");
                         publishProgress();
                     }
                     if (pdm.getSodFile() != null) { // We need the SOD file to check if DG14 exists
                         if (pdm.getSodFile().getDataGroupHashes().get(14) != null) { // Checks if DG14 exists
                             if (pdm.getDg14File() == null) {
                                 pdm.setDg14File(new DG14File(passportService.getInputStream(PassportService.EF_DG14)));
-                                Log.i(TAG, "Passport: reading DG14");
+                                Log.i(TAG, "EnrollActivity: reading DG14");
                                 publishProgress();
                             }
                         } else { // If DG14 does not exist, just advance the progress bar
-                            Log.i(TAG, "Passport: reading DG14 not necessary, skipping");
+                            Log.i(TAG, "EnrollActivity: reading DG14 not necessary, skipping");
                             publishProgress();
                         }
                     }
                     if (pdm.getDg15File() == null) {
                         pdm.setDg15File(new DG15File(passportService.getInputStream(PassportService.EF_DG15)));
-                        Log.i(TAG, "Passport: reading DG15");
+                        Log.i(TAG, "EnrollActivity: reading DG15");
                         publishProgress();
                     }
                     // The doAA() method does not use its first three arguments, it only passes the challenge
                     // on to another functio within JMRTD.
                     if (pdm.getResponse() == null) {
                         pdm.setResponse(passportService.doAA(null, null, null, pdm.getChallenge()));
-                        Log.i(TAG, "Passport: doing AA");
+                        Log.i(TAG, "EnrollActivity: doing AA");
                         publishProgress();
                     }
                 } catch (NullPointerException e) {
@@ -444,7 +444,7 @@ public class Passport extends Activity {
 
                 Boolean done = pdm != null && pdm.isComplete();
 
-                Log.i(TAG, "Passport: attempt " + passportAttempts + " finished, done: " + done);
+                Log.i(TAG, "EnrollActivity: attempt " + passportAttempts + " finished, done: " + done);
 
                 // If we're not yet done, we should not advance the screen but just wait for further attempts
                 if (passportAttempts < MAX_PASSPORT_ATTEMPTS && !done) {
