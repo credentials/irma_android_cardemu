@@ -30,9 +30,6 @@
 
 package org.irmacard.cardemu;
 
-import java.io.BufferedReader;
-import java.io.IOException;
-import java.io.InputStreamReader;
 import java.io.StringReader;
 import java.io.UnsupportedEncodingException;
 import java.util.*;
@@ -58,9 +55,8 @@ import org.irmacard.cardemu.messages.ReaderMessage;
 import org.irmacard.cardemu.messages.ReaderMessageDeserializer;
 import org.irmacard.cardemu.messages.ResponseArguments;
 import org.irmacard.cardemu.messages.TransmitCommandSetArguments;
-import org.irmacard.cardemu.selfenrol.Passport;
+import org.irmacard.cardemu.selfenrol.EnrollActivity;
 import org.irmacard.cardemu.updates.AppUpdater;
-import org.irmacard.cardemu.updates.AppVersionInfo;
 import org.irmacard.credentials.Attributes;
 import org.irmacard.credentials.CredentialsException;
 import org.irmacard.credentials.idemix.IdemixCredentials;
@@ -83,7 +79,6 @@ import android.app.PendingIntent;
 import android.content.DialogInterface;
 import android.content.Intent;
 import android.content.IntentFilter;
-import android.content.SharedPreferences;
 import android.nfc.NfcAdapter;
 import android.nfc.Tag;
 import android.nfc.tech.IsoDep;
@@ -682,7 +677,7 @@ public class MainActivity extends Activity implements PINDialogListener, Disclos
 	}
 
 	public void onEnrollButtonTouch(View v) {
-		Intent i = new Intent(this, Passport.class);
+		Intent i = new Intent(this, EnrollActivity.class);
 		CardManager.storeCard();
 		i.putExtra("card_json", "loadCard");
 		startActivityForResult(i, PASSPORT_REQUEST);
