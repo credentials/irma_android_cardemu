@@ -42,7 +42,7 @@ import org.irmacard.android.util.credentials.CredentialPackage;
 import org.irmacard.android.util.credentialdetails.*;
 import org.irmacard.android.util.cardlog.*;
 import org.irmacard.cardemu.HttpClient.HttpClientException;
-import org.irmacard.cardemu.selfenrol.EnrollActivity;
+import org.irmacard.cardemu.selfenrol.PassportEnrollActivity;
 import org.irmacard.cardemu.updates.AppUpdater;
 import org.irmacard.credentials.Attributes;
 import org.irmacard.credentials.CredentialsException;
@@ -357,9 +357,8 @@ public class MainActivity extends Activity {
 	}
 
 	public void onEnrollButtonTouch(View v) {
-		Intent i = new Intent(this, EnrollActivity.class);
+		Intent i = new Intent(this, PassportEnrollActivity.class);
 		CardManager.storeCard();
-		i.putExtra("card_json", "loadCard");
 		startActivityForResult(i, PASSPORT_REQUEST);
 	}
 
