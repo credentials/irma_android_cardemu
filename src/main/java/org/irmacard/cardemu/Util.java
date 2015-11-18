@@ -30,6 +30,22 @@
 
 package org.irmacard.cardemu;
 
+import android.content.Context;
+import android.content.res.Resources;
+import org.acra.ACRA;
+
+import javax.net.ssl.SSLContext;
+import javax.net.ssl.SSLSocketFactory;
+import javax.net.ssl.TrustManagerFactory;
+import java.io.IOException;
+import java.io.InputStream;
+import java.security.KeyManagementException;
+import java.security.KeyStore;
+import java.security.KeyStoreException;
+import java.security.NoSuchAlgorithmException;
+import java.security.cert.Certificate;
+import java.security.cert.CertificateException;
+import java.security.cert.CertificateFactory;
 import java.util.regex.Pattern;
 
 public class Util {
@@ -79,5 +95,53 @@ public class Util {
 			return isValidIPAddress(url);
 		else
 			return isValidDomainName(url);
+	}
+
+	/**
+	 * <p>Get a SSLSocketFactory that uses public key pinning: it only accepts the
+	 * CA certificate obtained from the file res/raw/filename.cert.
+	 * See https://developer.android.com/training/articles/security-ssl.html#Pinning
+	 * and https://op-co.de/blog/posts/java_sslsocket_mitm/</p>
+	 *
+	 * <p>Alternatively, https://github.com/Flowdalic/java-pinning</p>
+	 *
+	 * <p>If we want to trust our own CA instead, we can import it using
+	 * keyStore.setCertificateEntry("ourCa", ca);
+	 * instead of using the keyStore.load method. See the first link.</p>
+	 *
+	 * @param context Needed to load the file from the res/raw directory
+	 * @param filename Filename without .cert extension
+	 * @return A client whose SSL with our certificate pinnned. Will be null
+	 * if something went wrong.
+	 */
+	public static SSLSocketFactory getSocketFactory(Context context, String filename) {
+		try {
+			Resources r = context.getResources();
+
+			// Get the certificate from the res/raw folder and parse it
+			InputStream ins = r.openRawResource(r.getIdentifier("ca", "raw", context.getPackageName()));
+			Certificate ca;
+			try {
+				ca = CertificateFactory.getInstance("X.509").generateCertificate(ins);
+			} finally {
+				ins.close();
+			}
+
+			// Put the certificate in the keystore, put that in the TrustManagerFactory,
+			// put that in the SSLContext, from which we get the SSLSocketFactory
+			KeyStore keyStore = KeyStore.getInstance("BKS");
+			keyStore.load(null, null);
+			keyStore.setCertificateEntry("ca", ca);
+			TrustManagerFactory tmf = TrustManagerFactory.getInstance("X509");
+			tmf.init(keyStore);
+			final SSLContext sslcontext = SSLContext.getInstance("TLS");
+			sslcontext.init(null, tmf.getTrustManagers(), null);
+
+			return new SecureSSLSocketFactory(sslcontext.getSocketFactory());
+		} catch (KeyManagementException |NoSuchAlgorithmException |KeyStoreException |CertificateException |IOException e) {
+			ACRA.getErrorReporter().handleException(e);
+			e.printStackTrace();
+			return null;
+		}
 	}
 }

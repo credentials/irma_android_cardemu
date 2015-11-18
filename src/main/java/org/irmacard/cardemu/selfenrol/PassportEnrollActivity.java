@@ -33,7 +33,6 @@ package org.irmacard.cardemu.selfenrol;
 import android.app.DatePickerDialog;
 import android.content.Context;
 import android.content.Intent;
-import android.content.res.Resources;
 import android.nfc.NfcAdapter;
 import android.nfc.Tag;
 import android.nfc.tech.IsoDep;
@@ -93,6 +92,7 @@ public class PassportEnrollActivity extends EnrollActivity {
 		super.onCreate(savedInstanceState);
 
 		screen = SCREEN_START;
+		updateProgressCounter();
 
 		String enrollServer = BuildConfig.enrollServer.substring(8); // Strip "https://"
 		enrollServer = enrollServer.substring(0, enrollServer.indexOf('/')); // Strip path from the url
@@ -122,7 +122,7 @@ public class PassportEnrollActivity extends EnrollActivity {
      * method asynchroniously does BAC and AA with the passport, also extracting some necessary data files.
      *
      * As the ACTION_TECH_DISCOVERED intent can occur multiple times, this method can be called multiple times
-     * without problems. If it is called for the MAX_PASSPORT_ATTEMPTS's time, however, it will advance the screen
+     * without problems. If it is called for the MAX_TAG_READ_ATTEMPTS's time, however, it will advance the screen
      * either to the issue screen or the error screen, depending if we've successfully read the passport or not.
      */
 	@Override
@@ -147,11 +147,6 @@ public class PassportEnrollActivity extends EnrollActivity {
 		TextView feedbackTextView = (TextView) findViewById(R.id.se_feedback_text);
 		if (feedbackTextView != null) {
 			feedbackTextView.setText(R.string.feedback_communicating_passport);
-		} else {
-			// Judging from some crash reports, the se_feedback_text textview is not always here at this point.
-			// If so, report it. This may be an old problem that now does not occur anymore (in which case this line
-			// should disappear at some point).
-			ACRA.getErrorReporter().handleException(new Exception("se_feedback_text not found in passport screen"));
 		}
 
 		Tag tagFromIntent = intent.getParcelableExtra(NfcAdapter.EXTRA_TAG);
@@ -163,7 +158,7 @@ public class PassportEnrollActivity extends EnrollActivity {
 		tag.setTimeout(1500);
 
 		CardService cs = new IsoDepCardService(tag);
-		PassportService passportService = null;
+		PassportService passportService;
 
 		try {
 			cs.open();
@@ -188,7 +183,7 @@ public class PassportEnrollActivity extends EnrollActivity {
 	 * in a seperate thread.
 	 */
 	private void readPassport(PassportService ps, PassportDataMessage pdm) {
-		AsyncTask<Object,Void,PassportDataMessage> task = new AsyncTask<Object,Void,PassportDataMessage>(){
+		new AsyncTask<Object,Void,PassportDataMessage>(){
 			ProgressBar progressBar = (ProgressBar) findViewById(R.id.se_progress_bar);
 			boolean passportError = false;
 			boolean bacError = false;
@@ -204,10 +199,10 @@ public class PassportEnrollActivity extends EnrollActivity {
 				PassportService ps = (PassportService) params[0];
 				PassportDataMessage pdm = (PassportDataMessage) params[1];
 
-				if (passportAttempts == 0) {
+				if (tagReadAttempt == 0) {
 					start = System.currentTimeMillis();
 				}
-				passportAttempts++;
+				tagReadAttempt++;
 
 				// Do the BAC separately from generating the pdm, so we can be specific in our error message if
 				// necessary. (Note: the IllegalStateException should not happen, but if it does for some unforseen
@@ -223,16 +218,16 @@ public class PassportEnrollActivity extends EnrollActivity {
 
 				Exception ex = null;
 				try {
-					Log.i(TAG, "EnrollActivity: reading attempt " + passportAttempts);
+					Log.i(TAG, "EnrollActivity: reading attempt " + tagReadAttempt);
 					generatePassportDataMessage(ps, pdm);
 				} catch (IOException |CardServiceException e) {
-					Log.w(TAG, "EnrollActivity: reading attempt " + passportAttempts + " failed, stack trace:");
+					Log.w(TAG, "EnrollActivity: reading attempt " + tagReadAttempt + " failed, stack trace:");
 					Log.w(TAG, "          " + e.getMessage());
 					ex = e;
 				}
 
 				passportError = !pdm.isComplete();
-				if (!pdm.isComplete() && passportAttempts == MAX_PASSPORT_ATTEMPTS && ex != null) {
+				if (!pdm.isComplete() && tagReadAttempt == MAX_TAG_READ_ATTEMPTS && ex != null) {
 					// Build a fancy report saying which fields we did and which we did not manage to get
 					Log.e(TAG, "EnrollActivity: too many attempts failed, aborting");
 					ACRA.getErrorReporter().reportBuilder()
@@ -312,15 +307,15 @@ public class PassportEnrollActivity extends EnrollActivity {
 
 				Boolean done = pdm != null && pdm.isComplete();
 
-				Log.i(TAG, "EnrollActivity: attempt " + passportAttempts + " finished, done: " + done);
+				Log.i(TAG, "EnrollActivity: attempt " + tagReadAttempt + " finished, done: " + done);
 
 				// If we're not yet done, we should not advance the screen but just wait for further attempts
-				if (passportAttempts < MAX_PASSPORT_ATTEMPTS && !done) {
+				if (tagReadAttempt < MAX_TAG_READ_ATTEMPTS && !done) {
 					return;
 				}
 
 				stop = System.currentTimeMillis();
-				MetricsReporter.getInstance().reportMeasurement("passport_data_attempts", passportAttempts, false);
+				MetricsReporter.getInstance().reportMeasurement("passport_data_attempts", tagReadAttempt, false);
 				MetricsReporter.getInstance().reportMeasurement("passport_data_time", stop-start);
 
 				// If we're here, we're done. Check for errors or failures, and advance the screen
@@ -340,32 +335,6 @@ public class PassportEnrollActivity extends EnrollActivity {
 			}
 		}.execute(ps,pdm);
 	}
-
-	private void setBacFieldWatcher() {
-		final EditText docnrEditText = (EditText) findViewById(R.id.doc_nr_edittext);
-		final EditText dobEditText = (EditText) findViewById(R.id.dob_edittext);
-		final EditText doeEditText = (EditText) findViewById(R.id.doe_edittext);
-		final Button continueButton = (Button) findViewById(R.id.se_button_continue);
-
-		TextWatcher bacFieldWatcher = new TextWatcher() {
-			@Override public void beforeTextChanged(CharSequence s, int start, int count, int after) {}
-			@Override public void afterTextChanged(Editable s) {}
-			@Override
-			public void onTextChanged(CharSequence s, int start, int before, int count) {
-				boolean enableButton = docnrEditText.getText().length() > 0
-						&& dobEditText.getText().length() > 0
-						&& doeEditText.getText().length() > 0;
-				continueButton.setEnabled(enableButton);
-			}
-		};
-
-		docnrEditText.addTextChangedListener(bacFieldWatcher);
-		dobEditText.addTextChangedListener(bacFieldWatcher);
-		doeEditText.addTextChangedListener(bacFieldWatcher);
-
-		bacFieldWatcher.onTextChanged("", 0, 0, 0);
-	}
-
 
 	@Override
 	protected void advanceScreen() {
@@ -450,8 +419,8 @@ public class PassportEnrollActivity extends EnrollActivity {
 							connectedTextView.setTextColor(getResources().getColor(R.color.irmagreen));
 							connectedTextView.setText(R.string.se_connected_mno);
 
-							((TextView) findViewById(R.id.se_feedback_text)).setVisibility(View.VISIBLE);
-							((ProgressBar) findViewById(R.id.se_progress_bar)).setVisibility(View.VISIBLE);
+							findViewById(R.id.se_feedback_text).setVisibility(View.VISIBLE);
+							findViewById(R.id.se_progress_bar).setVisibility(View.VISIBLE);
 
 							enrollSession = result.msg;
 						}
@@ -477,7 +446,7 @@ public class PassportEnrollActivity extends EnrollActivity {
 							showErrorScreen(getString(R.string.error_enroll_passporterror));
 						}
 					}
-				}, MAX_PASSPORT_TIME);
+				}, MAX_TAG_READ_TIME);
 
 				break;
 
@@ -498,13 +467,12 @@ public class PassportEnrollActivity extends EnrollActivity {
 							// Success, save our new credentials
 							CardManager.storeCard();
 							enableContinueButton();
-							((TextView) findViewById(R.id.se_done_text)).setVisibility(View.VISIBLE);
+							findViewById(R.id.se_done_text).setVisibility(View.VISIBLE);
 						} else {
 							// Rollback the card
 							card = CardManager.loadCard();
 							is = new IdemixService(new SmartCardEmulatorService(card));
 
-							String errormsg;
 							if (msg.what != 0) // .what may contain a string identifier saying what went wrong
 								showErrorScreen(msg.what);
 							else
@@ -554,6 +522,31 @@ public class PassportEnrollActivity extends EnrollActivity {
 		dateView.setText(hrDateFormat.format(c.getTime()));
 	}
 
+	private void setBacFieldWatcher() {
+		final EditText docnrEditText = (EditText) findViewById(R.id.doc_nr_edittext);
+		final EditText dobEditText = (EditText) findViewById(R.id.dob_edittext);
+		final EditText doeEditText = (EditText) findViewById(R.id.doe_edittext);
+		final Button continueButton = (Button) findViewById(R.id.se_button_continue);
+
+		TextWatcher bacFieldWatcher = new TextWatcher() {
+			@Override public void beforeTextChanged(CharSequence s, int start, int count, int after) {}
+			@Override public void afterTextChanged(Editable s) {}
+			@Override
+			public void onTextChanged(CharSequence s, int start, int before, int count) {
+				boolean enableButton = docnrEditText.getText().length() > 0
+						&& dobEditText.getText().length() > 0
+						&& doeEditText.getText().length() > 0;
+				continueButton.setEnabled(enableButton);
+			}
+		};
+
+		docnrEditText.addTextChangedListener(bacFieldWatcher);
+		dobEditText.addTextChangedListener(bacFieldWatcher);
+		doeEditText.addTextChangedListener(bacFieldWatcher);
+
+		bacFieldWatcher.onTextChanged("", 0, 0, 0);
+	}
+
 	/**
 	 * Get the BAC key using the input from the user from the BAC screen.
 	 *
@@ -571,7 +564,6 @@ public class PassportEnrollActivity extends EnrollActivity {
 	}
 
 	protected void updateProgressCounter() {
-		Resources r = getResources();
 		super.updateProgressCounter(screen - 1);
 	}
 
@@ -587,7 +579,7 @@ public class PassportEnrollActivity extends EnrollActivity {
 		final String serverUrl = BuildConfig.enrollServer;
 
 		// Doing HTTP(S) stuff on the main thread is not allowed.
-		AsyncTask<PassportDataMessage, Void, Message> task = new AsyncTask<PassportDataMessage, Void, Message>() {
+		new AsyncTask<PassportDataMessage, Void, Message>() {
 			@Override
 			protected Message doInBackground(PassportDataMessage... params) {
 				Message msg = Message.obtain();
