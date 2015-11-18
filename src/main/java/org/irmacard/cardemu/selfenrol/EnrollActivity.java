@@ -34,6 +34,7 @@ import android.app.*;
 import android.content.*;
 import android.content.res.Resources;
 import android.nfc.NfcAdapter;
+import android.nfc.Tag;
 import android.nfc.tech.IsoDep;
 import android.os.*;
 import android.util.Log;
@@ -59,37 +60,52 @@ import java.text.DateFormat;
 import java.text.SimpleDateFormat;
 import java.util.Locale;
 
+/**
+ * Abstract base class for enrolling, coontaining generic UI, NFC and networking logic. Things handled by this class
+ * include:
+ * <ul>
+ *     <li>The progress counter in the top right of the screen, see {@link #updateProgressCounter(int)}</li>
+ *     <li>The error screen, see {@link #showErrorScreen(int)} and its friends</li>
+ *     <li>Fetching an EnrollmentStartMessage, see {@link #getEnrollmentSession(Handler)}</li>
+ *     <li>Catching the NFC intent and dispatching a tag to inheritors that is ready to be read</li>
+ * </ul>
+ * Inheriting classes are expected to handle NFC events that we dispatch to it (see
+ * {@link #handleNfcEvent(CardService, EnrollmentStartMessage)}), define and handle screens (see
+ * {@link #advanceScreen()}), take care of its own UI, and do the actual enrolling.
+ */
 abstract public class EnrollActivity extends Activity {
+    // Configuration
+    private static final String TAG = "cardemu.EnrollActivity";
+    protected static final String SETTINGS = "cardemu";
+    protected static final int SCREEN_START = 1;
+    protected static final int SCREEN_ERROR = -1;
+    protected final static int MAX_TAG_READ_ATTEMPTS = 5;
+    protected final static int MAX_TAG_READ_TIME = 15 * 1000;
+
+    // Settings
+    protected SharedPreferences settings;
+
+    // NFC stuff
     private NfcAdapter nfcA;
     private PendingIntent mPendingIntent;
     private IntentFilter[] mFilters;
     private String[][] mTechLists;
-
-    private String TAG = "cardemu.EnrollActivity";
-
-    protected int screen;
+    private Handler handler = new Handler();
+    private int SCREEN_NFC_EVENT = -2;
 
     // State variables
     protected IRMACard card = null;
     protected IdemixService is = null;
-
-    protected static final int SCREEN_START = 1;
-    protected static final int SCREEN_ERROR = -1;
-
+    protected int screen;
     protected int tagReadAttempt = 0;
-    protected final static int MAX_TAG_READ_ATTEMPTS = 5;
-    protected final static int MAX_TAG_READ_TIME = 15 * 1000;
 
-    protected static final String SETTINGS = "cardemu";
-
-    protected SharedPreferences settings;
+    // Date stuff
     protected SimpleDateFormat bacDateFormat = new SimpleDateFormat("yyMMdd", Locale.US);
     protected DateFormat hrDateFormat = DateFormat.getDateInstance();
 
-    protected Handler handler = new Handler();
+    // Enrolling variables
     protected HttpClient client = null;
-    protected EnrollmentStartMessage enrollSession = null;
-
+    private EnrollmentStartMessage enrollSession = null;
     protected final Gson gson = new GsonBuilder()
             .registerTypeAdapter(ProtocolCommand.class, new ProtocolCommandDeserializer())
             .registerTypeAdapter(ProtocolResponse.class, new ProtocolResponseSerializer())
@@ -145,9 +161,64 @@ abstract public class EnrollActivity extends Activity {
             showErrorScreen(R.string.error_nfc_disabled);
     }
 
-    abstract protected void processIntent(final Intent intent);
-
+    /**
+     * Called when the user presses the continue button
+     */
     abstract protected void advanceScreen();
+
+    /**
+     * Called when an NFC tag and enroll session are ready to be handled. Overriding methods should expect to be
+     * called multiple times.
+     *
+     * @param service Card service representing the tag
+     * @param message The enrollment session
+     */
+    abstract protected void handleNfcEvent(CardService service, EnrollmentStartMessage message);
+
+    /**
+     * Sets the screen on which we should handle incoming NFC events.
+     */
+    protected void setNfcScreen(int screen) {
+        this.SCREEN_NFC_EVENT = screen;
+    }
+
+    /**
+     * Process NFC intents. If we're on the screen on which we expect NFC events, and there's an enroll session
+     * containing a nonce, this method calls {@link #handleNfcEvent(CardService, EnrollmentStartMessage)} of the
+     * inheriting class.
+     * <p>
+     * As the ACTION_TECH_DISCOVERED intent can occur multiple times, this method can be called multiple times, so
+     * {@link #handleNfcEvent(CardService, EnrollmentStartMessage)} may also be called multiple times.
+     */
+    private void processIntent(final Intent intent) {
+        // Only handle this event if we expect it
+        if (screen != SCREEN_NFC_EVENT)
+            return;
+
+        if (enrollSession == null) {
+            // We need to have an enroll session before we can do AA, because the enroll session contains the nonce.
+            // So retry later. This will not cause an endless loop if the server is unreachable, because after a timeout
+            // (5 sec) the getEnrollmentSession method will go to the error screen, so the if-clause above will trigger.
+            handler.postDelayed(new Runnable() {
+                @Override
+                public void run() {
+                    processIntent(intent);
+                }
+            }, 250);
+            return;
+        }
+
+        Tag tagFromIntent = intent.getParcelableExtra(NfcAdapter.EXTRA_TAG);
+        assert (tagFromIntent != null);
+
+        IsoDep tag = IsoDep.get(tagFromIntent);
+        // Prevents "Tag is lost" messages (at least on a Nexus 5)
+        // TODO how about on other devices?
+        tag.setTimeout(1500);
+        CardService cs = new IsoDepCardService(tag);
+
+        handleNfcEvent(cs, enrollSession);
+    }
 
     @Override
     public void onNewIntent(Intent intent) {
@@ -188,7 +259,7 @@ abstract public class EnrollActivity extends Activity {
         }
     }
 
-    protected void enableContinueButton(){
+    protected void enableContinueButton() {
         final Button button = (Button) findViewById(R.id.se_button_continue);
         button.setVisibility(View.VISIBLE);
         button.setEnabled(true);
@@ -299,7 +370,10 @@ abstract public class EnrollActivity extends Activity {
         super.finish();
     }
 
-    public void getEnrollmentSession(final Handler uiHandler) {
+    /**
+     * Fetch an enrollment session. When done, the specified handler will be called with the result in its .obj.
+     */
+    protected void getEnrollmentSession(final Handler uiHandler) {
         final String serverUrl = BuildConfig.enrollServer;
 
         new AsyncTask<Void, Void, EnrollmentStartResult>() {
@@ -323,6 +397,7 @@ abstract public class EnrollActivity extends Activity {
             protected void onPostExecute(EnrollmentStartResult result) {
                 Message msg = Message.obtain();
                 msg.obj = result;
+                enrollSession = result.msg;
                 uiHandler.sendMessage(msg);
             }
         }.execute();

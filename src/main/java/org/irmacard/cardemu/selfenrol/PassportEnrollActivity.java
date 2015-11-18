@@ -32,10 +32,6 @@ package org.irmacard.cardemu.selfenrol;
 
 import android.app.DatePickerDialog;
 import android.content.Context;
-import android.content.Intent;
-import android.nfc.NfcAdapter;
-import android.nfc.Tag;
-import android.nfc.tech.IsoDep;
 import android.os.AsyncTask;
 import android.os.Bundle;
 import android.os.Handler;
@@ -78,18 +74,21 @@ import java.text.ParseException;
 import java.util.*;
 
 public class PassportEnrollActivity extends EnrollActivity {
-	static final private String TAG = "cardemu.EnrollActivity";
-
+	// Configuration
+	private static final String TAG = "cardemu.PassportEnrollA";
 	private static final int SCREEN_BAC = 2;
 	private static final int SCREEN_PASSPORT = 3;
 	private static final int SCREEN_ISSUE = 4;
 
+	// State variables
 	private String imsi;
 	private PassportDataMessage passportMsg = null;
 
 	@Override
 	protected void onCreate(Bundle savedInstanceState) {
 		super.onCreate(savedInstanceState);
+
+		setNfcScreen(SCREEN_PASSPORT);
 
 		screen = SCREEN_START;
 		updateProgressCounter();
@@ -117,56 +116,21 @@ public class PassportEnrollActivity extends EnrollActivity {
 			imsiTextView.setText("IMSI: " + imsi);
 	}
 
-	/*
-     * Process NFC intents. If we're on the passport screen, and there's an enroll session containing a nonce, this
-     * method asynchroniously does BAC and AA with the passport, also extracting some necessary data files.
-     *
-     * As the ACTION_TECH_DISCOVERED intent can occur multiple times, this method can be called multiple times
-     * without problems. If it is called for the MAX_TAG_READ_ATTEMPTS's time, however, it will advance the screen
-     * either to the issue screen or the error screen, depending if we've successfully read the passport or not.
-     */
+
 	@Override
-	protected void processIntent(final Intent intent) {
-		// Only handle this event if we expect it
-		if (screen != SCREEN_PASSPORT)
-			return;
-
-		if (enrollSession == null) {
-			// We need to have an enroll session before we can do AA, because the enroll session contains the nonce.
-			// So retry later. This will not cause an endless loop if the server is unreachable, because after a timeout
-			// (5 sec) the getEnrollmentSession method will go to the error screen, so the if-clause above will trigger.
-			handler.postDelayed(new Runnable() {
-				@Override
-				public void run() {
-					processIntent(intent);
-				}
-			}, 250);
-			return;
-		}
-
+	protected void handleNfcEvent(CardService service, EnrollmentStartMessage message) {
 		TextView feedbackTextView = (TextView) findViewById(R.id.se_feedback_text);
 		if (feedbackTextView != null) {
 			feedbackTextView.setText(R.string.feedback_communicating_passport);
 		}
 
-		Tag tagFromIntent = intent.getParcelableExtra(NfcAdapter.EXTRA_TAG);
-		assert (tagFromIntent != null);
-
-		IsoDep tag = IsoDep.get(tagFromIntent);
-		// Prevents "Tag is lost" messages (at least on a Nexus 5)
-		// TODO how about on other devices?
-		tag.setTimeout(1500);
-
-		CardService cs = new IsoDepCardService(tag);
-		PassportService passportService;
-
 		try {
-			cs.open();
-			passportService = new PassportService(cs);
+			service.open();
+			PassportService passportService = new PassportService(service);
 			passportService.sendSelectApplet(false);
 
 			if (passportMsg == null) {
-				passportMsg = new PassportDataMessage(enrollSession.getSessionToken(), imsi,enrollSession.getNonce());
+				passportMsg = new PassportDataMessage(message.getSessionToken(), imsi, message.getNonce());
 			}
 			readPassport(passportService, passportMsg);
 		} catch (CardServiceException e) {
@@ -209,19 +173,19 @@ public class PassportEnrollActivity extends EnrollActivity {
 				// reason there is no need to let it crash the app.)
 				try {
 					ps.doBAC(getBACKey());
-					Log.i(TAG, "EnrollActivity: doing BAC");
+					Log.i(TAG, "PassportEnrollActivity: doing BAC");
 				} catch (CardServiceException | IllegalStateException e) {
 					bacError = true;
-					Log.e(TAG, "EnrollActivity: doing BAC failed");
+					Log.e(TAG, "PassportEnrollActivity: doing BAC failed");
 					return null;
 				}
 
 				Exception ex = null;
 				try {
-					Log.i(TAG, "EnrollActivity: reading attempt " + tagReadAttempt);
+					Log.i(TAG, "PassportEnrollActivity: reading attempt " + tagReadAttempt);
 					generatePassportDataMessage(ps, pdm);
 				} catch (IOException |CardServiceException e) {
-					Log.w(TAG, "EnrollActivity: reading attempt " + tagReadAttempt + " failed, stack trace:");
+					Log.w(TAG, "PassportEnrollActivity: reading attempt " + tagReadAttempt + " failed, stack trace:");
 					Log.w(TAG, "          " + e.getMessage());
 					ex = e;
 				}
@@ -229,7 +193,7 @@ public class PassportEnrollActivity extends EnrollActivity {
 				passportError = !pdm.isComplete();
 				if (!pdm.isComplete() && tagReadAttempt == MAX_TAG_READ_ATTEMPTS && ex != null) {
 					// Build a fancy report saying which fields we did and which we did not manage to get
-					Log.e(TAG, "EnrollActivity: too many attempts failed, aborting");
+					Log.e(TAG, "PassportEnrollActivity: too many attempts failed, aborting");
 					ACRA.getErrorReporter().reportBuilder()
 							.customData("sod", String.valueOf(pdm.getSodFile() == null))
 							.customData("dg1File", String.valueOf(pdm.getDg1File() == null))
@@ -261,36 +225,36 @@ public class PassportEnrollActivity extends EnrollActivity {
 				try {
 					if (pdm.getDg1File() == null) {
 						pdm.setDg1File(new DG1File(passportService.getInputStream(PassportService.EF_DG1)));
-						Log.i(TAG, "EnrollActivity: reading DG1");
+						Log.i(TAG, "PassportEnrollActivity: reading DG1");
 						publishProgress();
 					}
 					if (pdm.getSodFile() == null) {
 						pdm.setSodFile(new SODFile(passportService.getInputStream(PassportService.EF_SOD)));
-						Log.i(TAG, "EnrollActivity: reading SOD");
+						Log.i(TAG, "PassportEnrollActivity: reading SOD");
 						publishProgress();
 					}
 					if (pdm.getSodFile() != null) { // We need the SOD file to check if DG14 exists
 						if (pdm.getSodFile().getDataGroupHashes().get(14) != null) { // Checks if DG14 exists
 							if (pdm.getDg14File() == null) {
 								pdm.setDg14File(new DG14File(passportService.getInputStream(PassportService.EF_DG14)));
-								Log.i(TAG, "EnrollActivity: reading DG14");
+								Log.i(TAG, "PassportEnrollActivity: reading DG14");
 								publishProgress();
 							}
 						} else { // If DG14 does not exist, just advance the progress bar
-							Log.i(TAG, "EnrollActivity: reading DG14 not necessary, skipping");
+							Log.i(TAG, "PassportEnrollActivity: reading DG14 not necessary, skipping");
 							publishProgress();
 						}
 					}
 					if (pdm.getDg15File() == null) {
 						pdm.setDg15File(new DG15File(passportService.getInputStream(PassportService.EF_DG15)));
-						Log.i(TAG, "EnrollActivity: reading DG15");
+						Log.i(TAG, "PassportEnrollActivity: reading DG15");
 						publishProgress();
 					}
 					// The doAA() method does not use its first three arguments, it only passes the challenge
 					// on to another functio within JMRTD.
 					if (pdm.getResponse() == null) {
 						pdm.setResponse(passportService.doAA(null, null, null, pdm.getChallenge()));
-						Log.i(TAG, "EnrollActivity: doing AA");
+						Log.i(TAG, "PassportEnrollActivity: doing AA");
 						publishProgress();
 					}
 				} catch (NullPointerException e) {
@@ -307,7 +271,7 @@ public class PassportEnrollActivity extends EnrollActivity {
 
 				Boolean done = pdm != null && pdm.isComplete();
 
-				Log.i(TAG, "EnrollActivity: attempt " + tagReadAttempt + " finished, done: " + done);
+				Log.i(TAG, "PassportEnrollActivity: attempt " + tagReadAttempt + " finished, done: " + done);
 
 				// If we're not yet done, we should not advance the screen but just wait for further attempts
 				if (tagReadAttempt < MAX_TAG_READ_ATTEMPTS && !done) {
@@ -421,8 +385,6 @@ public class PassportEnrollActivity extends EnrollActivity {
 
 							findViewById(R.id.se_feedback_text).setVisibility(View.VISIBLE);
 							findViewById(R.id.se_progress_bar).setVisibility(View.VISIBLE);
-
-							enrollSession = result.msg;
 						}
 					}
 				});
@@ -563,7 +525,7 @@ public class PassportEnrollActivity extends EnrollActivity {
 		return new BACKey(docnr, dobString, doeString);
 	}
 
-	protected void updateProgressCounter() {
+	private void updateProgressCounter() {
 		super.updateProgressCounter(screen - 1);
 	}
 
@@ -575,7 +537,7 @@ public class PassportEnrollActivity extends EnrollActivity {
 	 *
 	 * @param uiHandler The handler to message when done.
 	 */
-	public void enroll(final Handler uiHandler) {
+	private void enroll(final Handler uiHandler) {
 		final String serverUrl = BuildConfig.enrollServer;
 
 		// Doing HTTP(S) stuff on the main thread is not allowed.
