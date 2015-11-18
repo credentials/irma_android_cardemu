@@ -34,67 +34,30 @@ import android.app.*;
 import android.content.*;
 import android.content.res.Resources;
 import android.nfc.NfcAdapter;
-import android.nfc.Tag;
 import android.nfc.tech.IsoDep;
 import android.os.*;
-import android.provider.Settings;
-import android.telephony.TelephonyManager;
-import android.text.Editable;
-import android.text.Html;
-import android.text.TextWatcher;
-import android.text.method.LinkMovementMethod;
 import android.util.Log;
 import android.view.*;
 import android.widget.Button;
-import android.widget.DatePicker;
-import android.widget.EditText;
-import android.widget.ProgressBar;
 import android.widget.TextView;
 
 import com.google.gson.Gson;
-
+import com.google.gson.GsonBuilder;
 import com.google.gson.JsonSyntaxException;
-import com.google.gson.reflect.TypeToken;
-import net.sf.scuba.smartcards.*;
 
 import org.acra.ACRA;
+
+import net.sf.scuba.smartcards.*;
 import org.irmacard.cardemu.*;
 import org.irmacard.cardemu.BuildConfig;
-import org.irmacard.credentials.Attributes;
-import org.irmacard.credentials.CredentialsException;
-import org.irmacard.credentials.idemix.IdemixCredentials;
-import org.irmacard.credentials.idemix.descriptions.IdemixVerificationDescription;
 import org.irmacard.credentials.idemix.smartcard.IRMACard;
 import org.irmacard.credentials.idemix.smartcard.SmartCardEmulatorService;
-import org.irmacard.credentials.info.CredentialDescription;
-import org.irmacard.credentials.info.InfoException;
 import org.irmacard.cardemu.HttpClient.HttpClientException;
 import org.irmacard.idemix.IdemixService;
-import org.irmacard.idemix.IdemixSmartcard;
 import org.irmacard.mno.common.*;
-import org.jmrtd.BACKey;
-import org.jmrtd.PassportService;
-
-import java.io.*;
-import java.lang.reflect.Type;
-import java.security.*;
-import java.security.cert.Certificate;
-import java.security.cert.CertificateException;
-import java.security.cert.CertificateFactory;
 import java.text.DateFormat;
-import java.text.ParseException;
 import java.text.SimpleDateFormat;
-import java.util.*;
-
-import com.google.gson.GsonBuilder;
-import org.jmrtd.lds.DG14File;
-import org.jmrtd.lds.DG15File;
-import org.jmrtd.lds.DG1File;
-import org.jmrtd.lds.SODFile;
-
-import javax.net.ssl.SSLContext;
-import javax.net.ssl.SSLSocketFactory;
-import javax.net.ssl.TrustManagerFactory;
+import java.util.Locale;
 
 abstract public class EnrollActivity extends Activity {
     private NfcAdapter nfcA;
@@ -106,31 +69,33 @@ abstract public class EnrollActivity extends Activity {
 
     protected int screen;
 
-    // PIN handling
-    private int tries = -1;
-
     // State variables
     protected IRMACard card = null;
     protected IdemixService is = null;
 
     protected static final int SCREEN_START = 1;
     protected static final int SCREEN_ERROR = -1;
-    private int progressCounter;
 
-    // TODO rename
-    protected int passportAttempts = 0;
-    protected final static int MAX_PASSPORT_ATTEMPTS = 5;
-    protected final static int MAX_PASSPORT_TIME = 15 * 1000;
+    protected int tagReadAttempt = 0;
+    protected final static int MAX_TAG_READ_ATTEMPTS = 5;
+    protected final static int MAX_TAG_READ_TIME = 15 * 1000;
 
-    protected static final String CARD_STORAGE = "card";
     protected static final String SETTINGS = "cardemu";
 
-    private AlertDialog urldialog = null; // ?
     protected SharedPreferences settings;
-    protected SimpleDateFormat bacDateFormat = new SimpleDateFormat("yyMMdd");
+    protected SimpleDateFormat bacDateFormat = new SimpleDateFormat("yyMMdd", Locale.US);
     protected DateFormat hrDateFormat = DateFormat.getDateInstance();
 
     protected Handler handler = new Handler();
+    protected HttpClient client = null;
+    protected EnrollmentStartMessage enrollSession = null;
+
+    protected final Gson gson = new GsonBuilder()
+            .registerTypeAdapter(ProtocolCommand.class, new ProtocolCommandDeserializer())
+            .registerTypeAdapter(ProtocolResponse.class, new ProtocolResponseSerializer())
+            .registerTypeHierarchyAdapter(byte[].class, new ByteArrayToBase64TypeAdapter())
+            .registerTypeAdapter(PassportDataMessage.class, new PassportDataMessageSerializer())
+            .create();
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -156,7 +121,7 @@ abstract public class EnrollActivity extends Activity {
         mTechLists = new String[][] { new String[] { IsoDep.class.getName() } };
 
         settings = getSharedPreferences(SETTINGS, 0);
-        client = new HttpClient(gson, new SecureSSLSocketFactory(getSocketFactory()));
+        client = new HttpClient(gson, new SecureSSLSocketFactory(Util.getSocketFactory(this, "ca")));
 
         // Load the card and open the IdemixService
         card = CardManager.loadCard();
@@ -223,7 +188,6 @@ abstract public class EnrollActivity extends Activity {
         }
     }
 
-
     protected void enableContinueButton(){
         final Button button = (Button) findViewById(R.id.se_button_continue);
         button.setVisibility(View.VISIBLE);
@@ -237,9 +201,6 @@ abstract public class EnrollActivity extends Activity {
     }
 
     protected void updateProgressCounter(int count) {
-        progressCounter = count;
-        Resources r = getResources();
-
         updateStepLabels(count, R.color.irmadarkblue);
     }
 
@@ -258,8 +219,8 @@ abstract public class EnrollActivity extends Activity {
 
     private void prepareErrowScreen() {
         setContentView(R.layout.enroll_activity_error);
+        updateStepLabels(screen - 1, R.color.irmared);
         screen = SCREEN_ERROR;
-        updateStepLabels(progressCounter, R.color.irmared);
     }
 
 
@@ -338,67 +299,10 @@ abstract public class EnrollActivity extends Activity {
         super.finish();
     }
 
-    //region Network and issuing
-
-    /**
-     * Get a SSLSocketFactory that uses public key pinning: it only accepts the
-     * CA certificate obtained from the file res/raw/ca.cert.
-     * See https://developer.android.com/training/articles/security-ssl.html#Pinning
-     * and https://op-co.de/blog/posts/java_sslsocket_mitm/
-     *
-     * Alternatively, https://github.com/Flowdalic/java-pinning
-     *
-     * If we want to trust our own CA instead, we can import it using
-     * keyStore.setCertificateEntry("ourCa", ca);
-     * instead of using the keyStore.load method. See the first link.
-     *
-     * @return A client whose SSL with our certificate pinnned. Will be null
-     * if something went wrong.
-     */
-    private SSLSocketFactory getSocketFactory() {
-        try {
-            Resources r = getResources();
-
-            // Get the certificate from the res/raw folder and parse it
-            InputStream ins = r.openRawResource(r.getIdentifier("ca", "raw", getPackageName()));
-            Certificate ca;
-            try {
-                ca = CertificateFactory.getInstance("X.509").generateCertificate(ins);
-            } finally {
-                ins.close();
-            }
-
-            // Put the certificate in the keystore, put that in the TrustManagerFactory,
-            // put that in the SSLContext, from which we get the SSLSocketFactory
-            KeyStore keyStore = KeyStore.getInstance("BKS");
-            keyStore.load(null, null);
-            keyStore.setCertificateEntry("ca", ca);
-            TrustManagerFactory tmf = TrustManagerFactory.getInstance("X509");
-            tmf.init(keyStore);
-            final SSLContext context = SSLContext.getInstance("TLS");
-            context.init(null, tmf.getTrustManagers(), null);
-
-            return new SecureSSLSocketFactory(context.getSocketFactory());
-        } catch (KeyManagementException|NoSuchAlgorithmException|KeyStoreException|CertificateException|IOException e) {
-            ACRA.getErrorReporter().handleException(e);
-            e.printStackTrace();
-            return null;
-        }
-    }
-
-    final protected Gson gson = new GsonBuilder()
-            .registerTypeAdapter(ProtocolCommand.class, new ProtocolCommandDeserializer())
-            .registerTypeAdapter(ProtocolResponse.class, new ProtocolResponseSerializer())
-            .registerTypeHierarchyAdapter(byte[].class, new ByteArrayToBase64TypeAdapter())
-            .registerTypeAdapter(PassportDataMessage.class, new PassportDataMessageSerializer())
-            .create();
-    protected HttpClient client = null;
-    protected EnrollmentStartMessage enrollSession = null;
-
     public void getEnrollmentSession(final Handler uiHandler) {
         final String serverUrl = BuildConfig.enrollServer;
 
-        AsyncTask<Void, Void, EnrollmentStartResult> task = new AsyncTask<Void, Void, EnrollmentStartResult>() {
+        new AsyncTask<Void, Void, EnrollmentStartResult>() {
             @Override
             protected EnrollmentStartResult doInBackground(Void... params) {
                 try {
@@ -423,6 +327,4 @@ abstract public class EnrollActivity extends Activity {
             }
         }.execute();
     }
-
-    //endregion
 }
