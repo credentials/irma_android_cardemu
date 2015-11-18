@@ -55,7 +55,7 @@ import org.irmacard.cardemu.messages.ReaderMessage;
 import org.irmacard.cardemu.messages.ReaderMessageDeserializer;
 import org.irmacard.cardemu.messages.ResponseArguments;
 import org.irmacard.cardemu.messages.TransmitCommandSetArguments;
-import org.irmacard.cardemu.selfenrol.EnrollActivity;
+import org.irmacard.cardemu.selfenrol.PassportEnrollActivity;
 import org.irmacard.cardemu.updates.AppUpdater;
 import org.irmacard.credentials.Attributes;
 import org.irmacard.credentials.CredentialsException;
@@ -677,9 +677,8 @@ public class MainActivity extends Activity implements PINDialogListener, Disclos
 	}
 
 	public void onEnrollButtonTouch(View v) {
-		Intent i = new Intent(this, EnrollActivity.class);
+		Intent i = new Intent(this, PassportEnrollActivity.class);
 		CardManager.storeCard();
-		i.putExtra("card_json", "loadCard");
 		startActivityForResult(i, PASSPORT_REQUEST);
 	}
 
