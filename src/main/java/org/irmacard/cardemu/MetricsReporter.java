@@ -176,7 +176,8 @@ public class MetricsReporter {
 				try {
 					return client.doPost(SessionToken.class, url, applicationInformation);
 				} catch (HttpClient.HttpClientException e) {
-					e.printStackTrace();
+					if (!metricServer.equals(""))
+						e.printStackTrace();
 					return null;
 				}
 			}
@@ -275,7 +276,8 @@ public class MetricsReporter {
 					}
 					return true;
 				} catch (HttpClient.HttpClientException e) {
-					e.printStackTrace();
+					if (!metricServer.equals(""))
+						e.printStackTrace();
 					return false;
 				}
 			}
@@ -303,7 +305,8 @@ public class MetricsReporter {
 					}
 					return true;
 				} catch (HttpClient.HttpClientException e) {
-					e.printStackTrace();
+					if (!metricServer.equals(""))
+						e.printStackTrace();
 					return false;
 				}
 			}

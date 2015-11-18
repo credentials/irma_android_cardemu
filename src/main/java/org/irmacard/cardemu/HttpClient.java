@@ -182,7 +182,6 @@ public class HttpClient {
 					throw new HttpClientException(status, null);
 			}
 		} catch (JsonSyntaxException |IOException e) { // IOException includes MalformedURLException
-			e.printStackTrace();
 			throw new HttpClientException(0, e);
 		} finally {
 			if (c != null) {
