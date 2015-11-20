@@ -163,15 +163,13 @@ public class CredentialManager {
 	private static Attributes getAttributes(IdemixCredential credential) throws InfoException {
 		Attributes attributes = new Attributes();
 
-		// The attributes class already contains logic that extracts the credential ID from the metadata field - that
-		// is, attribute 1. So we first put that attribute in our attributes instance so we can use this logic.
-		attributes.add(Attributes.META_DATA_FIELD, credential.getAttribute(1).toByteArray());
-		short id = attributes.getCredentialID();
-
+		short id = Attributes.extractCredentialId(credential.getAttribute(1));
 		CredentialDescription cd = DescriptionStore.getInstance().getCredentialDescription(id);
+
 		if (cd == null)
 			throw new InfoException("Credential type not found in DescriptionStore");
 
+		attributes.add(Attributes.META_DATA_FIELD, credential.getAttribute(1).toByteArray());
 		for (int i = 0; i < cd.getAttributeNames().size(); i++) {
 			String name = cd.getAttributeNames().get(i);
 			BigInteger value = credential.getAttribute(i + 2); // + 2: skip secret key and metadata
