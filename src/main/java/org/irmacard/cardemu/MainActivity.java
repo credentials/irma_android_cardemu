@@ -396,7 +396,7 @@ public class MainActivity extends Activity {
 	}
 
 	private void gotoConnectingState(String json) {
-		String url = "";
+		String url;
 		try {
 			DisclosureQr contents = GsonUtil.getGson().fromJson(json, DisclosureQr.class);
 			if (!contents.getVersion().equals("1.0")) {
@@ -534,7 +534,7 @@ public class MainActivity extends Activity {
 				return true;
 			case R.id.show_card_log:
 				Log.d(TAG, "show_card_log pressed");
-				ArrayList<LogEntry> logs = new ArrayList<LogEntry>(CredentialManager.getLog());
+				ArrayList<LogEntry> logs = new ArrayList<>(CredentialManager.getLog());
 				Intent logIntent = new Intent(this, LogActivity.class);
 				logIntent.putExtra(LogFragment.ARG_LOG, logs);
 				startActivity(logIntent);
