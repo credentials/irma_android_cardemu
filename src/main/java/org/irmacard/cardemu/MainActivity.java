@@ -49,8 +49,6 @@ import org.irmacard.credentials.Attributes;
 import org.irmacard.credentials.CredentialsException;
 import org.irmacard.credentials.idemix.proofs.ProofD;
 import org.irmacard.credentials.info.CredentialDescription;
-import org.irmacard.credentials.info.DescriptionStore;
-import org.irmacard.credentials.info.InfoException;
 import org.irmacard.credentials.util.log.LogEntry;
 
 import android.app.Activity;
@@ -94,6 +92,8 @@ public class MainActivity extends Activity implements DisclosureDialogFragment.D
 
 	private long issuingStartTime;
 	private long qrScanStartTime;
+
+	private String disclosureServer;
 
 	@Override
 	protected void onCreate(Bundle savedInstanceState) {
@@ -411,44 +411,81 @@ public class MainActivity extends Activity implements DisclosureDialogFragment.D
 			return;
 		}
 
-
 		Log.i(TAG, "Start channel listening: " + url);
 
 		if (!url.endsWith("/"))
 			url = url + "/";
+		disclosureServer = url;
 
 		setState(STATE_CONNECTING_TO_SERVER);
 		final String server = url;
 		final HttpClient client = new HttpClient(GsonUtil.getGson());
-		final String successMessage = "Done";
+
+		new AsyncTask<Void,Void,DisclosureStartResult>() {
+			@Override
+			protected DisclosureStartResult doInBackground(Void... params) {
+				try {
+					DisclosureProofRequest request = client.doGet(DisclosureProofRequest.class, server);
+					return new DisclosureStartResult(request);
+				} catch (HttpClientException e) {
+					return new DisclosureStartResult(e);
+				}
+			}
+
+			@Override
+			protected void onPostExecute(DisclosureStartResult result) {
+				if (result.request != null) {
+					setState(STATE_READY);
+					askForVerificationPermission(result.request);
+				} else {
+					cancelDisclosure(server);
+					String feedback;
+					if (result.exception.getCause() != null)
+						feedback =  result.exception.getCause().getMessage();
+					else
+						feedback = "Server returned status " + result.exception.status;
+					setFeedback(feedback, "failure");
+				}
+			}
+		}.execute();
+	}
+
+	private void askForVerificationPermission(DisclosureProofRequest request) {
+		DisclosureDialogFragment dialog = DisclosureDialogFragment.newInstance(request);
+		dialog.show(getFragmentManager(), "disclosuredialog");
+	}
+
+	@Override
+	public void onDiscloseOK(final DisclosureProofRequest request) {
+		setState(STATE_COMMUNICATING);
 
 		new AsyncTask<Void,Void,String>() {
+			HttpClient client = new HttpClient(GsonUtil.getGson());
+			String successMessage = "Done";
+			String server = disclosureServer;
+			boolean shouldCancel = false;
+
 			@Override
 			protected String doInBackground(Void[] params) {
 				DisclosureProofResult.Status status;
 
 				try {
-					// Fetch the request from the server
-					DisclosureProofRequest request = client.doGet(DisclosureProofRequest.class, server);
-
-					publishProgress();
-
 					ProofD proof;
 					try {
 						proof = CredentialManager.getProof(request);
 					} catch (CredentialsException e) {
-						client.doDelete(server);
 						e.printStackTrace();
+						shouldCancel = true;
 						return e.getMessage();
 					}
 
 					status = client.doPost(DisclosureProofResult.Status.class, server + "proof", proof);
 				} catch (HttpClientException e) {
 					e.printStackTrace();
-					if (e.cause != null)
-						return e.cause.getMessage();
+					if (e.getCause() != null)
+						return e.getCause().getMessage();
 					else
-						return e.getMessage();
+						return "Server returned status " + e.status;
 				}
 
 				if (status == DisclosureProofResult.Status.VALID)
@@ -465,6 +502,9 @@ public class MainActivity extends Activity implements DisclosureDialogFragment.D
 				setState(STATE_IDLE);
 				String status = result.equals(successMessage) ? "success" : "failure";
 
+				if (shouldCancel)
+					cancelDisclosure(server);
+
 				// Translate some possible problems to more human-readable versions
 				if (result.startsWith("failed to connect"))
 					result = "Could not connect";
@@ -473,27 +513,32 @@ public class MainActivity extends Activity implements DisclosureDialogFragment.D
 
 				setFeedback(result, status);
 			}
-
-			@Override
-			protected void onProgressUpdate(Void... values) {
-				setState(STATE_COMMUNICATING);
-			}
 		}.execute();
-	}
-
-	private void askForVerificationPermission(DisclosureProofRequest request) {
-		DisclosureDialogFragment dialog = DisclosureDialogFragment.newInstance(request);
-		dialog.show(getFragmentManager(), "disclosuredialog");
-	}
-
-	@Override
-	public void onDiscloseOK(DisclosureProofRequest request) {
-		// Post the proof
 	}
 
 	@Override
 	public void onDiscloseCancel() {
-		// Cancel the session
+		cancelDisclosure(disclosureServer);
+		setFeedback("Disclosure cancelled", "failure");
+	}
+
+	/**
+	 * Cancels the current disclosure session by DELETE-ing the specified url and setting the state to idle.
+	 */
+	private void cancelDisclosure(final String server) {
+		setState(STATE_IDLE);
+		disclosureServer = null;
+
+		new AsyncTask<Void,Void,Void>() {
+			@Override protected Void doInBackground(Void... params) {
+				try {
+					new HttpClient(GsonUtil.getGson()).doDelete(server);
+				} catch (HttpClientException e) {
+					e.printStackTrace();
+				}
+				return null;
+			}
+		}.execute();
 	}
 
 	@Override
