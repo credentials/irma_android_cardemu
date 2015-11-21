@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+              android:id="@+id/attribute_picker"
+              android:layout_width="match_parent"
+              android:layout_height="wrap_content"
+              android:orientation="horizontal" >
+
+    <TextView
+            android:id="@+id/detail_attribute_name"
+            style="@style/DetailHeading"
+            android:layout_width="75dp"
+            android:text="name"
+            android:paddingBottom="4sp"
+            android:singleLine="true"
+            android:scrollHorizontally="true" />
+
+    <Spinner
+            android:id="@+id/attribute_spinner"
+            android:layout_width="fill_parent"
+            android:layout_height="wrap_content"
+            android:spinnerMode="dropdown"/>
+
+</LinearLayout>

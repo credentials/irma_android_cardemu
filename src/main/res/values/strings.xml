@@ -74,4 +74,10 @@
     <string name="update_server_error">Could not connect to the update server.</string>
     <string name="no_credentials">You don\'t have any credentials yet.</string>
     <string name="enroll">Enroll</string>
+
+    <plurals name="disclose_question_1">
+		<item quantity="one">The following attribute will be sent to the verifier.</item>
+		<item quantity="other">The following attributes will be sent to the verifier.</item>
+    </plurals>
+    <string name="disclose_question_2">Are you sure you want to disclose these attributes?</string>
 </resources>

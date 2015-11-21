@@ -42,12 +42,15 @@ import org.irmacard.android.util.credentials.CredentialPackage;
 import org.irmacard.android.util.credentialdetails.*;
 import org.irmacard.android.util.cardlog.*;
 import org.irmacard.cardemu.HttpClient.HttpClientException;
+import org.irmacard.cardemu.disclosuredialog.DisclosureDialogFragment;
 import org.irmacard.cardemu.selfenrol.PassportEnrollActivity;
 import org.irmacard.cardemu.updates.AppUpdater;
 import org.irmacard.credentials.Attributes;
 import org.irmacard.credentials.CredentialsException;
 import org.irmacard.credentials.idemix.proofs.ProofD;
 import org.irmacard.credentials.info.CredentialDescription;
+import org.irmacard.credentials.info.DescriptionStore;
+import org.irmacard.credentials.info.InfoException;
 import org.irmacard.credentials.util.log.LogEntry;
 
 import android.app.Activity;
@@ -60,12 +63,10 @@ import android.util.Log;
 
 import com.google.zxing.integration.android.IntentIntegrator;
 import com.google.zxing.integration.android.IntentResult;
-import org.irmacard.verification.common.DisclosureProofRequest;
-import org.irmacard.verification.common.DisclosureProofResult;
-import org.irmacard.verification.common.DisclosureQr;
+import org.irmacard.verification.common.*;
 import org.irmacard.verification.common.util.GsonUtil;
 
-public class MainActivity extends Activity {
+public class MainActivity extends Activity implements DisclosureDialogFragment.DisclosureDialogListener {
 	public static final int PASSPORT_REQUEST = 100;
 	private static final int DETAIL_REQUEST = 101;
 
@@ -480,6 +481,21 @@ public class MainActivity extends Activity {
 		}.execute();
 	}
 
+	private void askForVerificationPermission(DisclosureProofRequest request) {
+		DisclosureDialogFragment dialog = DisclosureDialogFragment.newInstance(request);
+		dialog.show(getFragmentManager(), "disclosuredialog");
+	}
+
+	@Override
+	public void onDiscloseOK(DisclosureProofRequest request) {
+		// Post the proof
+	}
+
+	@Override
+	public void onDiscloseCancel() {
+		// Cancel the session
+	}
+
 	@Override
 	public boolean onCreateOptionsMenu(Menu menu) {
 		// Inflate the menu; this adds items to the action bar if it is present.
@@ -552,5 +568,4 @@ public class MainActivity extends Activity {
 				return super.onOptionsItemSelected(item);
 		}
 	}
-
 }

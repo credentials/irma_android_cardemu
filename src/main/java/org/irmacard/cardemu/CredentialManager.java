@@ -332,4 +332,40 @@ public class CredentialManager {
 
 		return credential.getCredential().createDisclosureProof(disclosed, request.getContext(), request.getNonce());
 	}
+
+	/**
+	 * Given a disclosure request, see if we have satisfy it - i.e., if we have at least one attribute for each
+	 * disjunction.
+	 */
+	public static boolean canSatisfy(DisclosureProofRequest request) {
+		for (AttributeDisjunction disjunction : request.getContent())
+			if (getCandidates(disjunction).isEmpty())
+				return false;
+
+		return true;
+	}
+
+	/**
+	 * Given an {@link AttributeDisjunction}, return attributes (and their values) that we have and that are
+	 * contained in the disjunction.
+	 */
+	public static LinkedHashMap<AttributeIdentifier, String> getCandidates(AttributeDisjunction disjunction) {
+		LinkedHashMap<AttributeIdentifier, String> map = new LinkedHashMap<>();
+
+		for (AttributeIdentifier attribute : disjunction) {
+			Attributes foundAttrs = null;
+			try {
+				foundAttrs = getAttributes(attribute.getIssuerName(), attribute.getCredentialName());
+			} catch (InfoException e) {
+				e.printStackTrace();
+			}
+
+			if (foundAttrs != null && foundAttrs.get(attribute.getAttributeName()) != null) {
+				String value = new String(foundAttrs.get(attribute.getAttributeName()));
+				map.put(attribute, value);
+			}
+		}
+
+		return map;
+	}
 }
