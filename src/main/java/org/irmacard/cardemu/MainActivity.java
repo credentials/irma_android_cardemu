@@ -47,7 +47,7 @@ import org.irmacard.cardemu.selfenrol.PassportEnrollActivity;
 import org.irmacard.cardemu.updates.AppUpdater;
 import org.irmacard.credentials.Attributes;
 import org.irmacard.credentials.CredentialsException;
-import org.irmacard.credentials.idemix.proofs.ProofD;
+import org.irmacard.credentials.idemix.proofs.ProofCollection;
 import org.irmacard.credentials.info.CredentialDescription;
 import org.irmacard.credentials.util.log.LogEntry;
 
@@ -470,16 +470,16 @@ public class MainActivity extends Activity implements DisclosureDialogFragment.D
 				DisclosureProofResult.Status status;
 
 				try {
-					ProofD proof;
+					ProofCollection proofs;
 					try {
-						proof = CredentialManager.getProof(request);
+						proofs = CredentialManager.getProofs(request);
 					} catch (CredentialsException e) {
 						e.printStackTrace();
 						shouldCancel = true;
 						return e.getMessage();
 					}
 
-					status = client.doPost(DisclosureProofResult.Status.class, server + "proof", proof);
+					status = client.doPost(DisclosureProofResult.Status.class, server + "proofs", proofs);
 				} catch (HttpClientException e) {
 					e.printStackTrace();
 					if (e.getCause() != null)

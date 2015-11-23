@@ -39,7 +39,8 @@ import org.irmacard.credentials.Attributes;
 import org.irmacard.credentials.CredentialsException;
 import org.irmacard.credentials.idemix.IdemixCredential;
 import org.irmacard.credentials.idemix.IdemixCredentials;
-import org.irmacard.credentials.idemix.proofs.ProofD;
+import org.irmacard.credentials.idemix.proofs.ProofCollection;
+import org.irmacard.credentials.idemix.proofs.ProofCollectionBuilder;
 import org.irmacard.credentials.idemix.smartcard.IRMACard;
 import org.irmacard.credentials.idemix.smartcard.IRMAIdemixCredential;
 import org.irmacard.credentials.idemix.smartcard.SmartCardEmulatorService;
@@ -62,6 +63,7 @@ import java.util.*;
  * Handles issuing, disclosing, and deletion of credentials; keeps track of log entries; and handles (de)
  * serialization of credentials and log entries from/to storage.
  */
+@SuppressWarnings("unused")
 public class CredentialManager {
 	private static HashMap<Short, IRMAIdemixCredential> credentials = new HashMap<>();
 	private static List<LogEntry> logs = new LinkedList<>();
@@ -289,48 +291,71 @@ public class CredentialManager {
 		return logs;
 	}
 
-	public static ProofD getProof(DisclosureProofRequest request) throws CredentialsException {
-		if (!request.isSimple())
-			throw new CredentialsException("Request not supported");
+	/**
+	 * Given a disclosure request with selected attributes, build a proof collection. This function assumes that each
+	 * {@link AttributeDisjunction} in the contents of the request has a selected (as in
+	 * {@link AttributeDisjunction#getSelected()}) {@link AttributeIdentifier}, and we assume that we have the
+	 * credential of this identifier.
+	 * @throws CredentialsException if something goes wrong
+	 */
+	public static ProofCollection getProofs(DisclosureProofRequest request) throws CredentialsException {
+		if (!isApproved(request))
+			throw new CredentialsException("Select an attribute in each disjunction first");
 
 		List<AttributeDisjunction> content = request.getContent();
+		ProofCollectionBuilder builder = new ProofCollectionBuilder(request.getContext(), request.getNonce());
+		Map<Short, List<Integer>> toDisclose = new HashMap<>();
 
-		// Since isSimple() returned true, the request concerns one credential. Fetch its issuer and name
-		AttributeIdentifier identifier = content.get(0).get(0);
-		String issuer = identifier.getIssuerName();
-		String credentialName = identifier.getCredentialName();
+		// Group the chosen attribute identifiers by their credential ID in the toDisclose map
+		for (AttributeDisjunction disjunction : content) {
+			AttributeIdentifier identifier = disjunction.getSelected();
 
+			String issuer = identifier.getIssuerName();
+			String credentialName = identifier.getCredentialName();
+			CredentialDescription cd = getCredentialDescription(issuer, credentialName);
+			short id = cd.getId();
+
+			List<Integer> attributes;
+			if (toDisclose.get(id) == null) {
+				attributes = new ArrayList<>(5);
+				attributes.add(1); // Always disclose metadata
+				toDisclose.put(id, attributes);
+			} else
+				attributes = toDisclose.get(id);
+
+			int j = cd.getAttributeNames().indexOf(identifier.getAttributeName());
+			if (j == -1) // our CredentialDescription does not contain the asked-for attribute
+				throw new CredentialsException("Attribute \"" + identifier.getAttributeName() + "\" not found");
+
+			attributes.add(j + 2);
+		}
+
+		for (short id : toDisclose.keySet()) {
+			List<Integer> attributes = toDisclose.get(id);
+			IdemixCredential credential = credentials.get(id).getCredential();
+			builder.addProofD(credential, attributes);
+		}
+
+		return builder.build();
+	}
+
+	/**
+	 * Helper function that either returns a non-null CredentialDescription or throws an exception
+	 */
+	private static CredentialDescription getCredentialDescription(String issuer, String credentialName)
+	throws CredentialsException {
 		// Find the corresponding CredentialDescription
 		CredentialDescription cd;
 		try {
 			cd = DescriptionStore.getInstance().getCredentialDescriptionByName(issuer, credentialName);
 		} catch (InfoException e) { // Should not happen
 			e.printStackTrace();
-			throw new CredentialsException("Could not read DescriptionStore");
+			throw new CredentialsException("Could not read DescriptionStore", e);
 		}
 		if (cd == null)
 			throw new CredentialsException("Unknown issuer or credential");
 
-		// See if we have the corresponding credential
-		IRMAIdemixCredential credential = credentials.get(cd.getId());
-		if (credential == null)
-			throw new CredentialsException("Credential \"" + cd.getName() + "\" not found");
-
-		// Convert the requested attributes to a List<Integer>
-		List<Integer> disclosed = new ArrayList<>(5);
-		disclosed.add(1); // Always disclose metadata attribute
-
-		for (AttributeDisjunction disjunction : content) {
-			String attribute = disjunction.get(0).getAttributeName();
-			int j = cd.getAttributeNames().indexOf(attribute);
-
-			if (j == -1) // our CredentialDescription does not contain the asked-for attribute
-				throw new CredentialsException("Attribute \"" + attribute + "\" not found");
-
-			disclosed.add(j + 2);
-		}
-
-		return credential.getCredential().createDisclosureProof(disclosed, request.getContext(), request.getNonce());
+		return cd;
 	}
 
 	/**
@@ -340,6 +365,18 @@ public class CredentialManager {
 	public static boolean canSatisfy(DisclosureProofRequest request) {
 		for (AttributeDisjunction disjunction : request.getContent())
 			if (getCandidates(disjunction).isEmpty())
+				return false;
+
+		return true;
+	}
+
+	/**
+	 * Returns true if the request has been approved by the user - that is, if each disjunction of the request has a
+	 * selected attribute
+	 */
+	public static boolean isApproved(DisclosureProofRequest request) {
+		for (AttributeDisjunction disjunction : request.getContent())
+			if (disjunction.getSelected() == null)
 				return false;
 
 		return true;
