@@ -3,39 +3,19 @@
     android:id="@+id/detail_credential_attribute"
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
-    android:orientation="horizontal" >
+    android:orientation="vertical" >
 
-    <TextView
-        android:id="@+id/detail_attribute_name"
+    <CheckedTextView
+        android:id="@+id/detail_attribute_value"
         style="?android:attr/spinnerDropDownItemStyle"
-        android:text="name"
-        android:textStyle="bold"
-        android:singleLine="true"
-        android:layout_height="40dp"
-        android:layout_width="wrap_content"
-        android:paddingRight="10dp"
-        android:paddingLeft="10dp"
+        android:checkMark="?android:attr/listChoiceIndicatorSingle"
+        android:text="Credential - attribute\nValue"
+        android:layout_height="40sp"
+        android:layout_width="match_parent"
+        android:paddingRight="10sp"
+        android:paddingLeft="10sp"
         android:textSize="14sp"
-        android:scrollHorizontally="true" />
-
-    <LinearLayout
-        android:layout_width="fill_parent"
-        android:layout_height="wrap_content"
-        android:gravity="right"
-        android:orientation="horizontal" >
-
-        <CheckedTextView
-            android:id="@+id/detail_attribute_value"
-            style="?android:attr/spinnerDropDownItemStyle"
-            android:checkMark="?android:attr/listChoiceIndicatorSingle"
-            android:text="value"
-            android:layout_gravity="fill_horizontal"
-            android:layout_height="40sp"
-            android:layout_width="wrap_content"
-            android:paddingRight="10sp"
-            android:paddingLeft="10sp"
-            android:textSize="14sp"/>
-
-    </LinearLayout>
+        android:minLines="2"
+            />
 
 </LinearLayout>

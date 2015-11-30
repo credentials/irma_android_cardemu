@@ -31,6 +31,7 @@
 package org.irmacard.cardemu.disclosuredialog;
 
 import android.content.Context;
+import android.text.Html;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
@@ -115,11 +116,13 @@ public class AttributesPickerAdapter extends BaseAdapter {
 		View view = inflater.inflate(R.layout.attribute_picker_item, parent, false);
 		AttributeIdentifier ai = identifiers.get(position);
 
-		final TextView name = (TextView) view.findViewById(R.id.detail_attribute_name);
 		final CheckedTextView value = (CheckedTextView) view.findViewById(R.id.detail_attribute_value);
 
-		name.setText(getCredentialName(ai) + " - " + ai.getAttributeName() + ": ");
-		value.setText(objects.get(ai));
+		// The spaces (&nbsp;) push the radio button a bit to the right. Not very pretty but I can see no other way
+		// to do it. (We have to add them to both lines because we do not know which one will be longest.)
+		String html = "<b>" + getCredentialName(ai) + " - " + ai.getAttributeName()
+				+ "&nbsp;&nbsp;&nbsp;</b><br/>" + objects.get(ai) + "&nbsp;&nbsp;&nbsp;";
+		value.setText(Html.fromHtml(html));
 		value.setChecked(position == selected);
 
 		return view;
