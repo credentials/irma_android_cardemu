@@ -34,6 +34,7 @@ package org.irmacard.cardemu;
 import java.util.*;
 
 import android.os.AsyncTask;
+import android.text.Html;
 import android.view.*;
 import android.widget.*;
 
@@ -43,6 +44,7 @@ import org.irmacard.android.util.credentialdetails.*;
 import org.irmacard.android.util.cardlog.*;
 import org.irmacard.cardemu.HttpClient.HttpClientException;
 import org.irmacard.cardemu.disclosuredialog.DisclosureDialogFragment;
+import org.irmacard.cardemu.disclosuredialog.DisclosureInformationActivity;
 import org.irmacard.cardemu.selfenrol.PassportEnrollActivity;
 import org.irmacard.cardemu.updates.AppUpdater;
 import org.irmacard.credentials.Attributes;
@@ -450,9 +452,51 @@ public class MainActivity extends Activity implements DisclosureDialogFragment.D
 		}.execute();
 	}
 
-	private void askForVerificationPermission(DisclosureProofRequest request) {
-		DisclosureDialogFragment dialog = DisclosureDialogFragment.newInstance(request);
-		dialog.show(getFragmentManager(), "disclosuredialog");
+	private void askForVerificationPermission(final DisclosureProofRequest request) {
+		List<AttributeDisjunction> missing = new ArrayList<>();
+		for (AttributeDisjunction disjunction : request.getContent()) {
+			if (CredentialManager.getCandidates(disjunction).isEmpty()) {
+				missing.add(disjunction);
+			}
+		}
+
+		if (missing.isEmpty()) {
+			DisclosureDialogFragment dialog = DisclosureDialogFragment.newInstance(request);
+			dialog.show(getFragmentManager(), "disclosuredialog");
+		}
+		else {
+			cancelDisclosure(disclosureServer);
+
+			String message = "The verifier requires attributes of the following kind: ";
+			int count = 0;
+			int max = missing.size();
+			for (AttributeDisjunction disjunction : missing) {
+				count++;
+				message += "<b>" + disjunction.getLabel() + "</b>";
+				if (count < max - 1 || count == max)
+					message += ", ";
+				if (count == max - 1 && max > 1)
+					message += " and ";
+			}
+			message += " but you do not have the appropriate attributes.";
+
+			new AlertDialog.Builder(this)
+					.setTitle("Missing attributes")
+					.setMessage(Html.fromHtml(message))
+					.setPositiveButton("OK", new DialogInterface.OnClickListener() {
+						@Override public void onClick(DialogInterface dialog, int which) {
+							onDiscloseCancel();
+						}
+					})
+					.setNeutralButton("More Information", new DialogInterface.OnClickListener() {
+						@Override public void onClick(DialogInterface dialog, int which) {
+							Intent intent = new Intent(MainActivity.this, DisclosureInformationActivity.class);
+							intent.putExtra("request", request);
+							startActivity(intent);
+						}
+					})
+					.show();
+		}
 	}
 
 	@Override

@@ -35,6 +35,8 @@ import android.app.AlertDialog;
 import android.app.Dialog;
 import android.app.DialogFragment;
 import android.content.DialogInterface;
+import android.content.Intent;
+import android.content.res.Resources;
 import android.os.Bundle;
 import android.view.LayoutInflater;
 import android.view.View;
@@ -79,11 +81,14 @@ public class DisclosureDialogFragment extends DialogFragment {
 		request = (DisclosureProofRequest) getArguments().getSerializable("request");
 	}
 
-	@Override
-	public Dialog onCreateDialog(Bundle savedInstanceState) {
-		LayoutInflater inflater = getActivity().getLayoutInflater();
-		View view = inflater.inflate(R.layout.dialog_disclosure, null); // TODO getActivity(), false?
+	public static void populate(Activity activity, View view, final DisclosureProofRequest request) {
+		LayoutInflater inflater = activity.getLayoutInflater();
+		Resources resources = activity.getResources();
 		LinearLayout list = (LinearLayout) view.findViewById(R.id.attributes_container);
+
+		if (list == null)
+			throw new IllegalArgumentException("Can't populate view: of incorrect type" +
+					" (should be R.layout.dialog_disclosure)");
 
 		// When a user chooses an item in the spinner, this listener notifies the adapter of the spinner which item
 		// was selected
@@ -100,23 +105,31 @@ public class DisclosureDialogFragment extends DialogFragment {
 
 		for (int i = 0; i < request.getContent().size(); ++i) {
 			AttributeDisjunction disjunction = request.getContent().get(i);
-			View attributeView = inflater.inflate(R.layout.attribute_picker, null);
+			View attributeView = inflater.inflate(R.layout.attribute_picker, list, false);
 			TextView name = (TextView) attributeView.findViewById(R.id.detail_attribute_name);
 			name.setText(disjunction.getLabel());
 
 			Spinner spinner = (Spinner) attributeView.findViewById(R.id.attribute_spinner);
-			spinner.setAdapter(new AttributesPickerAdapter(getActivity(), disjunction, i));
+			spinner.setAdapter(new AttributesPickerAdapter(activity, disjunction, i));
 
 			spinner.setOnItemSelectedListener(spinnerListener);
 
 			list.addView(attributeView);
 		}
 
-		String question1 = getResources()
+		String question1 = resources
 				.getQuantityString(R.plurals.disclose_question_1, request.getContent().size());
 		((TextView) view.findViewById(R.id.disclosure_question_1)).setText(question1);
+	}
 
-		return new AlertDialog.Builder(getActivity())
+	@Override
+	public Dialog onCreateDialog(Bundle savedInstanceState) {
+		LayoutInflater inflater = getActivity().getLayoutInflater();
+		View view = inflater.inflate(R.layout.dialog_disclosure, null); // TODO getActivity(), false?
+
+		populate(getActivity(), view, request);
+
+		final AlertDialog d = new AlertDialog.Builder(getActivity())
 				.setTitle("Disclose attributes?")
 				.setView(view)
 				.setPositiveButton("Yes", new DialogInterface.OnClickListener() {
@@ -131,7 +144,26 @@ public class DisclosureDialogFragment extends DialogFragment {
 						listener.onDiscloseCancel();
 					}
 				})
+				.setNeutralButton("More Information", null)
 				.create();
+
+		// We set the listener for the neutral ("More Information") button instead of above, because if we set it
+		// above then the dialog is dismissed afterwards and we don't want that.
+		d.setOnShowListener(new DialogInterface.OnShowListener() {
+			@Override
+			public void onShow(DialogInterface dialog) {
+				d.getButton(AlertDialog.BUTTON_NEUTRAL).setOnClickListener(new View.OnClickListener() {
+					@Override
+					public void onClick(View v) {
+						Intent intent = new Intent(getActivity(), DisclosureInformationActivity.class);
+						intent.putExtra("request", request);
+						startActivity(intent);
+					}
+				});
+			}
+		});
+
+		return d;
 	}
 
 	@Override

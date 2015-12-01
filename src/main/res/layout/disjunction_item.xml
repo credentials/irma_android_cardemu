@@ -1,0 +1,25 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+              xmlns:tools="http://schemas.android.com/tools"
+              android:orientation="horizontal"
+              android:layout_width="match_parent"
+              android:layout_height="match_parent">
+
+    <ImageView
+            tools:ignore="ContentDescription"
+            android:layout_width="12sp"
+            android:layout_height="12sp"
+            android:layout_marginTop="4sp"
+            android:layout_marginRight="4sp"
+            android:id="@+id/disjunction_icon"
+            android:src="@drawable/irma_icon_ok_064px"/>
+
+    <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:textAppearance="?android:attr/textAppearanceSmall"
+            android:text="Disjunction Label"
+            android:id="@+id/disjunction_title"
+            android:textSize="14sp"/>
+
+</LinearLayout>

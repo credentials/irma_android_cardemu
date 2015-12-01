@@ -405,4 +405,15 @@ public class CredentialManager {
 
 		return map;
 	}
+
+	public static boolean contains(AttributeIdentifier identifier) {
+		try {
+			Attributes attrs = getAttributes(identifier.getIssuerName(), identifier.getCredentialName());
+			if (attrs == null)
+				return false;
+			return attrs.get(identifier.getAttributeName()) != null;
+		} catch (InfoException e) {
+			return false;
+		}
+	}
 }

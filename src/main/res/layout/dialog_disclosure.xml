@@ -3,7 +3,8 @@
               android:orientation="vertical"
               android:layout_width="wrap_content"
               android:layout_height="wrap_content"
-              android:padding="@dimen/detail_medium_vspace">
+              android:padding="@dimen/detail_medium_vspace"
+              android:id="@+id/dialog_disclosure">
 
     <TextView
             android:layout_width="wrap_content"

@@ -40,9 +40,6 @@ import android.widget.CheckedTextView;
 import android.widget.TextView;
 import org.irmacard.cardemu.CredentialManager;
 import org.irmacard.cardemu.R;
-import org.irmacard.credentials.info.CredentialDescription;
-import org.irmacard.credentials.info.DescriptionStore;
-import org.irmacard.credentials.info.InfoException;
 import org.irmacard.verification.common.AttributeDisjunction;
 import org.irmacard.verification.common.AttributeIdentifier;
 import org.irmacard.verification.common.DisclosureProofRequest;
@@ -120,7 +117,7 @@ public class AttributesPickerAdapter extends BaseAdapter {
 
 		// The spaces (&nbsp;) push the radio button a bit to the right. Not very pretty but I can see no other way
 		// to do it. (We have to add them to both lines because we do not know which one will be longest.)
-		String html = "<b>" + getCredentialName(ai) + " - " + ai.getAttributeName()
+		String html = "<b>" + ai.getIssuerName() + " - " + ai.getAttributeName()
 				+ "&nbsp;&nbsp;&nbsp;</b><br/>" + objects.get(ai) + "&nbsp;&nbsp;&nbsp;";
 		value.setText(Html.fromHtml(html));
 		value.setChecked(position == selected);
@@ -144,19 +141,5 @@ public class AttributesPickerAdapter extends BaseAdapter {
 	 */
 	public int getIndex() {
 		return index;
-	}
-
-	/**
-	 * Fetch the short name (as in {@link CredentialDescription#getShortName()} of the credential of the
-	 * specified attribute from the {@link DescriptionStore}.
-	 */
-	public static String getCredentialName(AttributeIdentifier ai) {
-		try {
-			CredentialDescription cd = DescriptionStore.getInstance()
-					.getCredentialDescriptionByName(ai.getIssuerName(), ai.getCredentialName());
-			return cd.getShortName();
-		} catch (InfoException e) {
-			throw new RuntimeException("Can't access DescriptionStore");
-		}
 	}
 }
