@@ -39,8 +39,8 @@ import org.irmacard.credentials.Attributes;
 import org.irmacard.credentials.CredentialsException;
 import org.irmacard.credentials.idemix.IdemixCredential;
 import org.irmacard.credentials.idemix.IdemixCredentials;
-import org.irmacard.credentials.idemix.proofs.ProofCollection;
-import org.irmacard.credentials.idemix.proofs.ProofCollectionBuilder;
+import org.irmacard.credentials.idemix.proofs.ProofList;
+import org.irmacard.credentials.idemix.proofs.ProofListBuilder;
 import org.irmacard.credentials.idemix.smartcard.IRMACard;
 import org.irmacard.credentials.idemix.smartcard.IRMAIdemixCredential;
 import org.irmacard.credentials.idemix.smartcard.SmartCardEmulatorService;
@@ -298,12 +298,12 @@ public class CredentialManager {
 	 * credential of this identifier.
 	 * @throws CredentialsException if something goes wrong
 	 */
-	public static ProofCollection getProofs(DisclosureProofRequest request) throws CredentialsException {
+	public static ProofList getProofs(DisclosureProofRequest request) throws CredentialsException {
 		if (!isApproved(request))
 			throw new CredentialsException("Select an attribute in each disjunction first");
 
 		List<AttributeDisjunction> content = request.getContent();
-		ProofCollectionBuilder builder = new ProofCollectionBuilder(request.getContext(), request.getNonce());
+		ProofListBuilder builder = new ProofListBuilder(request.getContext(), request.getNonce());
 		Map<Short, List<Integer>> toDisclose = new HashMap<>();
 
 		// Group the chosen attribute identifiers by their credential ID in the toDisclose map

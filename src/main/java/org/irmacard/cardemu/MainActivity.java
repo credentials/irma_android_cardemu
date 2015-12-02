@@ -49,7 +49,7 @@ import org.irmacard.cardemu.selfenrol.PassportEnrollActivity;
 import org.irmacard.cardemu.updates.AppUpdater;
 import org.irmacard.credentials.Attributes;
 import org.irmacard.credentials.CredentialsException;
-import org.irmacard.credentials.idemix.proofs.ProofCollection;
+import org.irmacard.credentials.idemix.proofs.ProofList;
 import org.irmacard.credentials.info.CredentialDescription;
 import org.irmacard.credentials.util.log.LogEntry;
 
@@ -514,7 +514,7 @@ public class MainActivity extends Activity implements DisclosureDialogFragment.D
 				DisclosureProofResult.Status status;
 
 				try {
-					ProofCollection proofs;
+					ProofList proofs;
 					try {
 						proofs = CredentialManager.getProofs(request);
 					} catch (CredentialsException e) {
