@@ -303,8 +303,26 @@ public class CredentialManager {
 		if (!isApproved(request))
 			throw new CredentialsException("Select an attribute in each disjunction first");
 
-		List<AttributeDisjunction> content = request.getContent();
+		Map<Short, List<Integer>> toDisclose = groupAttributesById(request.getContent());
 		ProofListBuilder builder = new ProofListBuilder(request.getContext(), request.getNonce());
+
+		for (short id : toDisclose.keySet()) {
+			List<Integer> attributes = toDisclose.get(id);
+			IdemixCredential credential = credentials.get(id).getCredential();
+			builder.addProofD(credential, attributes);
+		}
+
+		logs.addAll(0, generateLogEntries(toDisclose));
+
+		return builder.build();
+	}
+
+	/**
+	 * Helper function that, given a list of {@link AttributeDisjunction} that each have a selected member (as in,
+	 * {@link AttributeDisjunction#getSelected()} returns non-null), groups all selected attributes by credential ID.
+	 */
+	private static Map<Short, List<Integer>> groupAttributesById(List<AttributeDisjunction> content)
+	throws CredentialsException {
 		Map<Short, List<Integer>> toDisclose = new HashMap<>();
 
 		// Group the chosen attribute identifiers by their credential ID in the toDisclose map
@@ -331,15 +349,7 @@ public class CredentialManager {
 			attributes.add(j + 2);
 		}
 
-		for (short id : toDisclose.keySet()) {
-			List<Integer> attributes = toDisclose.get(id);
-			IdemixCredential credential = credentials.get(id).getCredential();
-			builder.addProofD(credential, attributes);
-		}
-
-		logs.addAll(0, generateLogEntries(toDisclose));
-
-		return builder.build();
+		return toDisclose;
 	}
 
 	private static List<LogEntry> generateLogEntries(Map<Short, List<Integer>> toDisclose)
