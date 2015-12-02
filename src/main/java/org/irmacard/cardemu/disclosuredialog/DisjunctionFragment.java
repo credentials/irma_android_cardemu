@@ -52,9 +52,13 @@ public class DisjunctionFragment extends Fragment {
 		this.disjunction = (AttributeDisjunction) getArguments().getSerializable("disjunction");
 		LinearLayout list = (LinearLayout) inflater.inflate(R.layout.disjunction_fragment, container, false);
 
-		((TextView) list.findViewById(R.id.disjunction_title)).setText(disjunction.getLabel());
-		LinearLayout content = (LinearLayout) list.findViewById(R.id.disjunction_content);
+		TextView title = (TextView) list.findViewById(R.id.disjunction_title);
+		title.setText(disjunction.getLabel());
+		if (CredentialManager.getCandidates(disjunction).isEmpty()) {
+			title.setTextColor(getResources().getColor(R.color.irmared));
+		}
 
+		LinearLayout content = (LinearLayout) list.findViewById(R.id.disjunction_content);
 		for (AttributeIdentifier ai : disjunction) {
 			View view = inflater.inflate(R.layout.disjunction_item, container, false);
 
