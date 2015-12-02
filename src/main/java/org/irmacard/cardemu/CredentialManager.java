@@ -49,6 +49,7 @@ import org.irmacard.credentials.info.DescriptionStore;
 import org.irmacard.credentials.info.InfoException;
 import org.irmacard.credentials.util.log.LogEntry;
 import org.irmacard.credentials.util.log.RemoveLogEntry;
+import org.irmacard.credentials.util.log.VerifyLogEntry;
 import org.irmacard.idemix.IdemixService;
 import org.irmacard.verification.common.AttributeDisjunction;
 import org.irmacard.verification.common.AttributeIdentifier;
@@ -336,7 +337,36 @@ public class CredentialManager {
 			builder.addProofD(credential, attributes);
 		}
 
+		logs.addAll(0, generateLogEntries(toDisclose));
+
 		return builder.build();
+	}
+
+	private static List<LogEntry> generateLogEntries(Map<Short, List<Integer>> toDisclose)
+	throws CredentialsException {
+		List<LogEntry> logs = new ArrayList<>(toDisclose.size());
+
+		for (short id : toDisclose.keySet()) {
+			List<Integer> attributes = toDisclose.get(id);
+
+			try {
+				CredentialDescription cd = DescriptionStore.getInstance().getCredentialDescription(id);
+				HashMap<String, Boolean> booleans = new HashMap<>(cd.getAttributeNames().size());
+
+				for (int i = 0; i < cd.getAttributeNames().size(); ++i) {
+					String attrName = cd.getAttributeNames().get(i);
+					booleans.put(attrName, attributes.contains(i + 2));
+				}
+
+				// The third argument should be a VerificationDescription, and we don't have one here.
+				// Fortunately it seems to be optional, at least for the log screen...
+				logs.add(new VerifyLogEntry(Calendar.getInstance().getTime(), cd, null, booleans));
+			} catch (InfoException e) {
+				throw new CredentialsException(e);
+			}
+		}
+
+		return logs;
 	}
 
 	/**
