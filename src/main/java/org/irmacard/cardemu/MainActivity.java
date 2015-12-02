@@ -465,8 +465,6 @@ public class MainActivity extends Activity implements DisclosureDialogFragment.D
 			dialog.show(getFragmentManager(), "disclosuredialog");
 		}
 		else {
-			cancelDisclosure(disclosureServer);
-
 			String message = "The verifier requires attributes of the following kind: ";
 			int count = 0;
 			int max = missing.size();
@@ -485,11 +483,13 @@ public class MainActivity extends Activity implements DisclosureDialogFragment.D
 					.setMessage(Html.fromHtml(message))
 					.setPositiveButton("OK", new DialogInterface.OnClickListener() {
 						@Override public void onClick(DialogInterface dialog, int which) {
+							cancelDisclosure(disclosureServer);
 							onDiscloseCancel();
 						}
 					})
 					.setNeutralButton("More Information", new DialogInterface.OnClickListener() {
 						@Override public void onClick(DialogInterface dialog, int which) {
+							cancelDisclosure(disclosureServer);
 							Intent intent = new Intent(MainActivity.this, DisclosureInformationActivity.class);
 							intent.putExtra("request", request);
 							startActivity(intent);
