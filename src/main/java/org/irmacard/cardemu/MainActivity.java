@@ -34,8 +34,6 @@ package org.irmacard.cardemu;
 import java.util.*;
 
 import android.content.SharedPreferences;
-import android.net.Uri;
-import android.support.annotation.NonNull;
 import android.view.*;
 import android.widget.*;
 
@@ -43,7 +41,7 @@ import org.irmacard.android.util.credentials.CredentialPackage;
 import org.irmacard.android.util.credentialdetails.*;
 import org.irmacard.android.util.cardlog.*;
 import org.irmacard.cardemu.protocols.Protocol;
-import org.irmacard.cardemu.selfenrol.PassportEnrollActivity;
+import org.irmacard.cardemu.selfenrol.EnrollSelectActivity;
 import org.irmacard.cardemu.updates.AppUpdater;
 import org.irmacard.credentials.Attributes;
 import org.irmacard.credentials.info.CredentialDescription;
@@ -61,7 +59,6 @@ import com.google.zxing.integration.android.IntentIntegrator;
 import com.google.zxing.integration.android.IntentResult;
 
 public class MainActivity extends Activity {
-	public static final int PASSPORT_REQUEST = 100;
 	private static final int DETAIL_REQUEST = 101;
 
 	private static final String TAG = "CardEmuMainActivity";
@@ -395,15 +392,15 @@ public class MainActivity extends Activity {
 	}
 
 	public void onEnrollButtonTouch(View v) {
-		Intent i = new Intent(this, PassportEnrollActivity.class);
+		Intent i = new Intent(this, EnrollSelectActivity.class);
 		CredentialManager.save();
-		startActivityForResult(i, PASSPORT_REQUEST);
+		startActivityForResult(i, EnrollSelectActivity.EnrollSelectActivityCode);
 	}
 
 	@Override
 	protected void onActivityResult(int requestCode, int resultCode, Intent data) {
 		super.onActivityResult(requestCode, resultCode, data);
-		if (requestCode == PASSPORT_REQUEST && resultCode == RESULT_OK) {
+		if (requestCode == EnrollSelectActivity.EnrollSelectActivityCode && resultCode == RESULT_OK) {
 			CredentialManager.loadFromCard();
 			CredentialManager.save();
 			updateCredentialList();
