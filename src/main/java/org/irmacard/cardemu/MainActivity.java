@@ -55,7 +55,7 @@ import org.irmacard.cardemu.messages.ReaderMessage;
 import org.irmacard.cardemu.messages.ReaderMessageDeserializer;
 import org.irmacard.cardemu.messages.ResponseArguments;
 import org.irmacard.cardemu.messages.TransmitCommandSetArguments;
-import org.irmacard.cardemu.selfenrol.PassportEnrollActivity;
+import org.irmacard.cardemu.selfenrol.EnrollSelectActivity;
 import org.irmacard.cardemu.updates.AppUpdater;
 import org.irmacard.credentials.Attributes;
 import org.irmacard.credentials.CredentialsException;
@@ -101,8 +101,9 @@ import org.irmacard.idemix.util.VerificationSetupData;
 
 
 public class MainActivity extends Activity implements PINDialogListener, DisclosureDialogListener {
-	public static final int PASSPORT_REQUEST = 100;
 	private static final int DETAIL_REQUEST = 101;
+	public final static int MainActivityCode = 100;
+
 
 	private String TAG = "CardEmuMainActivity";
 	private NfcAdapter nfcA;
@@ -677,9 +678,9 @@ public class MainActivity extends Activity implements PINDialogListener, Disclos
 	}
 
 	public void onEnrollButtonTouch(View v) {
-		Intent i = new Intent(this, PassportEnrollActivity.class);
+		Intent i = new Intent(this, EnrollSelectActivity.class);
 		CardManager.storeCard();
-		startActivityForResult(i, PASSPORT_REQUEST);
+		startActivityForResult(i, EnrollSelectActivity.EnrollSelectActivityCode);
 	}
 
 	@Override
@@ -701,7 +702,7 @@ public class MainActivity extends Activity implements PINDialogListener, Disclos
 	@Override
 	protected void onActivityResult(int requestCode, int resultCode, Intent data) {
 		super.onActivityResult(requestCode, resultCode, data);
-		if (requestCode == PASSPORT_REQUEST && resultCode == RESULT_OK) {
+		if (requestCode == EnrollSelectActivity.EnrollSelectActivityCode && resultCode == RESULT_OK) {
 			card = CardManager.loadCard(verificationListener);
 			is = new IdemixService(new SmartCardEmulatorService(card));
 			updateCardCredentials();

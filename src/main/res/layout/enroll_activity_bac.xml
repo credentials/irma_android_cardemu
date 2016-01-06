@@ -33,54 +33,133 @@
             android:textAppearance="?android:attr/textAppearanceMedium"
             android:text="@string/enroll_enter_bac_desc"
             android:id="@+id/bac_desc_textview"
-            android:layout_marginTop="20dp"
             android:textColor="@color/irmadarkblue"
             android:layout_below="@+id/bac_title_textview"
-            android:layout_alignParentLeft="true"
-            android:layout_alignParentStart="true"/>
-
-        <EditText
+            android:layout_alignParentRight="true"
+            android:layout_alignParentEnd="true" />
+        <Spinner
+            android:id="@+id/bac_selector"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:id="@+id/doc_nr_edittext"
-            android:hint="Document number"
-            android:layout_below="@+id/bac_desc_textview"
-            android:layout_alignParentLeft="true"
-            android:layout_alignParentStart="true"
-            android:layout_marginTop="20dp"
-            android:clickable="false"
-            android:inputType="textCapCharacters"
-            android:layout_alignRight="@+id/dob_edittext"
-            android:layout_alignEnd="@+id/dob_edittext"/>
+            android:layout_below="@+id/bac_desc_textview" />
 
-        <EditText
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:inputType="date"
-            android:ems="10"
-            android:id="@+id/doe_edittext"
-            android:hint="Date of expiry"
-            android:layout_below="@+id/dob_edittext"
+        <RelativeLayout
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:id="@+id/passport_data"
+            android:layout_below="@+id/bac_selector"
             android:layout_alignParentLeft="true"
             android:layout_alignParentStart="true"
-            android:onClick="onDateTouch"
-            android:clickable="false"
-            android:focusable="false"/>
+            android:layout_alignParentBottom="true"
+            android:visibility="gone">
 
-        <EditText
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:inputType="date"
-            android:ems="10"
-            android:id="@+id/dob_edittext"
-            android:hint="Date of birth"
-            android:layout_below="@+id/doc_nr_edittext"
-            android:layout_alignParentLeft="true"
-            android:layout_alignParentStart="true"
-            android:onClick="onDateTouch"
-            android:clickable="false"
-            android:focusable="false"
+            <EditText
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:id="@+id/doc_nr_edittext"
+                android:hint="Document number"
+                android:layout_alignParentLeft="true"
+                android:layout_alignParentStart="true"
+                android:clickable="false"
+                android:inputType="textCapCharacters"
+                android:layout_alignRight="@+id/dob_edittext"
+                android:layout_alignEnd="@+id/dob_edittext"/>
+
+            <EditText
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:inputType="date"
+                android:ems="10"
+                android:id="@+id/doe_edittext"
+                android:hint="Date of expiry"
+                android:layout_below="@+id/dob_edittext"
+                android:layout_alignParentLeft="true"
+                android:layout_alignParentStart="true"
+                android:onClick="onDateTouch"
+                android:clickable="false"
+                android:focusable="false"/>
+
+            <EditText
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:inputType="date"
+                android:ems="10"
+                android:id="@+id/dob_edittext"
+                android:hint="Date of birth"
+                android:layout_below="@+id/doc_nr_edittext"
+                android:layout_alignParentLeft="true"
+                android:layout_alignParentStart="true"
+                android:onClick="onDateTouch"
+                android:clickable="false"
+                android:focusable="false"
                 />
+        </RelativeLayout>
+
+        <RelativeLayout
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:id="@+id/drivers_license_data"
+            android:layout_below="@+id/bac_selector"
+            android:layout_alignParentLeft="true"
+            android:layout_alignParentStart="true"
+            android:layout_alignParentBottom="true"
+            android:visibility="gone">
+
+            <ImageView
+                android:id="@+id/mainshape"
+                android:layout_width="fill_parent"
+                android:layout_height="60dp"
+                android:layout_alignParentLeft="true"
+                android:layout_marginRight="62dp"
+                android:src="@drawable/whiteshaperounded"
+                android:onClick="onQRButtonTouch"/>
+
+
+            <ImageView
+                android:id="@+id/statusimage"
+                android:layout_width="50dp"
+                android:layout_height="50dp"
+                android:layout_alignParentTop="true"
+                android:layout_marginTop="10dp"
+                android:src="@drawable/irma_icon_place_card_520px" />
+
+            <TextView
+                android:id="@+id/tap_to_scan_qr"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_toRightOf="@+id/statusimage"
+                android:layout_marginTop="20dp"
+                android:layout_marginLeft="10dp"
+                android:text="@string/status_idle"
+                android:textAppearance="?android:attr/textAppearanceLarge"
+                android:textSize="20sp" />
+
+            <TextView
+                android:id="@+id/or"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_below="@+id/statusimage"
+                android:layout_marginTop="8dp"
+                android:layout_marginLeft="62dp"
+                android:text="@string/or"
+                android:textAppearance="?android:attr/textAppearance"
+                android:textSize="18sp" />
+
+            <EditText
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:inputType="textCapCharacters"
+                android:ems="10"
+                android:id="@+id/mrz"
+                android:hint="Machine Readable Zone"
+                android:layout_below="@+id/or"
+                android:layout_marginTop="3dp"
+                android:layout_alignParentLeft="true"
+                android:layout_alignParentStart="true"
+                android:clickable="false"
+                />
+
+        </RelativeLayout>
 
         <Button
             style="@style/Irma.Button"
@@ -92,6 +171,8 @@
             android:layout_alignParentRight="true"
             android:layout_alignParentEnd="true"
             android:enabled="false"/>
+
+
 
     </RelativeLayout>
 
