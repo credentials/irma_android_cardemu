@@ -36,7 +36,7 @@ import java.util.*;
 
 import android.view.*;
 import android.widget.*;
-import com.google.gson.JsonElement;
+import com.google.gson.*;
 import net.sf.scuba.smartcards.*;
 
 import org.acra.ACRA;
@@ -89,9 +89,6 @@ import android.os.Handler;
 import android.os.Message;
 import android.util.Log;
 
-import com.google.gson.Gson;
-import com.google.gson.GsonBuilder;
-import com.google.gson.JsonParser;
 import com.google.gson.stream.JsonReader;
 import com.google.zxing.integration.android.IntentIntegrator;
 import com.google.zxing.integration.android.IntentResult;
@@ -727,7 +724,29 @@ public class MainActivity extends Activity implements PINDialogListener, Disclos
 		}
 	}
 
-	private void gotoConnectingState(String url) {
+	private void gotoConnectingState(String data) {
+		String url;
+
+		try {
+			JsonObject o = new JsonParser().parse(data).getAsJsonObject();
+			String version = o.get("v").getAsString();
+
+			if (!version.equals("1.0")) {
+				new AlertDialog.Builder(this)
+						.setTitle("Not Supported")
+						.setMessage("This verifier uses a protocol which this version of the app does not yet support. No attributes will be disclosed.")
+						.setIcon(R.drawable.irma_icon_missing_064px)
+						.setPositiveButton("OK", null)
+						.show();
+				return;
+			}
+
+			url = o.get("u").getAsString();
+		} catch (JsonSyntaxException|NullPointerException e) {
+			// If parsing the data as JSON failed, assume the old behavior, i.e., assume it is an url
+			url = data;
+		}
+
 		Log.i(TAG, "Start channel listening: " + url);
 		currentReaderURL = url;
 		Message msg = new Message();
