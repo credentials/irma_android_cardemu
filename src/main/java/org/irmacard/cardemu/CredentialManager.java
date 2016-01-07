@@ -278,8 +278,16 @@ public class CredentialManager {
 	 * Delete all credentials.
 	 */
 	public static void deleteAll() {
-		for (short id : credentials.keySet())
-			delete(id, false);
+		for (short id : credentials.keySet()) {
+			try {
+				CredentialDescription cd = DescriptionStore.getInstance().getCredentialDescription(id);
+				logs.add(new RemoveLogEntry(Calendar.getInstance().getTime(), cd));
+			} catch (InfoException e) {
+				e.printStackTrace();
+			}
+		}
+
+		credentials = new HashMap<>();
 
 		save();
 	}
