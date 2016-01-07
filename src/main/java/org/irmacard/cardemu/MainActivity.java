@@ -402,7 +402,7 @@ public class MainActivity extends Activity implements DisclosureDialogFragment.D
 		String url;
 		try {
 			DisclosureQr contents = GsonUtil.getGson().fromJson(json, DisclosureQr.class);
-			if (!contents.getVersion().equals("1.0")) {
+			if (!contents.getVersion().equals("2.0")) {
 				setFeedback("Protocol not supported", "failure");
 				return;
 			}
