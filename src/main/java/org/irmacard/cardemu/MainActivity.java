@@ -114,9 +114,7 @@ public class MainActivity extends Activity implements DisclosureDialogFragment.D
 		// touch events that were meant for its container. Don't know why setting its value here works.
 		((TextView) findViewById(R.id.feedback_text)).setTextIsSelectable(false);
 
-//		CredentialManager.load();
-//		if (CredentialManager.isEmpty())
-		CredentialManager.loadFromCard();
+		CredentialManager.load();
 
 		// Display cool list
 		ExpandableListView credentialList = (ExpandableListView) findViewById(R.id.listView);
@@ -361,7 +359,7 @@ public class MainActivity extends Activity implements DisclosureDialogFragment.D
 
 	public void onEnrollButtonTouch(View v) {
 		Intent i = new Intent(this, PassportEnrollActivity.class);
-		CardManager.storeCard();
+		CredentialManager.save();
 		startActivityForResult(i, PASSPORT_REQUEST);
 	}
 
@@ -374,6 +372,8 @@ public class MainActivity extends Activity implements DisclosureDialogFragment.D
 	protected void onActivityResult(int requestCode, int resultCode, Intent data) {
 		super.onActivityResult(requestCode, resultCode, data);
 		if (requestCode == PASSPORT_REQUEST && resultCode == RESULT_OK) {
+			CredentialManager.loadFromCard();
+			CredentialManager.save();
 			updateCredentialList();
 		}
 		else if (requestCode == DETAIL_REQUEST && resultCode == CredentialDetailActivity.RESULT_DELETE) {
@@ -628,9 +628,8 @@ public class MainActivity extends Activity implements DisclosureDialogFragment.D
 		switch (item.getItemId()) {
 			case R.id.menu_reset:
 				Log.d(TAG, "menu_reset pressed");
-				CardManager.loadDefaultCard();
-				CardManager.storeCard();
-				CredentialManager.loadFromCard();
+				CredentialManager.loadDefaultCard();
+				CredentialManager.save();
 				updateCredentialList();
 				return true;
 			case R.id.enroll:

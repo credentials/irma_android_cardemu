@@ -33,6 +33,7 @@ package org.irmacard.cardemu;
 import android.content.SharedPreferences;
 import android.util.Log;
 import com.google.gson.Gson;
+import com.google.gson.GsonBuilder;
 import com.google.gson.reflect.TypeToken;
 import net.sf.scuba.smartcards.CardServiceException;
 import org.irmacard.credentials.Attributes;
@@ -73,6 +74,9 @@ public class CredentialManager {
 	private static Type credentialsType = new TypeToken<HashMap<Short, IRMAIdemixCredential>>() {}.getType();
 	private static Type logsType = new TypeToken<List<LogEntry>>() {}.getType();
 
+	private static Field cardCredentialsField;
+	private static Field cardMasterSecretField;
+	private static Gson gson;
 	private static SharedPreferences settings;
 	private static final String TAG = "CredentialManager";
 	private static final String CREDENTIAL_STORAGE = "credentials";
@@ -80,22 +84,50 @@ public class CredentialManager {
 
 	public static void init(SharedPreferences s) {
 		settings = s;
+
+		try {
+			cardCredentialsField = IRMACard.class.getDeclaredField("credentials");
+			cardCredentialsField.setAccessible(true);
+			cardMasterSecretField = IRMACard.class.getDeclaredField("master_secret");
+			cardMasterSecretField.setAccessible(true);
+		} catch (NoSuchFieldException e) {
+			e.printStackTrace();
+		}
 	}
 
 	/**
-	 * Extract credentials and logs from an IRMACard instance retrieved from storage.
+	 * Clear the instance: throw away all credentials and logs.
+	 */
+	public static void clear() {
+		credentials = new HashMap<>();
+		logs = new LinkedList<>();
+	}
+
+	/**
+	 * Clear existing credentials and logs, and load them from the default card.
+	 */
+	public static void loadDefaultCard() {
+		clear();
+		loadFromCard(CardManager.loadDefaultCard());
+	}
+
+	/**
+	 * Extract and insert credentials and logs from an IRMACard instance retrieved from storage
+	 */
+	public static void loadFromCard() {
+		loadFromCard(CardManager.getCard());
+	}
+
+	/**
+	 * Extract and insert credentials and logs from the specified IRMACard
 	 */
 	@SuppressWarnings("unchecked")
-	public static void loadFromCard() {
+	public static void loadFromCard(IRMACard card) {
 		Log.i(TAG, "Loading credentials from card");
 
-		IRMACard card = CardManager.loadCard();
-
 		try {
-			Field f = card.getClass().getDeclaredField("credentials");
-			f.setAccessible(true);
-			credentials = (HashMap<Short, IRMAIdemixCredential>) f.get(card);
-		} catch (NoSuchFieldException|IllegalAccessException|ClassCastException e) {
+			credentials.putAll((HashMap<Short, IRMAIdemixCredential>) cardCredentialsField.get(card));
+		} catch (IllegalAccessException|ClassCastException e) {
 			e.printStackTrace();
 		}
 
@@ -103,10 +135,40 @@ public class CredentialManager {
 			IdemixService is = new IdemixService(new SmartCardEmulatorService(card));
 			is.open();
 			is.sendCardPin("000000".getBytes());
-			logs = new IdemixCredentials(is).getLog();
-		} catch (CardServiceException|InfoException e) {
+			logs.addAll(0, new IdemixCredentials(is).getLog());
+		} catch (CardServiceException | InfoException e) {
 			e.printStackTrace();
 		}
+	}
+
+	/**
+	 * Create a new IRMACard containing all credentials, insert it into the CardManager, and serialize it to storage
+	 * @return the new IRMACard
+	 */
+	public static IRMACard saveCard() {
+		IRMACard card = new IRMACard();
+		try {
+			cardCredentialsField.set(card, credentials);
+			if (credentials.size() > 0) {
+				BigInteger sk = credentials.values().iterator().next().getCredential().getAttribute(0);
+				cardMasterSecretField.set(card, sk);
+			}
+		} catch (IllegalAccessException e) {
+			e.printStackTrace();
+		}
+
+		CardManager.setCard(card);
+		return card;
+	}
+
+	private static Gson getGson() {
+		if (gson == null) {
+			gson = new GsonBuilder()
+					.registerTypeAdapter(LogEntry.class, new LogEntrySerializer())
+					.create();
+		}
+
+		return gson;
 	}
 
 	/**
@@ -115,7 +177,9 @@ public class CredentialManager {
 	public static void save() {
 		Log.i(TAG, "Saving credentials");
 
-		Gson gson = new Gson();
+		saveCard();
+
+		Gson gson = getGson();
 		String credentialsJson = gson.toJson(credentials, credentialsType);
 		String logsJson = gson.toJson(logs, logsType);
 
@@ -131,7 +195,7 @@ public class CredentialManager {
 	public static void load() {
 		Log.i(TAG, "Loading credentials");
 
-		Gson gson = new Gson();
+		Gson gson = getGson();
 		String credentialsJson = settings.getString(CREDENTIAL_STORAGE, "");
 		String logsJson = settings.getString(LOG_STORAGE, "");
 
@@ -245,7 +309,7 @@ public class CredentialManager {
 		IRMAIdemixCredential cred = credentials.remove(cd.getId());
 
 		if (cred != null) {
-			logs.add(new RemoveLogEntry(Calendar.getInstance().getTime(), cd));
+			logs.add(0, new RemoveLogEntry(Calendar.getInstance().getTime(), cd));
 			if (shouldSave)
 				save();
 		}
@@ -281,7 +345,7 @@ public class CredentialManager {
 		for (short id : credentials.keySet()) {
 			try {
 				CredentialDescription cd = DescriptionStore.getInstance().getCredentialDescription(id);
-				logs.add(new RemoveLogEntry(Calendar.getInstance().getTime(), cd));
+				logs.add(0, new RemoveLogEntry(Calendar.getInstance().getTime(), cd));
 			} catch (InfoException e) {
 				e.printStackTrace();
 			}

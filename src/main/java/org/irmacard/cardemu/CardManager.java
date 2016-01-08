@@ -63,22 +63,13 @@ public class CardManager {
 		context = app.getApplicationContext();
 	}
 
-	public static void logCard(IdemixService is) {
-		Log.d(TAG, "Current card contents");
-		// Retrieve list of credentials from the card
-		IdemixCredentials ic = new IdemixCredentials(is);
-		List<CredentialDescription> credentialDescriptions;
+	public static void setCard(IRMACard card) {
+		CardManager.card = card;
+		storeCard();
+	}
 
-		try {
-			ic.connect();
-			is.sendCardPin("000000".getBytes());
-			credentialDescriptions = ic.getCredentials();
-			for(CredentialDescription cd : credentialDescriptions) {
-				Log.d(TAG,cd.getName());
-			}
-		} catch (CardServiceException|InfoException|CredentialsException e) {
-			e.printStackTrace();
-		}
+	public static IRMACard getCard() {
+		return card;
 	}
 
 	public static void storeCard() {
