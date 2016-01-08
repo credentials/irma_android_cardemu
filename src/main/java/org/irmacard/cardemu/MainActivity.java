@@ -73,29 +73,31 @@ public class MainActivity extends Activity implements DisclosureDialogFragment.D
 	private String TAG = "CardEmuMainActivity";
 
 	// Previewed list of credentials
-	ExpandableCredentialsAdapter credentialListAdapter;
+	private ExpandableCredentialsAdapter credentialListAdapter;
 
 	private int activityState = STATE_IDLE;
 
 	// New states
-	private static final int STATE_IDLE = 1;
-	private static final int STATE_CONNECTING_TO_SERVER = 2;
-	private static final int STATE_CONNECTED = 3;
-	private static final int STATE_READY = 4;
-	private static final int STATE_COMMUNICATING = 5;
-	private static final int STATE_WAITING_FOR_PIN = 6;
+	public static final int STATE_IDLE = 1;
+	public static final int STATE_CONNECTING_TO_SERVER = 2;
+	public static final int STATE_CONNECTED = 3;
+	public static final int STATE_READY = 4;
+	public static final int STATE_COMMUNICATING = 5;
+	public static final int STATE_WAITING_FOR_PIN = 6;
 
 	// Timer for briefly displaying feedback messages on CardEmu
-	CountDownTimer cdt;
+	private CountDownTimer cdt;
 	private static final int FEEDBACK_SHOW_DELAY = 10000;
 	private boolean showingFeedback = false;
 
-	AppUpdater updater;
+	private AppUpdater updater;
 
 	private long issuingStartTime;
 	private long qrScanStartTime;
 
 	private String disclosureServer;
+
+	private APDUProtocol apduProtocol;
 
 	@Override
 	protected void onCreate(Bundle savedInstanceState) {
@@ -115,6 +117,7 @@ public class MainActivity extends Activity implements DisclosureDialogFragment.D
 		((TextView) findViewById(R.id.feedback_text)).setTextIsSelectable(false);
 
 		CredentialManager.load();
+		apduProtocol = new APDUProtocol(this);
 
 		// Display cool list
 		ExpandableListView credentialList = (ExpandableListView) findViewById(R.id.listView);
@@ -148,7 +151,11 @@ public class MainActivity extends Activity implements DisclosureDialogFragment.D
 		updater = new AppUpdater(this, BuildConfig.updateServer);
 	}
 
-	private void setState(int state) {
+	public int getState() {
+		return activityState;
+	}
+
+	public void setState(int state) {
 		Log.i(TAG, "Set state: " + state);
 		activityState = state;
 
@@ -206,7 +213,7 @@ public class MainActivity extends Activity implements DisclosureDialogFragment.D
 			((TextView) findViewById(R.id.status_text)).setText(feedbackTextResource);
 	}
 
-	private void setFeedback(String message, String state) {
+	public void setFeedback(String message, String state) {
 		int imageResource = 0;
 
 		setUIForState();
@@ -398,26 +405,23 @@ public class MainActivity extends Activity implements DisclosureDialogFragment.D
 		}
 	}
 
-	private void gotoConnectingState(String json) {
-		String url;
-		try {
-			DisclosureQr contents = GsonUtil.getGson().fromJson(json, DisclosureQr.class);
-			if (!contents.getVersion().equals("2.0")) {
-				setFeedback("Protocol not supported", "failure");
-				return;
-			}
-
-			url = contents.getUrl();
-		} catch (Exception e) {
-			setFeedback("Failed to parse QR", "failure");
-			return;
-		}
+	private void connectAPDUProtocol(String url) {
+		apduProtocol.setCard(CredentialManager.saveCard());
 
 		Log.i(TAG, "Start channel listening: " + url);
+		apduProtocol.connect(url);
+	}
 
+	public void onAPDUProtocolDone() {
+		CredentialManager.loadFromCard();
+		CredentialManager.save();
+	}
+
+	private void connectJsonProtocol(String url) {
 		if (!url.endsWith("/"))
 			url = url + "/";
 		disclosureServer = url;
+		Log.i(TAG, "Start channel listening: " + url);
 
 		setState(STATE_CONNECTING_TO_SERVER);
 		final String server = url;
@@ -450,6 +454,25 @@ public class MainActivity extends Activity implements DisclosureDialogFragment.D
 				}
 			}
 		}.execute();
+	}
+
+	private void gotoConnectingState(String json) {
+		try {
+			DisclosureQr contents = GsonUtil.getGson().fromJson(json, DisclosureQr.class);
+
+			switch (contents.getVersion()) {
+				case "1.0":
+					connectAPDUProtocol(contents.getUrl());
+					break;
+				case "2.0":
+					connectJsonProtocol(contents.getUrl());
+					break;
+				default:
+					setFeedback("Protocol not supported", "failure");
+			}
+		} catch (Exception e) { // Assume the QR contained just a bare URL
+			connectAPDUProtocol(json);
+		}
 	}
 
 	private void askForVerificationPermission(final DisclosureProofRequest request) {
