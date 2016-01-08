@@ -50,6 +50,7 @@ import org.irmacard.cardemu.updates.AppUpdater;
 import org.irmacard.credentials.Attributes;
 import org.irmacard.credentials.CredentialsException;
 import org.irmacard.credentials.idemix.proofs.ProofList;
+import org.irmacard.credentials.idemix.smartcard.IRMACard;
 import org.irmacard.credentials.info.CredentialDescription;
 import org.irmacard.credentials.util.log.LogEntry;
 
@@ -76,6 +77,7 @@ public class MainActivity extends Activity implements DisclosureDialogFragment.D
 	private ExpandableCredentialsAdapter credentialListAdapter;
 
 	private int activityState = STATE_IDLE;
+	private String protocolVersion;
 
 	// New states
 	public static final int STATE_IDLE = 1;
@@ -406,7 +408,9 @@ public class MainActivity extends Activity implements DisclosureDialogFragment.D
 	}
 
 	private void connectAPDUProtocol(String url) {
-		apduProtocol.setCard(CredentialManager.saveCard());
+		IRMACard card = CredentialManager.saveCard();
+		card.addVerificationListener(apduProtocol.getListener());
+		apduProtocol.setCard(card);
 
 		Log.i(TAG, "Start channel listening: " + url);
 		apduProtocol.connect(url);
@@ -459,8 +463,9 @@ public class MainActivity extends Activity implements DisclosureDialogFragment.D
 	private void gotoConnectingState(String json) {
 		try {
 			DisclosureQr contents = GsonUtil.getGson().fromJson(json, DisclosureQr.class);
+			protocolVersion = contents.getVersion();
 
-			switch (contents.getVersion()) {
+			switch (protocolVersion) {
 				case "1.0":
 					connectAPDUProtocol(contents.getUrl());
 					break;
@@ -471,11 +476,12 @@ public class MainActivity extends Activity implements DisclosureDialogFragment.D
 					setFeedback("Protocol not supported", "failure");
 			}
 		} catch (Exception e) { // Assume the QR contained just a bare URL
+			protocolVersion = "1.0";
 			connectAPDUProtocol(json);
 		}
 	}
 
-	private void askForVerificationPermission(final DisclosureProofRequest request) {
+	public void askForVerificationPermission(final DisclosureProofRequest request) {
 		List<AttributeDisjunction> missing = new ArrayList<>();
 		for (AttributeDisjunction disjunction : request.getContent()) {
 			if (CredentialManager.getCandidates(disjunction).isEmpty()) {
@@ -524,6 +530,18 @@ public class MainActivity extends Activity implements DisclosureDialogFragment.D
 
 	@Override
 	public void onDiscloseOK(final DisclosureProofRequest request) {
+		switch (protocolVersion) {
+			case "1.0":
+				apduProtocol.sendDisclosureProof();
+				CredentialManager.loadFromCard(); // retrieve log entry of disclosure
+				break;
+			case "2.0":
+				discloseJsonProtocol(request);
+				break;
+		}
+	}
+
+	public void discloseJsonProtocol(final DisclosureProofRequest request) {
 		setState(STATE_COMMUNICATING);
 
 		new AsyncTask<Void,Void,String>() {
@@ -585,7 +603,15 @@ public class MainActivity extends Activity implements DisclosureDialogFragment.D
 
 	@Override
 	public void onDiscloseCancel() {
-		cancelDisclosure(disclosureServer);
+		switch (protocolVersion) {
+			case "1.0":
+				apduProtocol.abortConnection();
+				break;
+			case "2.0":
+				cancelDisclosure(disclosureServer);
+				break;
+		}
+
 		setFeedback("Disclosure cancelled", "failure");
 	}
 

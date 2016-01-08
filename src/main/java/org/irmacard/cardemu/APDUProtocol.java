@@ -421,15 +421,15 @@ public class APDUProtocol {
 				}
 			}
 
-//			if (verificationList.size() == 0) {
+			if (verificationList.size() == 0) {
 				// Post result to browser
 				postMessage(result);
-//			} else {
-//				// We're doing disclosure proofs: ask for permission first
-//				disclosureproof = result;
-//				activity.askForVerificationPermission(verificationList);
-//				verificationList.clear();
-//			}
+			} else {
+				// We're doing disclosure proofs: ask for permission first
+				disclosureproof = result;
+				activity.askForVerificationPermission(convertToRequest(verificationList));
+				verificationList.clear();
+			}
 		}
 	}
 
@@ -441,7 +441,7 @@ public class APDUProtocol {
 			for (VerificationSetupData entry : list) {
 				CredentialDescription desc = DescriptionStore.getInstance().getCredentialDescription(entry.getID());
 				List<AttributeDescription> attrDescs = desc.getAttributes();
-				String credential = desc.getIssuerDescription().getName() + "." + desc.getCredentialID();
+				String credential = desc.getIssuerID() + "." + desc.getCredentialID();
 				List<Short> attrIds = disclosureMaskToList(entry.getDisclosureMask());
 
 				short i;
