@@ -612,6 +612,7 @@ public class MainActivity extends Activity implements DisclosureDialogFragment.D
 				break;
 		}
 
+		setState(STATE_IDLE);
 		setFeedback("Disclosure cancelled", "failure");
 	}
 
@@ -619,7 +620,6 @@ public class MainActivity extends Activity implements DisclosureDialogFragment.D
 	 * Cancels the current disclosure session by DELETE-ing the specified url and setting the state to idle.
 	 */
 	private void cancelDisclosure(final String server) {
-		setState(STATE_IDLE);
 		disclosureServer = null;
 
 		new AsyncTask<Void,Void,Void>() {
