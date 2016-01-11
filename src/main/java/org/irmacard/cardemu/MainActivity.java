@@ -33,24 +33,18 @@ package org.irmacard.cardemu;
 
 import java.util.*;
 
-import android.os.AsyncTask;
 import android.text.Html;
 import android.view.*;
 import android.widget.*;
 
-import org.acra.ACRA;
 import org.irmacard.android.util.credentials.CredentialPackage;
 import org.irmacard.android.util.credentialdetails.*;
 import org.irmacard.android.util.cardlog.*;
-import org.irmacard.cardemu.HttpClient.HttpClientException;
 import org.irmacard.cardemu.disclosuredialog.DisclosureDialogFragment;
 import org.irmacard.cardemu.disclosuredialog.DisclosureInformationActivity;
 import org.irmacard.cardemu.selfenrol.PassportEnrollActivity;
 import org.irmacard.cardemu.updates.AppUpdater;
 import org.irmacard.credentials.Attributes;
-import org.irmacard.credentials.CredentialsException;
-import org.irmacard.credentials.idemix.proofs.ProofList;
-import org.irmacard.credentials.idemix.smartcard.IRMACard;
 import org.irmacard.credentials.info.CredentialDescription;
 import org.irmacard.credentials.util.log.LogEntry;
 
@@ -97,9 +91,8 @@ public class MainActivity extends Activity implements DisclosureDialogFragment.D
 	private long issuingStartTime;
 	private long qrScanStartTime;
 
-	private String disclosureServer;
-
 	private APDUProtocol apduProtocol;
+	private JsonProtocol jsonProtocol;
 
 	@Override
 	protected void onCreate(Bundle savedInstanceState) {
@@ -120,6 +113,7 @@ public class MainActivity extends Activity implements DisclosureDialogFragment.D
 
 		CredentialManager.load();
 		apduProtocol = new APDUProtocol(this);
+		jsonProtocol = new JsonProtocol(this);
 
 		// Display cool list
 		ExpandableListView credentialList = (ExpandableListView) findViewById(R.id.listView);
@@ -421,45 +415,6 @@ public class MainActivity extends Activity implements DisclosureDialogFragment.D
 		CredentialManager.save();
 	}
 
-	private void connectJsonProtocol(String url) {
-		if (!url.endsWith("/"))
-			url = url + "/";
-		disclosureServer = url;
-		Log.i(TAG, "Start channel listening: " + url);
-
-		setState(STATE_CONNECTING_TO_SERVER);
-		final String server = url;
-		final HttpClient client = new HttpClient(GsonUtil.getGson());
-
-		new AsyncTask<Void,Void,DisclosureStartResult>() {
-			@Override
-			protected DisclosureStartResult doInBackground(Void... params) {
-				try {
-					DisclosureProofRequest request = client.doGet(DisclosureProofRequest.class, server);
-					return new DisclosureStartResult(request);
-				} catch (HttpClientException e) {
-					return new DisclosureStartResult(e);
-				}
-			}
-
-			@Override
-			protected void onPostExecute(DisclosureStartResult result) {
-				if (result.request != null) {
-					setState(STATE_READY);
-					askForVerificationPermission(result.request);
-				} else {
-					cancelDisclosure(server);
-					String feedback;
-					if (result.exception.getCause() != null)
-						feedback =  result.exception.getCause().getMessage();
-					else
-						feedback = "Server returned status " + result.exception.status;
-					setFeedback(feedback, "failure");
-				}
-			}
-		}.execute();
-	}
-
 	private void gotoConnectingState(String json) {
 		try {
 			DisclosureQr contents = GsonUtil.getGson().fromJson(json, DisclosureQr.class);
@@ -470,7 +425,7 @@ public class MainActivity extends Activity implements DisclosureDialogFragment.D
 					connectAPDUProtocol(contents.getUrl());
 					break;
 				case "2.0":
-					connectJsonProtocol(contents.getUrl());
+					jsonProtocol.connect(contents.getUrl());
 					break;
 				default:
 					setFeedback("Protocol not supported", "failure");
@@ -512,13 +467,12 @@ public class MainActivity extends Activity implements DisclosureDialogFragment.D
 					.setMessage(Html.fromHtml(message))
 					.setPositiveButton("OK", new DialogInterface.OnClickListener() {
 						@Override public void onClick(DialogInterface dialog, int which) {
-							cancelDisclosure(disclosureServer);
 							onDiscloseCancel();
 						}
 					})
 					.setNeutralButton("More Information", new DialogInterface.OnClickListener() {
 						@Override public void onClick(DialogInterface dialog, int which) {
-							cancelDisclosure(disclosureServer);
+							onDiscloseCancel();
 							Intent intent = new Intent(MainActivity.this, DisclosureInformationActivity.class);
 							intent.putExtra("request", request);
 							startActivity(intent);
@@ -536,69 +490,9 @@ public class MainActivity extends Activity implements DisclosureDialogFragment.D
 				CredentialManager.loadFromCard(); // retrieve log entry of disclosure
 				break;
 			case "2.0":
-				discloseJsonProtocol(request);
+				jsonProtocol.disclose(request);
 				break;
 		}
-	}
-
-	public void discloseJsonProtocol(final DisclosureProofRequest request) {
-		setState(STATE_COMMUNICATING);
-
-		new AsyncTask<Void,Void,String>() {
-			HttpClient client = new HttpClient(GsonUtil.getGson());
-			String successMessage = "Done";
-			String server = disclosureServer;
-			boolean shouldCancel = false;
-
-			@Override
-			protected String doInBackground(Void[] params) {
-				DisclosureProofResult.Status status;
-
-				try {
-					ProofList proofs;
-					try {
-						proofs = CredentialManager.getProofs(request);
-					} catch (CredentialsException e) {
-						e.printStackTrace();
-						shouldCancel = true;
-						return e.getMessage();
-					}
-
-					status = client.doPost(DisclosureProofResult.Status.class, server + "proofs", proofs);
-				} catch (HttpClientException e) {
-					e.printStackTrace();
-					if (e.getCause() != null)
-						return e.getCause().getMessage();
-					else
-						return "Server returned status " + e.status;
-				}
-
-				if (status == DisclosureProofResult.Status.VALID)
-					return successMessage;
-				else { // We successfully computed a proof but server rejects it? That's fishy, report it
-					String feedback = "Server rejected proof: " + status.name().toLowerCase();
-					ACRA.getErrorReporter().handleException(new Exception(feedback));
-					return feedback;
-				}
-			}
-
-			@Override
-			protected void onPostExecute(String result) {
-				setState(STATE_IDLE);
-				String status = result.equals(successMessage) ? "success" : "failure";
-
-				if (shouldCancel)
-					cancelDisclosure(server);
-
-				// Translate some possible problems to more human-readable versions
-				if (result.startsWith("failed to connect"))
-					result = "Could not connect";
-				if (result.startsWith("Supplied sessionToken not found or expired"))
-					result = "Server refused connection";
-
-				setFeedback(result, status);
-			}
-		}.execute();
 	}
 
 	@Override
@@ -608,30 +502,12 @@ public class MainActivity extends Activity implements DisclosureDialogFragment.D
 				apduProtocol.abortConnection();
 				break;
 			case "2.0":
-				cancelDisclosure(disclosureServer);
+				jsonProtocol.cancelDisclosure();
 				break;
 		}
 
 		setState(STATE_IDLE);
 		setFeedback("Disclosure cancelled", "failure");
-	}
-
-	/**
-	 * Cancels the current disclosure session by DELETE-ing the specified url and setting the state to idle.
-	 */
-	private void cancelDisclosure(final String server) {
-		disclosureServer = null;
-
-		new AsyncTask<Void,Void,Void>() {
-			@Override protected Void doInBackground(Void... params) {
-				try {
-					new HttpClient(GsonUtil.getGson()).doDelete(server);
-				} catch (HttpClientException e) {
-					e.printStackTrace();
-				}
-				return null;
-			}
-		}.execute();
 	}
 
 	@Override
