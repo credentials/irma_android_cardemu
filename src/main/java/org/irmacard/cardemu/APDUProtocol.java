@@ -102,6 +102,12 @@ public class APDUProtocol {
 	 * @param url The url to connect to
 	 */
 	public void connect(String url) {
+		IRMACard card = CredentialManager.saveCard();
+		card.addVerificationListener(getListener());
+		setCard(card);
+
+		Log.i(TAG, "Start channel listening: " + url);
+
 		currentReaderURL = url;
 		Message msg = new Message();
 		msg.what = MESSAGE_STARTGET;
@@ -269,7 +275,8 @@ public class APDUProtocol {
 				activity.setState(MainActivity.STATE_IDLE);
 			} else if (rm.name.equals(ReaderMessage.NAME_EVENT_DONE)) {
 				CardManager.storeCard();
-				activity.onAPDUProtocolDone();
+				CredentialManager.loadFromCard();
+				CredentialManager.save();
 				activity.setState(MainActivity.STATE_IDLE);
 			}
 		}

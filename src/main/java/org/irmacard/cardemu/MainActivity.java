@@ -401,41 +401,6 @@ public class MainActivity extends Activity implements DisclosureDialogFragment.D
 		}
 	}
 
-	private void connectAPDUProtocol(String url) {
-		IRMACard card = CredentialManager.saveCard();
-		card.addVerificationListener(apduProtocol.getListener());
-		apduProtocol.setCard(card);
-
-		Log.i(TAG, "Start channel listening: " + url);
-		apduProtocol.connect(url);
-	}
-
-	public void onAPDUProtocolDone() {
-		CredentialManager.loadFromCard();
-		CredentialManager.save();
-	}
-
-	private void gotoConnectingState(String json) {
-		try {
-			DisclosureQr contents = GsonUtil.getGson().fromJson(json, DisclosureQr.class);
-			protocolVersion = contents.getVersion();
-
-			switch (protocolVersion) {
-				case "1.0":
-					connectAPDUProtocol(contents.getUrl());
-					break;
-				case "2.0":
-					jsonProtocol.connect(contents.getUrl());
-					break;
-				default:
-					setFeedback("Protocol not supported", "failure");
-			}
-		} catch (Exception e) { // Assume the QR contained just a bare URL
-			protocolVersion = "1.0";
-			connectAPDUProtocol(json);
-		}
-	}
-
 	public void askForVerificationPermission(final DisclosureProofRequest request) {
 		List<AttributeDisjunction> missing = new ArrayList<>();
 		for (AttributeDisjunction disjunction : request.getContent()) {
@@ -482,12 +447,34 @@ public class MainActivity extends Activity implements DisclosureDialogFragment.D
 		}
 	}
 
+	private void gotoConnectingState(String json) {
+		String url;
+		try {
+			DisclosureQr contents = GsonUtil.getGson().fromJson(json, DisclosureQr.class);
+			protocolVersion = contents.getVersion();
+			url = contents.getUrl();
+		} catch (Exception e) { // Assume the QR contained just a bare URL
+			protocolVersion = "1.0";
+			url = json;
+		}
+
+		switch (protocolVersion) {
+			case "1.0":
+				apduProtocol.connect(url);
+				break;
+			case "2.0":
+				jsonProtocol.connect(url);
+				break;
+			default:
+				setFeedback("Protocol not supported", "failure");
+		}
+	}
+
 	@Override
 	public void onDiscloseOK(final DisclosureProofRequest request) {
 		switch (protocolVersion) {
 			case "1.0":
 				apduProtocol.sendDisclosureProof();
-				CredentialManager.loadFromCard(); // retrieve log entry of disclosure
 				break;
 			case "2.0":
 				jsonProtocol.disclose(request);
