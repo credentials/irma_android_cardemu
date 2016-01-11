@@ -52,7 +52,7 @@ import org.irmacard.verification.common.DisclosureProofRequest;
  */
 public class DisclosureDialogFragment extends DialogFragment {
 	private DisclosureProofRequest request;
-	private DisclosureDialogListener listener;
+	private static DisclosureDialogListener listener;
 
 	public interface DisclosureDialogListener {
 		void onDiscloseOK(DisclosureProofRequest request);
@@ -63,7 +63,8 @@ public class DisclosureDialogFragment extends DialogFragment {
 	 * Constructs and returns a new DisclosureDialogFragment. Users must implement the DisclosureDialogListener
 	 * interface.
 	 */
-	public static DisclosureDialogFragment newInstance(DisclosureProofRequest request) {
+	public static DisclosureDialogFragment newInstance(DisclosureProofRequest request, DisclosureDialogListener listener) {
+		DisclosureDialogFragment.listener = listener;
 		DisclosureDialogFragment dialog = new DisclosureDialogFragment();
 
 		Bundle args = new Bundle();
@@ -165,17 +166,5 @@ public class DisclosureDialogFragment extends DialogFragment {
 		});
 
 		return d;
-	}
-
-	@Override
-	public void onAttach(Activity activity) {
-		super.onAttach(activity);
-		// Verify that the host activity implements the callback interface
-		try {
-			// Set our listener so we can send events to the host
-			listener = (DisclosureDialogListener) activity;
-		} catch (ClassCastException e) {
-			throw new ClassCastException(activity.toString() + " must implement DisclosureDialogListener");
-		}
 	}
 }

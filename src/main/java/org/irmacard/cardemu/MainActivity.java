@@ -33,15 +33,13 @@ package org.irmacard.cardemu;
 
 import java.util.*;
 
-import android.text.Html;
 import android.view.*;
 import android.widget.*;
 
 import org.irmacard.android.util.credentials.CredentialPackage;
 import org.irmacard.android.util.credentialdetails.*;
 import org.irmacard.android.util.cardlog.*;
-import org.irmacard.cardemu.disclosuredialog.DisclosureDialogFragment;
-import org.irmacard.cardemu.disclosuredialog.DisclosureInformationActivity;
+import org.irmacard.cardemu.protocols.Protocol;
 import org.irmacard.cardemu.selfenrol.PassportEnrollActivity;
 import org.irmacard.cardemu.updates.AppUpdater;
 import org.irmacard.credentials.Attributes;
@@ -58,10 +56,8 @@ import android.util.Log;
 
 import com.google.zxing.integration.android.IntentIntegrator;
 import com.google.zxing.integration.android.IntentResult;
-import org.irmacard.verification.common.*;
-import org.irmacard.verification.common.util.GsonUtil;
 
-public class MainActivity extends Activity implements DisclosureDialogFragment.DisclosureDialogListener {
+public class MainActivity extends Activity {
 	public static final int PASSPORT_REQUEST = 100;
 	private static final int DETAIL_REQUEST = 101;
 
@@ -71,7 +67,6 @@ public class MainActivity extends Activity implements DisclosureDialogFragment.D
 	private ExpandableCredentialsAdapter credentialListAdapter;
 
 	private int activityState = STATE_IDLE;
-	private String protocolVersion;
 
 	// New states
 	public static final int STATE_IDLE = 1;
@@ -88,11 +83,7 @@ public class MainActivity extends Activity implements DisclosureDialogFragment.D
 
 	private AppUpdater updater;
 
-	private long issuingStartTime;
 	private long qrScanStartTime;
-
-	private APDUProtocol apduProtocol;
-	private JsonProtocol jsonProtocol;
 
 	@Override
 	protected void onCreate(Bundle savedInstanceState) {
@@ -112,8 +103,6 @@ public class MainActivity extends Activity implements DisclosureDialogFragment.D
 		((TextView) findViewById(R.id.feedback_text)).setTextIsSelectable(false);
 
 		CredentialManager.load();
-		apduProtocol = new APDUProtocol(this);
-		jsonProtocol = new JsonProtocol(this);
 
 		// Display cool list
 		ExpandableListView credentialList = (ExpandableListView) findViewById(R.id.listView);
@@ -395,106 +384,10 @@ public class MainActivity extends Activity implements DisclosureDialogFragment.D
 			if (scanResult != null) {
 				String contents = scanResult.getContents();
 				if (contents != null) {
-					gotoConnectingState(contents);
+					Protocol.NewSession(contents, this);
 				}
 			}
 		}
-	}
-
-	public void askForVerificationPermission(final DisclosureProofRequest request) {
-		List<AttributeDisjunction> missing = new ArrayList<>();
-		for (AttributeDisjunction disjunction : request.getContent()) {
-			if (CredentialManager.getCandidates(disjunction).isEmpty()) {
-				missing.add(disjunction);
-			}
-		}
-
-		if (missing.isEmpty()) {
-			DisclosureDialogFragment dialog = DisclosureDialogFragment.newInstance(request);
-			dialog.show(getFragmentManager(), "disclosuredialog");
-		}
-		else {
-			String message = "The verifier requires attributes of the following kind: ";
-			int count = 0;
-			int max = missing.size();
-			for (AttributeDisjunction disjunction : missing) {
-				count++;
-				message += "<b>" + disjunction.getLabel() + "</b>";
-				if (count < max - 1 || count == max)
-					message += ", ";
-				if (count == max - 1 && max > 1)
-					message += " and ";
-			}
-			message += " but you do not have the appropriate attributes.";
-
-			new AlertDialog.Builder(this)
-					.setTitle("Missing attributes")
-					.setMessage(Html.fromHtml(message))
-					.setPositiveButton("OK", new DialogInterface.OnClickListener() {
-						@Override public void onClick(DialogInterface dialog, int which) {
-							onDiscloseCancel();
-						}
-					})
-					.setNeutralButton("More Information", new DialogInterface.OnClickListener() {
-						@Override public void onClick(DialogInterface dialog, int which) {
-							onDiscloseCancel();
-							Intent intent = new Intent(MainActivity.this, DisclosureInformationActivity.class);
-							intent.putExtra("request", request);
-							startActivity(intent);
-						}
-					})
-					.show();
-		}
-	}
-
-	private void gotoConnectingState(String json) {
-		String url;
-		try {
-			DisclosureQr contents = GsonUtil.getGson().fromJson(json, DisclosureQr.class);
-			protocolVersion = contents.getVersion();
-			url = contents.getUrl();
-		} catch (Exception e) { // Assume the QR contained just a bare URL
-			protocolVersion = "1.0";
-			url = json;
-		}
-
-		switch (protocolVersion) {
-			case "1.0":
-				apduProtocol.connect(url);
-				break;
-			case "2.0":
-				jsonProtocol.connect(url);
-				break;
-			default:
-				setFeedback("Protocol not supported", "failure");
-		}
-	}
-
-	@Override
-	public void onDiscloseOK(final DisclosureProofRequest request) {
-		switch (protocolVersion) {
-			case "1.0":
-				apduProtocol.sendDisclosureProof();
-				break;
-			case "2.0":
-				jsonProtocol.disclose(request);
-				break;
-		}
-	}
-
-	@Override
-	public void onDiscloseCancel() {
-		switch (protocolVersion) {
-			case "1.0":
-				apduProtocol.abortConnection();
-				break;
-			case "2.0":
-				jsonProtocol.cancelDisclosure();
-				break;
-		}
-
-		setState(STATE_IDLE);
-		setFeedback("Disclosure cancelled", "failure");
 	}
 
 	@Override

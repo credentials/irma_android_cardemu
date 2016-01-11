@@ -1,24 +1,22 @@
-package org.irmacard.cardemu;
+package org.irmacard.cardemu.protocols;
 
 import android.os.AsyncTask;
 import android.util.Log;
 import org.acra.ACRA;
+import org.irmacard.cardemu.CredentialManager;
+import org.irmacard.cardemu.DisclosureStartResult;
+import org.irmacard.cardemu.HttpClient;
+import org.irmacard.cardemu.MainActivity;
 import org.irmacard.credentials.CredentialsException;
 import org.irmacard.credentials.idemix.proofs.ProofList;
 import org.irmacard.verification.common.DisclosureProofRequest;
 import org.irmacard.verification.common.DisclosureProofResult;
 import org.irmacard.verification.common.util.GsonUtil;
 
-public class JsonProtocol {
+public class JsonProtocol extends Protocol {
 	private static String TAG = "CardEmuJson";
 
-	private MainActivity activity;
-
 	private String disclosureServer;
-
-	public JsonProtocol(MainActivity activity) {
-		this.activity = activity;
-	}
 
 	public void connect(String url) {
 		if (!url.endsWith("/"))
@@ -45,7 +43,7 @@ public class JsonProtocol {
 			protected void onPostExecute(DisclosureStartResult result) {
 				if (result.request != null) {
 					activity.setState(MainActivity.STATE_READY);
-					activity.askForVerificationPermission(result.request);
+					askForVerificationPermission(result.request);
 				} else {
 					cancelDisclosure();
 					String feedback;
@@ -122,7 +120,10 @@ public class JsonProtocol {
 	/**
 	 * Cancels the current disclosure session by DELETE-ing the specified url and setting the state to idle.
 	 */
+	@Override
 	public void cancelDisclosure() {
+		super.cancelDisclosure();
+
 		new AsyncTask<String,Void,Void>() {
 			@Override protected Void doInBackground(String... params) {
 				try {

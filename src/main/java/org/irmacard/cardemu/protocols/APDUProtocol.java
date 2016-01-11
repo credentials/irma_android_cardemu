@@ -1,4 +1,4 @@
-package org.irmacard.cardemu;
+package org.irmacard.cardemu.protocols;
 
 import android.os.AsyncTask;
 import android.os.Handler;
@@ -15,10 +15,8 @@ import net.sf.scuba.smartcards.*;
 import org.acra.ACRA;
 import org.apache.http.Header;
 import org.apache.http.entity.StringEntity;
-import org.irmacard.android.util.credentials.CredentialPackage;
+import org.irmacard.cardemu.*;
 import org.irmacard.cardemu.messages.*;
-import org.irmacard.credentials.Attributes;
-import org.irmacard.credentials.CredentialsException;
 import org.irmacard.credentials.idemix.IdemixCredentials;
 import org.irmacard.credentials.idemix.smartcard.IRMACard;
 import org.irmacard.credentials.idemix.smartcard.SmartCardEmulatorService;
@@ -37,12 +35,11 @@ import java.io.UnsupportedEncodingException;
 import java.util.ArrayList;
 import java.util.List;
 
-public class APDUProtocol {
+public class APDUProtocol extends Protocol {
 	private static String TAG = "CardEmuAPDU";
 	private static final int MESSAGE_STARTGET = 1;
 	private static final int MAX_RETRIES = 3;
 
-	private MainActivity activity;
 	private long issuingStartTime;
 
 	// Card state
@@ -59,9 +56,7 @@ public class APDUProtocol {
 	private int retry_counter = 0;
 	private int currentHandlers = 0;
 
-	public APDUProtocol(MainActivity activity) {
-		this.activity = activity;
-
+	public APDUProtocol() {
 		verificationListener = new VerificationStartListener() {
 			@Override
 			public void verificationStarting(VerificationSetupData data) {
@@ -115,6 +110,12 @@ public class APDUProtocol {
 		handler.sendMessage(msg);
 	}
 
+	@Override
+	public void cancelDisclosure() {
+		super.cancelDisclosure();
+		abortConnection();
+	}
+
 	/**
 	 * Aborts the connection to the server: sends ISO7816.SW_COMMAND_NOT_ALLOWED.
 	 */
@@ -131,7 +132,7 @@ public class APDUProtocol {
 		postMessage(rm);
 	}
 
-	public void sendDisclosureProof() {
+	public void disclose(final DisclosureProofRequest request) {
 		postMessage(disclosureproof);
 	}
 
@@ -434,7 +435,7 @@ public class APDUProtocol {
 			} else {
 				// We're doing disclosure proofs: ask for permission first
 				disclosureproof = result;
-				activity.askForVerificationPermission(convertToRequest(verificationList));
+				askForVerificationPermission(convertToRequest(verificationList));
 				verificationList.clear();
 			}
 		}
