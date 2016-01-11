@@ -414,6 +414,9 @@ public class CredentialManager {
 			} else
 				attributes = toDisclose.get(id);
 
+			if (identifier.isCredential())
+				continue;
+
 			int j = cd.getAttributeNames().indexOf(identifier.getAttributeName());
 			if (j == -1) // our CredentialDescription does not contain the asked-for attribute
 				throw new CredentialsException("Attribute \"" + identifier.getAttributeName() + "\" not found");
