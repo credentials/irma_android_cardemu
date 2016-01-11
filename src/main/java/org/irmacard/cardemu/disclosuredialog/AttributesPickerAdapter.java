@@ -117,8 +117,13 @@ public class AttributesPickerAdapter extends BaseAdapter {
 
 		// The spaces (&nbsp;) push the radio button a bit to the right. Not very pretty but I can see no other way
 		// to do it. (We have to add them to both lines because we do not know which one will be longest.)
-		String html = "<b>" + ai.getIssuerName() + " - " + ai.getAttributeName()
-				+ "&nbsp;&nbsp;&nbsp;</b><br/>" + objects.get(ai) + "&nbsp;&nbsp;&nbsp;";
+		String html;
+		if (ai.isCredential())
+			html = "<b>" + objects.get(ai)
+					+ "&nbsp;&nbsp;&nbsp;</b><br/>(possession of credential)&nbsp;&nbsp;&nbsp;";
+		else
+			html = "<b>" + ai.getIssuerName() + " - " + ai.getAttributeName()
+					+ "&nbsp;&nbsp;&nbsp;</b><br/>" + objects.get(ai) + "&nbsp;&nbsp;&nbsp;";
 		value.setText(Html.fromHtml(html));
 		value.setChecked(position == selected);
 

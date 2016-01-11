@@ -444,16 +444,17 @@ public class APDUProtocol {
 				String credential = desc.getIssuerID() + "." + desc.getCredentialID();
 				List<Short> attrIds = disclosureMaskToList(entry.getDisclosureMask());
 
-				short i;
-				for (i = 0; i < desc.getAttributeNames().size(); ++i) {
+				if (attrIds.size() == 0) {
+					// We're only proving possession of the credential (or rather, only disclosing metadata attribute)
+					disjunctions.add(new AttributeDisjunction(desc.getShortName(), credential));
+					continue;
+				}
+
+				for (short i = 0; i < desc.getAttributeNames().size(); ++i) {
 					if (attrIds.contains(i)) {
 						String attrname = attrDescs.get(i).getName();
 						disjunctions.add(new AttributeDisjunction(attrname, credential + "." + attrname));
 					}
-				}
-
-				if (i == 0) {
-					disjunctions.add(new AttributeDisjunction(credential, credential));
 				}
 			}
 		} catch (InfoException e) {

@@ -503,15 +503,22 @@ public class CredentialManager {
 
 		for (AttributeIdentifier attribute : disjunction) {
 			Attributes foundAttrs = null;
+			CredentialDescription cd = null;
 			try {
 				foundAttrs = getAttributes(attribute.getIssuerName(), attribute.getCredentialName());
-			} catch (InfoException e) {
+				cd = getCredentialDescription(attribute.getIssuerName(), attribute.getCredentialName());
+			} catch (InfoException|CredentialsException e) {
 				e.printStackTrace();
 			}
 
-			if (foundAttrs != null && foundAttrs.get(attribute.getAttributeName()) != null) {
-				String value = new String(foundAttrs.get(attribute.getAttributeName()));
-				map.put(attribute, value);
+			if (foundAttrs != null) {
+				if (attribute.isCredential() && cd != null) {
+					map.put(attribute, cd.getIssuerDescription().getName() + " - " + cd.getShortName());
+				}
+				if (!attribute.isCredential() && foundAttrs.get(attribute.getAttributeName()) != null){
+					String value = new String(foundAttrs.get(attribute.getAttributeName()));
+					map.put(attribute, value);
+				}
 			}
 		}
 
@@ -523,7 +530,10 @@ public class CredentialManager {
 			Attributes attrs = getAttributes(identifier.getIssuerName(), identifier.getCredentialName());
 			if (attrs == null)
 				return false;
-			return attrs.get(identifier.getAttributeName()) != null;
+			if (identifier.isCredential())
+				return true;
+			else
+				return attrs.get(identifier.getAttributeName()) != null;
 		} catch (InfoException e) {
 			return false;
 		}

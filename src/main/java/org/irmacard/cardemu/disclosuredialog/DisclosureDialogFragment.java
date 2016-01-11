@@ -105,8 +105,6 @@ public class DisclosureDialogFragment extends DialogFragment {
 
 		for (int i = 0; i < request.getContent().size(); ++i) {
 			AttributeDisjunction disjunction = request.getContent().get(i);
-			if (disjunction.get(0).isCredential())
-				continue;
 
 			View attributeView = inflater.inflate(R.layout.attribute_picker, list, false);
 			TextView name = (TextView) attributeView.findViewById(R.id.detail_attribute_name);
