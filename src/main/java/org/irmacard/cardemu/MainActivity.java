@@ -33,6 +33,7 @@ package org.irmacard.cardemu;
 
 import java.util.*;
 
+import android.net.Uri;
 import android.os.AsyncTask;
 import android.text.Html;
 import android.view.*;
@@ -100,6 +101,12 @@ public class MainActivity extends Activity implements DisclosureDialogFragment.D
 	private String disclosureServer;
 
 	private APDUProtocol apduProtocol;
+
+	// Keep track of last verification fragment to ensure we handle it only once
+	private String lastFragment = "()";
+
+	// Automatically return to browser when launched using a URL
+	private boolean launchedFromBrowser = false;
 
 	@Override
 	protected void onCreate(Bundle savedInstanceState) {
@@ -341,17 +348,42 @@ public class MainActivity extends Activity implements DisclosureDialogFragment.D
 	@Override
 	protected void onPause() {
 		super.onPause();
-
 		Log.i(TAG, "onPause() called");
 	}
 
 	@Override
 	protected void onResume() {
 		super.onResume();
-
-		Log.i(TAG, "onResume() called, action: " + getIntent().getAction());
-
+		Log.i(TAG, "onResume() called");
+		processIntent();
 		updater.updateVersionInfo(false);
+	}
+
+	private void processIntent() {
+		Intent intent = getIntent();
+		Log.i(TAG, "processIntent() called, action: " + intent.getAction());
+		try {
+			Uri data = getIntent().getData();
+
+			if (data != null) {
+				String fragment = data.getFragment();
+
+				if((intent.getFlags() & Intent.FLAG_ACTIVITY_LAUNCHED_FROM_HISTORY) != 0) {
+					Log.i(TAG, "Ignoring intent because we were launched from history");
+					lastFragment = fragment;
+				}
+
+				if(!fragment.equals(lastFragment)) {
+					lastFragment = fragment;
+					launchedFromBrowser = true;
+					gotoConnectingState(data.getFragment());
+				} else {
+					Log.i(TAG, "Already processed this fragment");
+				}
+			}
+		} catch (Exception e) {
+			Log.i(TAG, "Couldn't read data action", e);
+		}
 	}
 
 	@Override
@@ -375,6 +407,7 @@ public class MainActivity extends Activity implements DisclosureDialogFragment.D
 	@Override
 	public void onNewIntent(Intent intent) {
 		setIntent(intent);
+		processIntent();
 	}
 
 	@Override
@@ -597,6 +630,12 @@ public class MainActivity extends Activity implements DisclosureDialogFragment.D
 					result = "Server refused connection";
 
 				setFeedback(result, status);
+
+				if(launchedFromBrowser) {
+					launchedFromBrowser = false;
+					Log.i(TAG, "Programatically returning to browser");
+					onBackPressed();
+				}
 			}
 		}.execute();
 	}
