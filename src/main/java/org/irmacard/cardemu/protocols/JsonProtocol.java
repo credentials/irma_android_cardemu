@@ -22,7 +22,7 @@ public class JsonProtocol extends Protocol {
 		if (!url.endsWith("/"))
 			url = url + "/";
 		disclosureServer = url;
-		Log.i(TAG, "Start channel listening: " + url);
+		Log.i(TAG, "Retrieving disclosure request: " + url);
 
 		activity.setState(MainActivity.STATE_CONNECTING_TO_SERVER);
 		final String server = url;
@@ -59,6 +59,7 @@ public class JsonProtocol extends Protocol {
 
 	public void disclose(final DisclosureProofRequest request) {
 		activity.setState(MainActivity.STATE_COMMUNICATING);
+		Log.i(TAG, "Sending disclosure proofs to " + disclosureServer);
 
 		new AsyncTask<Void,Void,String>() {
 			HttpClient client = new HttpClient(GsonUtil.getGson());
@@ -124,6 +125,7 @@ public class JsonProtocol extends Protocol {
 	@Override
 	public void cancelDisclosure() {
 		super.cancelDisclosure();
+		Log.i(TAG, "Canceling disclosure to " + disclosureServer);
 
 		new AsyncTask<String,Void,Void>() {
 			@Override protected Void doInBackground(String... params) {
