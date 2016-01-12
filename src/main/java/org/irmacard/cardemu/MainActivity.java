@@ -34,6 +34,7 @@ package org.irmacard.cardemu;
 import java.util.*;
 
 import android.net.Uri;
+import android.support.annotation.NonNull;
 import android.view.*;
 import android.widget.*;
 
@@ -86,8 +87,8 @@ public class MainActivity extends Activity {
 
 	private long qrScanStartTime;
 
-	// Keep track of last verification fragment to ensure we handle it only once
-	private String lastFragment = "()";
+	// Keep track of last verification url to ensure we handle it only once
+	private String lastSessionUrl = "()";
 
 	@Override
 	protected void onCreate(Bundle savedInstanceState) {
@@ -138,6 +139,20 @@ public class MainActivity extends Activity {
 		clearFeedback();
 
 		updater = new AppUpdater(this, BuildConfig.updateServer);
+
+		if (savedInstanceState != null) {
+			lastSessionUrl = savedInstanceState.getString("lastSessionUrl");
+		}
+	}
+
+	@Override
+	protected void onSaveInstanceState(@NonNull Bundle outState) {
+		super.onSaveInstanceState(outState);
+
+		// We have to store this here (and retrieve it in onCreate above), because if the activity
+		// gets garbage collected (i.e. killed) then the lastSessionUrl member is null when we
+		// are revided.
+		outState.putString("lastSessionUrl", lastSessionUrl);
 	}
 
 	public int getState() {
@@ -332,6 +347,17 @@ public class MainActivity extends Activity {
 	}
 
 	@Override
+	public void onNewIntent(Intent intent) {
+		setIntent(intent);
+	}
+
+	@Override
+	protected void onDestroy() {
+		Log.i(TAG, "onDestroy() called");
+		super.onDestroy();
+	}
+
+	@Override
 	protected void onResume() {
 		super.onResume();
 		Log.i(TAG, "onResume() called");
@@ -344,31 +370,21 @@ public class MainActivity extends Activity {
 		Log.i(TAG, "processIntent() called, action: " + intent.getAction());
 		try {
 			Uri data = getIntent().getData();
+			if (data == null) {
+				return;
+			}
 
-			if (data != null) {
-				String fragment = data.getFragment();
-
-				if((intent.getFlags() & Intent.FLAG_ACTIVITY_LAUNCHED_FROM_HISTORY) != 0) {
-					Log.i(TAG, "Ignoring intent because we were launched from history");
-					lastFragment = fragment;
-				}
-
-				if(!fragment.equals(lastFragment)) {
-					lastFragment = fragment;
-					Protocol.NewSession(data.getFragment(), this, true);
-				} else {
-					Log.i(TAG, "Already processed this fragment");
-				}
+			String fragment = data.getFragment();
+			Log.i(TAG, "Received fragment in intent: " + fragment);
+			if(!fragment.equals(lastSessionUrl)) {
+				lastSessionUrl = fragment;
+				Protocol.NewSession(data.getFragment(), this, true);
+			} else {
+				Log.i(TAG, "Already processed this fragment");
 			}
 		} catch (Exception e) {
 			Log.i(TAG, "Couldn't read data action", e);
 		}
-	}
-
-	@Override
-	protected void onDestroy() {
-		Log.i(TAG, "onDestroy() called");
-		super.onDestroy();
 	}
 
 	public void onMainShapeTouch(View v) {
@@ -381,12 +397,6 @@ public class MainActivity extends Activity {
 		Intent i = new Intent(this, PassportEnrollActivity.class);
 		CredentialManager.save();
 		startActivityForResult(i, PASSPORT_REQUEST);
-	}
-
-	@Override
-	public void onNewIntent(Intent intent) {
-		setIntent(intent);
-		processIntent();
 	}
 
 	@Override
