@@ -113,6 +113,7 @@ public class JsonProtocol extends Protocol {
 					result = "Server refused connection";
 
 				activity.setFeedback(result, status);
+				done();
 			}
 		}.execute();
 	}

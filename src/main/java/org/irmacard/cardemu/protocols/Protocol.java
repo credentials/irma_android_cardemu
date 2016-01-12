@@ -4,6 +4,7 @@ import android.app.AlertDialog;
 import android.content.DialogInterface;
 import android.content.Intent;
 import android.text.Html;
+import android.util.Log;
 import android.util.Patterns;
 import org.irmacard.cardemu.CredentialManager;
 import org.irmacard.cardemu.MainActivity;
@@ -38,7 +39,12 @@ public abstract class Protocol implements DisclosureDialogFragment.DisclosureDia
 		activity.setState(MainActivity.STATE_IDLE);
 	}
 
+	private static final String TAG = "CardEmuProtocol";
+
 	protected MainActivity activity;
+
+	// Automatically return to browser when launched using a URL
+	private boolean launchedFromBrowser;
 
 	/**
 	 * Create a new session
@@ -46,7 +52,7 @@ public abstract class Protocol implements DisclosureDialogFragment.DisclosureDia
 	 * @param activity The activity to report progress to
 	 * @return A new Protocol instance of the appropriate version
 	 */
-	public static void NewSession(String qrcontent, MainActivity activity) {
+	public static void NewSession(String qrcontent, MainActivity activity, boolean launchedFromBrowser) {
 		// Decide on the protocol version and the URL to connect to
 		String url, protocolVersion;
 		try {
@@ -81,6 +87,7 @@ public abstract class Protocol implements DisclosureDialogFragment.DisclosureDia
 		}
 
 		protocol.activity = activity;
+		protocol.launchedFromBrowser = launchedFromBrowser;
 		protocol.connect(url);
 	}
 
@@ -122,6 +129,7 @@ public abstract class Protocol implements DisclosureDialogFragment.DisclosureDia
 					.setPositiveButton("OK", new DialogInterface.OnClickListener() {
 						@Override public void onClick(DialogInterface dialog, int which) {
 							cancelDisclosure();
+							done();
 						}
 					})
 					.setNeutralButton("More Information", new DialogInterface.OnClickListener() {
@@ -144,6 +152,15 @@ public abstract class Protocol implements DisclosureDialogFragment.DisclosureDia
 	@Override
 	public void onDiscloseCancel() {
 		cancelDisclosure();
+		done();
+	}
+
+	public void done() {
+		if(launchedFromBrowser) {
+			launchedFromBrowser = false;
+			Log.i(TAG, "Programatically returning to browser");
+			activity.onBackPressed();
+		}
 	}
 }
 

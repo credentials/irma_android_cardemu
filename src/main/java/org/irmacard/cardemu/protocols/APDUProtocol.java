@@ -279,6 +279,7 @@ public class APDUProtocol extends Protocol {
 				CredentialManager.loadFromCard();
 				CredentialManager.save();
 				activity.setState(MainActivity.STATE_IDLE);
+				done();
 			}
 		}
 	}

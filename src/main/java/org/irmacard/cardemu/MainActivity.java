@@ -33,6 +33,7 @@ package org.irmacard.cardemu;
 
 import java.util.*;
 
+import android.net.Uri;
 import android.view.*;
 import android.widget.*;
 
@@ -84,6 +85,9 @@ public class MainActivity extends Activity {
 	private AppUpdater updater;
 
 	private long qrScanStartTime;
+
+	// Keep track of last verification fragment to ensure we handle it only once
+	private String lastFragment = "()";
 
 	@Override
 	protected void onCreate(Bundle savedInstanceState) {
@@ -324,17 +328,41 @@ public class MainActivity extends Activity {
 	@Override
 	protected void onPause() {
 		super.onPause();
-
 		Log.i(TAG, "onPause() called");
 	}
 
 	@Override
 	protected void onResume() {
 		super.onResume();
-
-		Log.i(TAG, "onResume() called, action: " + getIntent().getAction());
-
+		Log.i(TAG, "onResume() called");
+		processIntent();
 		updater.updateVersionInfo(false);
+	}
+
+	private void processIntent() {
+		Intent intent = getIntent();
+		Log.i(TAG, "processIntent() called, action: " + intent.getAction());
+		try {
+			Uri data = getIntent().getData();
+
+			if (data != null) {
+				String fragment = data.getFragment();
+
+				if((intent.getFlags() & Intent.FLAG_ACTIVITY_LAUNCHED_FROM_HISTORY) != 0) {
+					Log.i(TAG, "Ignoring intent because we were launched from history");
+					lastFragment = fragment;
+				}
+
+				if(!fragment.equals(lastFragment)) {
+					lastFragment = fragment;
+					Protocol.NewSession(data.getFragment(), this, true);
+				} else {
+					Log.i(TAG, "Already processed this fragment");
+				}
+			}
+		} catch (Exception e) {
+			Log.i(TAG, "Couldn't read data action", e);
+		}
 	}
 
 	@Override
@@ -358,6 +386,7 @@ public class MainActivity extends Activity {
 	@Override
 	public void onNewIntent(Intent intent) {
 		setIntent(intent);
+		processIntent();
 	}
 
 	@Override
@@ -384,7 +413,7 @@ public class MainActivity extends Activity {
 			if (scanResult != null) {
 				String contents = scanResult.getContents();
 				if (contents != null) {
-					Protocol.NewSession(contents, this);
+					Protocol.NewSession(contents, this, false);
 				}
 			}
 		}
