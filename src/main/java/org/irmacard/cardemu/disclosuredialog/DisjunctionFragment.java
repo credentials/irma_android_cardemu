@@ -32,7 +32,6 @@ package org.irmacard.cardemu.disclosuredialog;
 
 import android.app.Fragment;
 import android.os.Bundle;
-import android.text.Html;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
@@ -62,8 +61,13 @@ public class DisjunctionFragment extends Fragment {
 		for (AttributeIdentifier ai : disjunction) {
 			View view = inflater.inflate(R.layout.disjunction_item, container, false);
 
-			TextView text = (TextView) view.findViewById(R.id.disjunction_title);
-			text.setText(ai.getIssuerName() + " - " + ai.getAttributeName());
+			TextView textView = (TextView) view.findViewById(R.id.disjunction_title);
+			String text;
+			if (ai.isCredential())
+				text = ai.getIssuerName() + " - " + ai.getCredentialName() + " (possession of credential)";
+			else
+				text = ai.getIssuerName() + " - " + ai.getAttributeName();
+			textView.setText(text);
 
 			if (!CredentialManager.contains(ai)) {
 				ImageView image = (ImageView) view.findViewById(R.id.disjunction_icon);
