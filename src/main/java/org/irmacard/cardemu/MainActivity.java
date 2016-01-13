@@ -368,22 +368,18 @@ public class MainActivity extends Activity {
 	private void processIntent() {
 		Intent intent = getIntent();
 		Log.i(TAG, "processIntent() called, action: " + intent.getAction());
-		try {
-			Uri data = getIntent().getData();
-			if (data == null) {
-				return;
-			}
 
-			String fragment = data.getFragment();
-			Log.i(TAG, "Received fragment in intent: " + fragment);
-			if(!fragment.equals(lastSessionUrl)) {
-				lastSessionUrl = fragment;
-				Protocol.NewSession(data.getFragment(), this, true);
-			} else {
-				Log.i(TAG, "Already processed this fragment");
-			}
-		} catch (Exception e) {
-			Log.i(TAG, "Couldn't read data action", e);
+		String qr = intent.getStringExtra("qr");
+		if (!intent.getAction().equals(Intent.ACTION_VIEW) || qr == null) {
+			return;
+		}
+
+		Log.i(TAG, "Received qr in intent: " + qr);
+		if(!qr.equals(lastSessionUrl)) {
+			lastSessionUrl = qr;
+			Protocol.NewSession(qr, this, true);
+		} else {
+			Log.i(TAG, "Already processed this fragment");
 		}
 	}
 
