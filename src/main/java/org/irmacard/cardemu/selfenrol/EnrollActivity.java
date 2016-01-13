@@ -51,6 +51,8 @@ import org.acra.ACRA;
 import net.sf.scuba.smartcards.*;
 import org.irmacard.cardemu.*;
 import org.irmacard.cardemu.BuildConfig;
+import org.irmacard.cardemu.messages.ProtocolCommandDeserializer;
+import org.irmacard.cardemu.messages.ProtocolResponseSerializer;
 import org.irmacard.credentials.idemix.smartcard.IRMACard;
 import org.irmacard.credentials.idemix.smartcard.SmartCardEmulatorService;
 import org.irmacard.cardemu.HttpClient.HttpClientException;

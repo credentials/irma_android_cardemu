@@ -28,29 +28,29 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-package org.irmacard.cardemu;
+package org.irmacard.cardemu.messages;
 
 import java.lang.reflect.Type;
 
-import net.sf.scuba.smartcards.ProtocolResponse;
+import net.sf.scuba.smartcards.CommandAPDU;
+import net.sf.scuba.smartcards.ProtocolCommand;
 import net.sf.scuba.util.Hex;
 
+import com.google.gson.JsonDeserializationContext;
+import com.google.gson.JsonDeserializer;
 import com.google.gson.JsonElement;
-import com.google.gson.JsonObject;
-import com.google.gson.JsonSerializationContext;
-import com.google.gson.JsonSerializer;
+import com.google.gson.JsonParseException;
 
 /**
- * Helper class to serialize ProtocolResponse to JSON.
+ * Helper class to deserialize a ProtocolResponse from json
  *
  */
-public class ProtocolResponseSerializer implements JsonSerializer<ProtocolResponse> {
+public class ProtocolCommandDeserializer implements JsonDeserializer<ProtocolCommand> {
 	@Override
-	public JsonElement serialize(ProtocolResponse src, Type typeOfSrc,
-			JsonSerializationContext context) {
-		JsonObject obj = new JsonObject();
-		obj.addProperty("key", src.getKey());
-		obj.addProperty("apdu", Hex.bytesToHexString(src.getAPDU().getBytes()));
-		return obj;
+	public ProtocolCommand deserialize(JsonElement json, Type typeOfT,
+			JsonDeserializationContext context) throws JsonParseException {
+		return new ProtocolCommand(
+				json.getAsJsonObject().get("key").getAsString(), "",
+				new CommandAPDU(Hex.hexStringToBytes(json.getAsJsonObject().get("command").getAsString())));
 	}
 }
