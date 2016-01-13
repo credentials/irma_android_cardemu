@@ -6,6 +6,7 @@ import android.content.Intent;
 import android.text.Html;
 import android.util.Log;
 import android.util.Patterns;
+import android.view.View;
 import org.irmacard.cardemu.CredentialManager;
 import org.irmacard.cardemu.MainActivity;
 import org.irmacard.cardemu.disclosuredialog.DisclosureDialogFragment;
@@ -123,24 +124,36 @@ public abstract class Protocol implements DisclosureDialogFragment.DisclosureDia
 			}
 			message += " but you do not have the appropriate attributes.";
 
-			new AlertDialog.Builder(activity)
+			final AlertDialog dialog = new AlertDialog.Builder(activity)
 					.setTitle("Missing attributes")
 					.setMessage(Html.fromHtml(message))
 					.setPositiveButton("OK", new DialogInterface.OnClickListener() {
-						@Override public void onClick(DialogInterface dialog, int which) {
+						@Override
+						public void onClick(DialogInterface dialog, int which) {
 							cancelDisclosure();
 							done();
 						}
 					})
-					.setNeutralButton("More Information", new DialogInterface.OnClickListener() {
-						@Override public void onClick(DialogInterface dialog, int which) {
+					.setNeutralButton("More Information", null)
+					.create();
+
+			// Set the listener for the More Info button here, so that it does not close the dialog
+			dialog.setOnShowListener(new DialogInterface.OnShowListener() {
+				@Override
+				public void onShow(DialogInterface d) {
+					dialog.getButton(AlertDialog.BUTTON_NEUTRAL).setOnClickListener(new View.OnClickListener() {
+						@Override
+						public void onClick(View v) {
 							cancelDisclosure();
 							Intent intent = new Intent(activity, DisclosureInformationActivity.class);
 							intent.putExtra("request", request);
 							activity.startActivity(intent);
 						}
-					})
-					.show();
+					});
+				}
+			});
+
+			dialog.show();
 		}
 	}
 
