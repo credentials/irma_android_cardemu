@@ -139,7 +139,7 @@ abstract public class EnrollActivity extends Activity {
         mTechLists = new String[][] { new String[] { IsoDep.class.getName() } };
 
         settings = getSharedPreferences(SETTINGS, 0);
-        client = new HttpClient(gson, new SecureSSLSocketFactory(Util.getSocketFactory(this, "ca")));
+        client = new HttpClient(gson, new SecureSSLSocketFactory(this, "ca"));
 
         // Load the card and open the IdemixService
         card = CardManager.loadCard();
