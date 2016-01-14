@@ -87,6 +87,9 @@ public class MainActivity extends Activity {
 	private static final int FEEDBACK_SHOW_DELAY = 10000;
 	private boolean showingFeedback = false;
 
+	// Time after which old Intents are ignored (in milliseconds)
+	private static final long INTENT_EXPIRY_TIME = 5000;
+
 	private AppUpdater updater;
 
 	private long qrScanStartTime;
@@ -364,7 +367,15 @@ public class MainActivity extends Activity {
 		Log.i(TAG, "processIntent() called, action: " + intent.getAction());
 
 		String qr = intent.getStringExtra("qr");
+		long timestamp  = intent.getLongExtra("timestamp", 0);
+
 		if (!intent.getAction().equals(Intent.ACTION_VIEW) || qr == null) {
+			return;
+		}
+
+		if (timestamp > 0 && System.currentTimeMillis() - timestamp > INTENT_EXPIRY_TIME) {
+			Log.i(TAG, "Discarding event, timestamp (" + timestamp +
+					") too old for qr: " + qr);
 			return;
 		}
 
