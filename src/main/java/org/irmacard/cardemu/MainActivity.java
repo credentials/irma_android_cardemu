@@ -33,6 +33,7 @@ package org.irmacard.cardemu;
 
 import java.util.*;
 
+import android.content.SharedPreferences;
 import android.net.Uri;
 import android.support.annotation.NonNull;
 import android.view.*;
@@ -63,7 +64,10 @@ public class MainActivity extends Activity {
 	public static final int PASSPORT_REQUEST = 100;
 	private static final int DETAIL_REQUEST = 101;
 
-	private String TAG = "CardEmuMainActivity";
+	private static final String TAG = "CardEmuMainActivity";
+	private static final String SETTINGS = "cardemu";
+
+	private SharedPreferences settings;
 
 	// Previewed list of credentials
 	private ExpandableCredentialsAdapter credentialListAdapter;
@@ -140,19 +144,7 @@ public class MainActivity extends Activity {
 
 		updater = new AppUpdater(this, BuildConfig.updateServer);
 
-		if (savedInstanceState != null) {
-			lastSessionUrl = savedInstanceState.getString("lastSessionUrl");
-		}
-	}
-
-	@Override
-	protected void onSaveInstanceState(@NonNull Bundle outState) {
-		super.onSaveInstanceState(outState);
-
-		// We have to store this here (and retrieve it in onCreate above), because if the activity
-		// gets garbage collected (i.e. killed) then the lastSessionUrl member is null when we
-		// are revided.
-		outState.putString("lastSessionUrl", lastSessionUrl);
+		settings = getSharedPreferences(SETTINGS, 0);
 	}
 
 	public int getState() {
@@ -343,6 +335,7 @@ public class MainActivity extends Activity {
 	@Override
 	protected void onPause() {
 		super.onPause();
+		settings.edit().putString("lastSessionUrl", lastSessionUrl).apply();
 		Log.i(TAG, "onPause() called");
 	}
 
@@ -361,6 +354,7 @@ public class MainActivity extends Activity {
 	protected void onResume() {
 		super.onResume();
 		Log.i(TAG, "onResume() called");
+		lastSessionUrl = settings.getString("lastSessionUrl", "");
 		processIntent();
 		updater.updateVersionInfo(false);
 	}
@@ -379,7 +373,7 @@ public class MainActivity extends Activity {
 			lastSessionUrl = qr;
 			Protocol.NewSession(qr, this, true);
 		} else {
-			Log.i(TAG, "Already processed this fragment");
+			Log.i(TAG, "Already processed this qr");
 		}
 	}
 
