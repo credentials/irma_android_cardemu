@@ -28,7 +28,7 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-package org.irmacard.cardemu;
+package org.irmacard.cardemu.httpclient;
 
 import com.google.gson.Gson;
 import com.google.gson.JsonSyntaxException;

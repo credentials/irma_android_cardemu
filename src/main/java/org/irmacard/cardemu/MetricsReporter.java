@@ -44,6 +44,8 @@ import com.google.gson.Gson;
 import com.google.gson.JsonSyntaxException;
 import com.google.gson.reflect.TypeToken;
 import org.acra.util.Installation;
+import org.irmacard.cardemu.httpclient.HttpClient;
+import org.irmacard.cardemu.httpclient.HttpClientException;
 import org.irmacard.metrics.common.ApplicationInformation;
 import org.irmacard.metrics.common.DataLogger;
 import org.irmacard.metrics.common.Measurement;

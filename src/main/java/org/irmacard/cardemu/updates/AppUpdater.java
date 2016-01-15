@@ -46,8 +46,8 @@ import android.widget.Toast;
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
 import org.irmacard.cardemu.ByteArrayToBase64TypeAdapter;
-import org.irmacard.cardemu.HttpClient;
-import org.irmacard.cardemu.HttpClientException;
+import org.irmacard.cardemu.httpclient.HttpClient;
+import org.irmacard.cardemu.httpclient.HttpClientException;
 import org.irmacard.cardemu.R;
 
 import java.io.*;

@@ -30,7 +30,7 @@
 
 package org.irmacard.cardemu.selfenrol;
 
-import org.irmacard.cardemu.HttpClientException;
+import org.irmacard.cardemu.httpclient.HttpClientException;
 import org.irmacard.mno.common.EnrollmentStartMessage;
 
 /**

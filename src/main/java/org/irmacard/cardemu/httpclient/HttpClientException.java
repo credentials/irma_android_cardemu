@@ -1,4 +1,4 @@
-package org.irmacard.cardemu;
+package org.irmacard.cardemu.httpclient;
 
 /**
  * Exception class for HttpClient.

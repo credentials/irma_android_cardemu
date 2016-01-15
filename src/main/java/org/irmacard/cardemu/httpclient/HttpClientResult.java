@@ -1,4 +1,4 @@
-package org.irmacard.cardemu;
+package org.irmacard.cardemu.httpclient;
 
 /**
  * Simple generic class to store the result from using the {@link HttpClient}: either an object

@@ -31,6 +31,7 @@
 package org.irmacard.cardemu;
 
 import org.irmacard.api.common.DisclosureProofRequest;
+import org.irmacard.cardemu.httpclient.HttpClientException;
 
 public class DisclosureStartResult {
 	public DisclosureProofRequest request;
