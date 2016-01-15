@@ -34,13 +34,13 @@ import org.irmacard.api.common.DisclosureProofRequest;
 
 public class DisclosureStartResult {
 	public DisclosureProofRequest request;
-	public HttpClient.HttpClientException exception;
+	public HttpClientException exception;
 
 	public DisclosureStartResult(DisclosureProofRequest request) {
 		this.request = request;
 	}
 
-	public DisclosureStartResult(HttpClient.HttpClientException e) {
+	public DisclosureStartResult(HttpClientException e) {
 		this.exception = e;
 	}
 }

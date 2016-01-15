@@ -2,18 +2,18 @@ package org.irmacard.cardemu;
 
 /**
  * Simple generic class to store the result from using the {@link HttpClient}: either an object
- * or a {@link org.irmacard.cardemu.HttpClient.HttpClientException}.
+ * or a {@link HttpClientException}.
  * @param <T> Type of the object to store
  */
 public class HttpClientResult<T> {
 	private T object;
-	private HttpClient.HttpClientException exception;
+	private HttpClientException exception;
 
 	public HttpClientResult(T object) {
 		this.object = object;
 	}
 
-	public HttpClientResult(HttpClient.HttpClientException exception) {
+	public HttpClientResult(HttpClientException exception) {
 		this.exception = exception;
 	}
 
@@ -21,7 +21,7 @@ public class HttpClientResult<T> {
 		return object;
 	}
 
-	public HttpClient.HttpClientException getException() {
+	public HttpClientException getException() {
 		return exception;
 	}
 }

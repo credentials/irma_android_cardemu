@@ -55,7 +55,7 @@ import org.irmacard.cardemu.messages.ProtocolCommandDeserializer;
 import org.irmacard.cardemu.messages.ProtocolResponseSerializer;
 import org.irmacard.credentials.idemix.smartcard.IRMACard;
 import org.irmacard.credentials.idemix.smartcard.SmartCardEmulatorService;
-import org.irmacard.cardemu.HttpClient.HttpClientException;
+import org.irmacard.cardemu.HttpClientException;
 import org.irmacard.idemix.IdemixService;
 import org.irmacard.mno.common.*;
 import java.text.DateFormat;

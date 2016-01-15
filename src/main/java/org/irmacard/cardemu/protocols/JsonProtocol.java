@@ -4,7 +4,6 @@ import android.os.AsyncTask;
 import android.util.Log;
 import org.acra.ACRA;
 import org.irmacard.cardemu.*;
-import org.irmacard.cardemu.api.IssuingRequest;
 import org.irmacard.credentials.CredentialsException;
 import org.irmacard.credentials.idemix.proofs.ProofList;
 import org.irmacard.api.common.DisclosureProofRequest;
@@ -37,7 +36,7 @@ public class JsonProtocol extends Protocol {
 				try {
 					DisclosureProofRequest request = client.doGet(DisclosureProofRequest.class, server);
 					return new HttpClientResult<>(request);
-				} catch (HttpClient.HttpClientException e) {
+				} catch (HttpClientException e) {
 					return new HttpClientResult<DisclosureProofRequest>(e);
 				}
 			}
@@ -85,7 +84,7 @@ public class JsonProtocol extends Protocol {
 					}
 
 					status = client.doPost(DisclosureProofResult.Status.class, server + "proofs", proofs);
-				} catch (HttpClient.HttpClientException e) {
+				} catch (HttpClientException e) {
 					e.printStackTrace();
 					if (e.getCause() != null)
 						return e.getCause().getMessage();
@@ -134,7 +133,7 @@ public class JsonProtocol extends Protocol {
 			@Override protected Void doInBackground(String... params) {
 				try {
 					new HttpClient(GsonUtil.getGson()).doDelete(params[0]);
-				} catch (HttpClient.HttpClientException e) {
+				} catch (HttpClientException e) {
 					e.printStackTrace();
 				}
 				return null;

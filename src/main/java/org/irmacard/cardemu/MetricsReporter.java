@@ -175,7 +175,7 @@ public class MetricsReporter {
 				String url = metricServer + "/register";
 				try {
 					return client.doPost(SessionToken.class, url, applicationInformation);
-				} catch (HttpClient.HttpClientException e) {
+				} catch (HttpClientException e) {
 					if (!metricServer.equals(""))
 						e.printStackTrace();
 					return null;
@@ -275,7 +275,7 @@ public class MetricsReporter {
 						client.doPost(Object.class, url, logger.report(), auth);
 					}
 					return true;
-				} catch (HttpClient.HttpClientException e) {
+				} catch (HttpClientException e) {
 					if (!metricServer.equals(""))
 						e.printStackTrace();
 					return false;
@@ -304,7 +304,7 @@ public class MetricsReporter {
 						client.doPost(Object.class, url, m, auth);
 					}
 					return true;
-				} catch (HttpClient.HttpClientException e) {
+				} catch (HttpClientException e) {
 					if (!metricServer.equals(""))
 						e.printStackTrace();
 					return false;

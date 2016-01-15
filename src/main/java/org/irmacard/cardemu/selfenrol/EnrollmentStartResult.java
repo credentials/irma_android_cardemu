@@ -30,7 +30,7 @@
 
 package org.irmacard.cardemu.selfenrol;
 
-import org.irmacard.cardemu.HttpClient;
+import org.irmacard.cardemu.HttpClientException;
 import org.irmacard.mno.common.EnrollmentStartMessage;
 
 /**
@@ -39,22 +39,22 @@ import org.irmacard.mno.common.EnrollmentStartMessage;
  */
 class EnrollmentStartResult {
 	public EnrollmentStartMessage msg = null;
-	public HttpClient.HttpClientException exception = null;
+	public HttpClientException exception = null;
 	public int errorId = 0;
 
 	public EnrollmentStartResult(EnrollmentStartMessage msg) {
 		this(msg, null, 0);
 	}
 
-	public EnrollmentStartResult(HttpClient.HttpClientException exception) {
+	public EnrollmentStartResult(HttpClientException exception) {
 		this(null, exception, 0);
 	}
 
-	public EnrollmentStartResult(HttpClient.HttpClientException exception, int errorId) {
+	public EnrollmentStartResult(HttpClientException exception, int errorId) {
 		this(null, exception, errorId);
 	}
 
-	public EnrollmentStartResult(EnrollmentStartMessage msg, HttpClient.HttpClientException exception, int errorId) {
+	public EnrollmentStartResult(EnrollmentStartMessage msg, HttpClientException exception, int errorId) {
 		this.msg = msg;
 		this.exception = exception;
 		this.errorId = errorId;

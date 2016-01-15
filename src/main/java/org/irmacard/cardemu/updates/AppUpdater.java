@@ -34,7 +34,6 @@ import android.app.AlertDialog;
 import android.content.Context;
 import android.content.DialogInterface;
 import android.content.Intent;
-import android.content.SharedPreferences;
 import android.content.pm.PackageInfo;
 import android.content.pm.PackageManager;
 import android.net.ConnectivityManager;
@@ -48,7 +47,7 @@ import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
 import org.irmacard.cardemu.ByteArrayToBase64TypeAdapter;
 import org.irmacard.cardemu.HttpClient;
-import org.irmacard.cardemu.HttpClient.HttpClientException;
+import org.irmacard.cardemu.HttpClientException;
 import org.irmacard.cardemu.R;
 
 import java.io.*;
