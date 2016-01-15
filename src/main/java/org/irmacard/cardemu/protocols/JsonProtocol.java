@@ -48,7 +48,13 @@ public class JsonProtocol extends Protocol {
 			protected void onPostExecute(HttpClientResult<DisclosureProofRequest> result) {
 				if (result.getObject() != null) {
 					activity.setState(MainActivity.STATE_READY);
-					askForVerificationPermission(result.getObject());
+					DisclosureProofRequest request = result.getObject();
+					if (request.getContent().size() == 0 || request.getNonce() == null || request.getContext() == null) {
+						activity.setFeedback("Got malformed disclosure request", "failure");
+						cancelDisclosure();
+						return;
+					}
+					askForVerificationPermission(request);
 				} else {
 					cancelDisclosure();
 					String feedback;
