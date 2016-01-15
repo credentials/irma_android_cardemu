@@ -56,7 +56,6 @@ import org.irmacard.verification.common.AttributeDisjunction;
 import org.irmacard.verification.common.AttributeIdentifier;
 import org.irmacard.verification.common.DisclosureProofRequest;
 
-import java.lang.reflect.Field;
 import java.lang.reflect.Type;
 import java.math.BigInteger;
 import java.util.*;
@@ -74,8 +73,6 @@ public class CredentialManager {
 	private static Type credentialsType = new TypeToken<HashMap<Short, IRMAIdemixCredential>>() {}.getType();
 	private static Type logsType = new TypeToken<List<LogEntry>>() {}.getType();
 
-	private static Field cardCredentialsField;
-	private static Field cardMasterSecretField;
 	private static Gson gson;
 	private static SharedPreferences settings;
 	private static final String TAG = "CredentialManager";
@@ -84,15 +81,6 @@ public class CredentialManager {
 
 	public static void init(SharedPreferences s) {
 		settings = s;
-
-		try {
-			cardCredentialsField = IRMACard.class.getDeclaredField("credentials");
-			cardCredentialsField.setAccessible(true);
-			cardMasterSecretField = IRMACard.class.getDeclaredField("master_secret");
-			cardMasterSecretField.setAccessible(true);
-		} catch (NoSuchFieldException e) {
-			e.printStackTrace();
-		}
 	}
 
 	/**
@@ -125,11 +113,7 @@ public class CredentialManager {
 	public static void loadFromCard(IRMACard card) {
 		Log.i(TAG, "Loading credentials from card");
 
-		try {
-			credentials.putAll((HashMap<Short, IRMAIdemixCredential>) cardCredentialsField.get(card));
-		} catch (IllegalAccessException|ClassCastException e) {
-			e.printStackTrace();
-		}
+		credentials.putAll(card.getCredentials());
 
 		try {
 			IdemixService is = new IdemixService(new SmartCardEmulatorService(card));
@@ -147,14 +131,10 @@ public class CredentialManager {
 	 */
 	public static IRMACard saveCard() {
 		IRMACard card = new IRMACard();
-		try {
-			cardCredentialsField.set(card, credentials);
-			if (credentials.size() > 0) {
-				BigInteger sk = credentials.values().iterator().next().getCredential().getAttribute(0);
-				cardMasterSecretField.set(card, sk);
-			}
-		} catch (IllegalAccessException e) {
-			e.printStackTrace();
+		card.setCredentials(credentials);
+		if (credentials.size() > 0) {
+			BigInteger sk = credentials.values().iterator().next().getCredential().getAttribute(0);
+			card.setMasterSecret(sk);
 		}
 
 		CardManager.setCard(card);
