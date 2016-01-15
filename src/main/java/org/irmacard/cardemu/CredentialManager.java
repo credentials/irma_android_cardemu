@@ -200,6 +200,17 @@ public class CredentialManager {
 		if (logs == null) {
 			logs = new LinkedList<>();
 		}
+
+		// Upgrade path from the old protocol-branch to the new protocol-branch:
+		// Normally, we only temporarily save the credentials from this.credentials into a new,
+		// temporary IRMACard. So if we do not yet have any credentials while the IRMACard from
+		// storage does, it must mean we're called for the very first time, so that the user's
+		// credentials are still in the CardManager. So, we fetch them.
+		IRMACard card = CardManager.loadCard();
+		if (credentials.size() == 0 && card.getCredentials().size() > 0) {
+			loadFromCard();
+			save();
+		}
 	}
 
 	/**
