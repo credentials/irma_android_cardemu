@@ -27,8 +27,8 @@ import org.irmacard.credentials.info.DescriptionStore;
 import org.irmacard.credentials.info.InfoException;
 import org.irmacard.idemix.IdemixService;
 import org.irmacard.idemix.util.VerificationSetupData;
-import org.irmacard.verification.common.AttributeDisjunction;
-import org.irmacard.verification.common.DisclosureProofRequest;
+import org.irmacard.api.common.AttributeDisjunction;
+import org.irmacard.api.common.DisclosureProofRequest;
 
 import java.io.StringReader;
 import java.io.UnsupportedEncodingException;

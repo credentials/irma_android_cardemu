@@ -30,7 +30,7 @@
 
 package org.irmacard.cardemu;
 
-import org.irmacard.verification.common.DisclosureProofRequest;
+import org.irmacard.api.common.DisclosureProofRequest;
 
 public class DisclosureStartResult {
 	public DisclosureProofRequest request;

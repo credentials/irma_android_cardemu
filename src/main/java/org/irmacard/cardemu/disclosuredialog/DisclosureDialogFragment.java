@@ -42,8 +42,8 @@ import android.view.LayoutInflater;
 import android.view.View;
 import android.widget.*;
 import org.irmacard.cardemu.R;
-import org.irmacard.verification.common.AttributeDisjunction;
-import org.irmacard.verification.common.DisclosureProofRequest;
+import org.irmacard.api.common.AttributeDisjunction;
+import org.irmacard.api.common.DisclosureProofRequest;
 
 /**
  * DialogFragment for asking permission of a user to disclose specified attributes, and allowing him to choose which

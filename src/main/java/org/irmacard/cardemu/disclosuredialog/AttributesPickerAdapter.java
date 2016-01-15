@@ -40,9 +40,9 @@ import android.widget.CheckedTextView;
 import android.widget.TextView;
 import org.irmacard.cardemu.CredentialManager;
 import org.irmacard.cardemu.R;
-import org.irmacard.verification.common.AttributeDisjunction;
-import org.irmacard.verification.common.AttributeIdentifier;
-import org.irmacard.verification.common.DisclosureProofRequest;
+import org.irmacard.api.common.AttributeDisjunction;
+import org.irmacard.api.common.AttributeIdentifier;
+import org.irmacard.api.common.DisclosureProofRequest;
 
 import java.util.ArrayList;
 import java.util.LinkedHashMap;

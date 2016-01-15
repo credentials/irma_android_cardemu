@@ -52,9 +52,9 @@ import org.irmacard.credentials.util.log.LogEntry;
 import org.irmacard.credentials.util.log.RemoveLogEntry;
 import org.irmacard.credentials.util.log.VerifyLogEntry;
 import org.irmacard.idemix.IdemixService;
-import org.irmacard.verification.common.AttributeDisjunction;
-import org.irmacard.verification.common.AttributeIdentifier;
-import org.irmacard.verification.common.DisclosureProofRequest;
+import org.irmacard.api.common.AttributeDisjunction;
+import org.irmacard.api.common.AttributeIdentifier;
+import org.irmacard.api.common.DisclosureProofRequest;
 
 import java.lang.reflect.Type;
 import java.math.BigInteger;

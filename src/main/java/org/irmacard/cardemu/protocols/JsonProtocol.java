@@ -4,11 +4,12 @@ import android.os.AsyncTask;
 import android.util.Log;
 import org.acra.ACRA;
 import org.irmacard.cardemu.*;
+import org.irmacard.cardemu.api.IssuingRequest;
 import org.irmacard.credentials.CredentialsException;
 import org.irmacard.credentials.idemix.proofs.ProofList;
-import org.irmacard.verification.common.DisclosureProofRequest;
-import org.irmacard.verification.common.DisclosureProofResult;
-import org.irmacard.verification.common.util.GsonUtil;
+import org.irmacard.api.common.DisclosureProofRequest;
+import org.irmacard.api.common.DisclosureProofResult;
+import org.irmacard.api.common.util.GsonUtil;
 
 public class JsonProtocol extends Protocol {
 	private static String TAG = "CardEmuJson";
@@ -35,7 +36,7 @@ public class JsonProtocol extends Protocol {
 			protected HttpClientResult<DisclosureProofRequest> doInBackground(Void... params) {
 				try {
 					DisclosureProofRequest request = client.doGet(DisclosureProofRequest.class, server);
-					return new HttpClientResult<DisclosureProofRequest>(request);
+					return new HttpClientResult<>(request);
 				} catch (HttpClient.HttpClientException e) {
 					return new HttpClientResult<DisclosureProofRequest>(e);
 				}

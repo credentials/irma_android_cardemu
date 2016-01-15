@@ -40,8 +40,8 @@ import android.widget.LinearLayout;
 import android.widget.TextView;
 import org.irmacard.cardemu.CredentialManager;
 import org.irmacard.cardemu.R;
-import org.irmacard.verification.common.AttributeDisjunction;
-import org.irmacard.verification.common.AttributeIdentifier;
+import org.irmacard.api.common.AttributeDisjunction;
+import org.irmacard.api.common.AttributeIdentifier;
 
 public class DisjunctionFragment extends Fragment {
 	AttributeDisjunction disjunction;

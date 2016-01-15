@@ -35,8 +35,8 @@ import android.app.FragmentTransaction;
 import android.os.Bundle;
 import android.view.View;
 import org.irmacard.cardemu.R;
-import org.irmacard.verification.common.AttributeDisjunction;
-import org.irmacard.verification.common.DisclosureProofRequest;
+import org.irmacard.api.common.AttributeDisjunction;
+import org.irmacard.api.common.DisclosureProofRequest;
 
 public class DisclosureInformationActivity extends Activity {
 	DisclosureProofRequest request;

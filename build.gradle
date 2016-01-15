@@ -114,7 +114,7 @@ dependencies {
 
     compile "org.irmacard.android:irma_android_library:0.10.2"
     compile 'org.irmacard.metrics:irma_metrics_common:0.1.1'
-    compile 'org.irmacard.verification:irma_verification_common:0.1.5'
+    compile 'org.irmacard.api:irma_api_common:0.1.6'
     compile('org.irmacard.mno:irma_mno_common:0.1.1')  {
         transitive = false // Prevent it from including Scuba
     }

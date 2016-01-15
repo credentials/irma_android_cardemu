@@ -11,10 +11,10 @@ import org.irmacard.cardemu.CredentialManager;
 import org.irmacard.cardemu.MainActivity;
 import org.irmacard.cardemu.disclosuredialog.DisclosureDialogFragment;
 import org.irmacard.cardemu.disclosuredialog.DisclosureInformationActivity;
-import org.irmacard.verification.common.AttributeDisjunction;
-import org.irmacard.verification.common.DisclosureProofRequest;
-import org.irmacard.verification.common.DisclosureQr;
-import org.irmacard.verification.common.util.GsonUtil;
+import org.irmacard.api.common.AttributeDisjunction;
+import org.irmacard.api.common.DisclosureProofRequest;
+import org.irmacard.api.common.DisclosureQr;
+import org.irmacard.api.common.util.GsonUtil;
 
 import java.util.ArrayList;
 import java.util.List;
