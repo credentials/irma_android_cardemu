@@ -3,10 +3,7 @@ package org.irmacard.cardemu.protocols;
 import android.os.AsyncTask;
 import android.util.Log;
 import org.acra.ACRA;
-import org.irmacard.cardemu.CredentialManager;
-import org.irmacard.cardemu.DisclosureStartResult;
-import org.irmacard.cardemu.HttpClient;
-import org.irmacard.cardemu.MainActivity;
+import org.irmacard.cardemu.*;
 import org.irmacard.credentials.CredentialsException;
 import org.irmacard.credentials.idemix.proofs.ProofList;
 import org.irmacard.verification.common.DisclosureProofRequest;
@@ -16,41 +13,46 @@ import org.irmacard.verification.common.util.GsonUtil;
 public class JsonProtocol extends Protocol {
 	private static String TAG = "CardEmuJson";
 
-	private String disclosureServer;
+	private String server;
 
 	public void connect(String url) {
 		if (!url.endsWith("/"))
 			url = url + "/";
-		disclosureServer = url;
-		Log.i(TAG, "Retrieving disclosure request: " + url);
+		server = url;
+
+		startDisclosure();
+	}
+
+	private void startDisclosure() {
+		Log.i(TAG, "Retrieving disclosure request: " + server);
 
 		activity.setState(MainActivity.STATE_CONNECTING_TO_SERVER);
-		final String server = url;
+		final String server = this.server;
 		final HttpClient client = new HttpClient(GsonUtil.getGson());
 
-		new AsyncTask<Void,Void,DisclosureStartResult>() {
+		new AsyncTask<Void,Void,HttpClientResult<DisclosureProofRequest>>() {
 			@Override
-			protected DisclosureStartResult doInBackground(Void... params) {
+			protected HttpClientResult<DisclosureProofRequest> doInBackground(Void... params) {
 				try {
 					DisclosureProofRequest request = client.doGet(DisclosureProofRequest.class, server);
-					return new DisclosureStartResult(request);
+					return new HttpClientResult<DisclosureProofRequest>(request);
 				} catch (HttpClient.HttpClientException e) {
-					return new DisclosureStartResult(e);
+					return new HttpClientResult<DisclosureProofRequest>(e);
 				}
 			}
 
 			@Override
-			protected void onPostExecute(DisclosureStartResult result) {
-				if (result.request != null) {
+			protected void onPostExecute(HttpClientResult<DisclosureProofRequest> result) {
+				if (result.getObject() != null) {
 					activity.setState(MainActivity.STATE_READY);
-					askForVerificationPermission(result.request);
+					askForVerificationPermission(result.getObject());
 				} else {
 					cancelDisclosure();
 					String feedback;
-					if (result.exception.getCause() != null)
-						feedback =  result.exception.getCause().getMessage();
+					if (result.getException().getCause() != null)
+						feedback =  result.getException().getCause().getMessage();
 					else
-						feedback = "Server returned status " + result.exception.status;
+						feedback = "Server returned status " + result.getException().status;
 					activity.setFeedback(feedback, "failure");
 				}
 			}
@@ -59,12 +61,12 @@ public class JsonProtocol extends Protocol {
 
 	public void disclose(final DisclosureProofRequest request) {
 		activity.setState(MainActivity.STATE_COMMUNICATING);
-		Log.i(TAG, "Sending disclosure proofs to " + disclosureServer);
+		Log.i(TAG, "Sending disclosure proofs to " + server);
 
 		new AsyncTask<Void,Void,String>() {
 			HttpClient client = new HttpClient(GsonUtil.getGson());
 			String successMessage = "Done";
-			String server = disclosureServer;
+			String server = JsonProtocol.this.server;
 			boolean shouldCancel = false;
 
 			@Override
@@ -125,7 +127,7 @@ public class JsonProtocol extends Protocol {
 	@Override
 	public void cancelDisclosure() {
 		super.cancelDisclosure();
-		Log.i(TAG, "Canceling disclosure to " + disclosureServer);
+		Log.i(TAG, "Canceling disclosure to " + server);
 
 		new AsyncTask<String,Void,Void>() {
 			@Override protected Void doInBackground(String... params) {
@@ -136,8 +138,8 @@ public class JsonProtocol extends Protocol {
 				}
 				return null;
 			}
-		}.execute(disclosureServer);
+		}.execute(server);
 
-		disclosureServer = null;
+		server = null;
 	}
 }
