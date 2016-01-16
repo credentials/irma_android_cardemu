@@ -36,10 +36,15 @@ import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
 import com.google.gson.reflect.TypeToken;
 import net.sf.scuba.smartcards.CardServiceException;
+import org.irmacard.api.common.CredentialRequest;
+import org.irmacard.api.common.IssuingRequest;
 import org.irmacard.credentials.Attributes;
 import org.irmacard.credentials.CredentialsException;
+import org.irmacard.credentials.idemix.CredentialBuilder;
 import org.irmacard.credentials.idemix.IdemixCredential;
 import org.irmacard.credentials.idemix.IdemixCredentials;
+import org.irmacard.credentials.idemix.messages.IssueCommitmentMessage;
+import org.irmacard.credentials.idemix.messages.IssueSignatureMessage;
 import org.irmacard.credentials.idemix.proofs.ProofList;
 import org.irmacard.credentials.idemix.proofs.ProofListBuilder;
 import org.irmacard.credentials.idemix.smartcard.IRMACard;
@@ -48,6 +53,7 @@ import org.irmacard.credentials.idemix.smartcard.SmartCardEmulatorService;
 import org.irmacard.credentials.info.CredentialDescription;
 import org.irmacard.credentials.info.DescriptionStore;
 import org.irmacard.credentials.info.InfoException;
+import org.irmacard.credentials.util.log.IssueLogEntry;
 import org.irmacard.credentials.util.log.LogEntry;
 import org.irmacard.credentials.util.log.RemoveLogEntry;
 import org.irmacard.credentials.util.log.VerifyLogEntry;
@@ -78,6 +84,9 @@ public class CredentialManager {
 	private static final String TAG = "CredentialManager";
 	private static final String CREDENTIAL_STORAGE = "credentials";
 	private static final String LOG_STORAGE = "logs";
+
+	// Issuing state
+	private static List<CredentialBuilder> credentialBuilders;
 
 	public static void init(SharedPreferences s) {
 		settings = s;
@@ -531,5 +540,64 @@ public class CredentialManager {
 		} catch (InfoException e) {
 			return false;
 		}
+	}
+
+	/**
+	 * Compute the first message in the issuing protocol: the commitments to the secret key and v_prime,
+	 * the corresponding proofs of correctness, and the user nonce.
+	 * @param request The request containing the description of the credentials that will be issued
+	 * @return The message
+	 * @throws InfoException If one of the credentials in the request or its attributes is not contained or
+	 *         does not match our DescriptionStore
+	 */
+	public static IssueCommitmentMessage getIssueCommitments(IssuingRequest request)
+			throws InfoException {
+		if (!request.credentialsMatchStore())
+			throw new InfoException("Request contains mismatching attributes");
+
+		// Initialize issuing state
+		credentialBuilders = new ArrayList<>(request.getCredentials().size());
+
+		// TODO This reuses the same nonce for all credentials: not good once pk sizes start to vary
+		BigInteger nonce2 = CredentialBuilder.createReceiverNonce(request.getCredentials().get(0).getPublicKey());
+
+		// Construct the commitment proofs
+		ProofListBuilder proofsBuilder = new ProofListBuilder(request.getContext(), request.getNonce());
+		for (CredentialRequest cred : request.getCredentials()) {
+			CredentialBuilder cb = new CredentialBuilder(
+					cred.getPublicKey(), cred.convertToBigIntegers(), request.getContext(), nonce2);
+			proofsBuilder.addCredentialBuilder(cb);
+			credentialBuilders.add(cb);
+		}
+
+		return new IssueCommitmentMessage(proofsBuilder.build(), nonce2);
+	}
+
+	/**
+	 * Given the issuer's reply to our {@link IssueCommitmentMessage}, compute the new Idemix credentials and save them
+	 * @param sigs The message from the issuer containing the CL signatures and proofs of correctness
+	 * @throws InfoException If one of the credential types is unknown (this should already have happened in
+	 *         {@link #getIssueCommitments(IssuingRequest)})
+	 * @throws CredentialsException If one of the credentials could not be reconstructed (e.g., because of an incorrect
+	 *         issuer proof)
+	 */
+	public static void constructCredentials(List<IssueSignatureMessage> sigs)
+			throws InfoException, CredentialsException {
+		if (sigs.size() != credentialBuilders.size())
+			throw new CredentialsException("Received unexpected amount of signatures");
+
+		for (int i = 0; i < sigs.size(); ++i) {
+			IRMAIdemixCredential irmaCred = new IRMAIdemixCredential(null);
+			IdemixCredential cred = credentialBuilders.get(i).constructCredential(sigs.get(i));
+			irmaCred.setCredential(cred);
+
+			short id = Attributes.extractCredentialId(cred.getAttribute(1));
+			credentials.put(id, irmaCred);
+
+			CredentialDescription cd = DescriptionStore.getInstance().getCredentialDescription(id);
+			logs.add(new IssueLogEntry(Calendar.getInstance().getTime(), cd));
+		}
+
+		save();
 	}
 }

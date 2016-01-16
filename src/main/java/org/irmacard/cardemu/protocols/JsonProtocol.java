@@ -2,16 +2,24 @@ package org.irmacard.cardemu.protocols;
 
 import android.os.AsyncTask;
 import android.util.Log;
+import com.google.gson.reflect.TypeToken;
 import org.acra.ACRA;
 import org.irmacard.cardemu.*;
 import org.irmacard.cardemu.httpclient.HttpClient;
 import org.irmacard.cardemu.httpclient.HttpClientException;
 import org.irmacard.cardemu.httpclient.HttpClientResult;
 import org.irmacard.credentials.CredentialsException;
+import org.irmacard.credentials.idemix.messages.IssueCommitmentMessage;
+import org.irmacard.credentials.idemix.messages.IssueSignatureMessage;
 import org.irmacard.credentials.idemix.proofs.ProofList;
+import org.irmacard.api.common.IssuingRequest;
 import org.irmacard.api.common.DisclosureProofRequest;
 import org.irmacard.api.common.DisclosureProofResult;
 import org.irmacard.api.common.util.GsonUtil;
+import org.irmacard.credentials.info.InfoException;
+
+import java.lang.reflect.Type;
+import java.util.ArrayList;
 
 public class JsonProtocol extends Protocol {
 	private static String TAG = "CardEmuJson";
@@ -23,7 +31,73 @@ public class JsonProtocol extends Protocol {
 			url = url + "/";
 		server = url;
 
-		startDisclosure();
+		if (server.contains("/verification/"))
+			startDisclosure();
+		else if (server.contains("/issue/"))
+			startIssuance();
+	}
+
+	public void startIssuance() {
+		Log.i(TAG, "Retrieving issuing request: " + server);
+
+		activity.setState(MainActivity.STATE_CONNECTING_TO_SERVER);
+		final String server = this.server;
+		final HttpClient client = new HttpClient(GsonUtil.getGson());
+
+		new AsyncTask<Void,Void,HttpClientResult<IssuingRequest>>() {
+			@Override
+			protected HttpClientResult<IssuingRequest> doInBackground(Void... params) {
+				try {
+					IssuingRequest request = client.doGet(IssuingRequest.class, server);
+					return new HttpClientResult<>(request);
+				} catch (HttpClientException e) {
+					return new HttpClientResult<>(e);
+				}
+			}
+
+			@Override
+			protected void onPostExecute(HttpClientResult<IssuingRequest> result) {
+				Log.i(TAG, result.getObject().toString());
+				if (result.getObject() == null)
+					return;
+
+				try {
+					postCommitments(CredentialManager.getIssueCommitments(result.getObject()), client);
+				} catch (InfoException e) {
+					e.printStackTrace();
+				}
+			}
+		}.execute();
+	}
+
+	private void postCommitments(final IssueCommitmentMessage msg, final HttpClient client) {
+		new AsyncTask<Void, Void, HttpClientResult<ArrayList<IssueSignatureMessage>>>() {
+			@Override
+			protected HttpClientResult<ArrayList<IssueSignatureMessage>> doInBackground(Void... params) {
+				Type t = new TypeToken<ArrayList<IssueSignatureMessage>>(){}.getType();
+				try {
+					ArrayList<IssueSignatureMessage> sigs = client.doPost(t, server + "commitments", msg);
+					return new HttpClientResult<>(sigs);
+				} catch (HttpClientException e) {
+					return new HttpClientResult<>(e);
+				}
+			}
+
+			@Override
+			protected void onPostExecute(HttpClientResult<ArrayList<IssueSignatureMessage>> sigs) {
+				if (sigs.getObject() == null)
+					return; // TODO
+
+				try {
+					CredentialManager.constructCredentials(sigs.getObject());
+					activity.setFeedback("Issuing was successfull", "success");
+					activity.setState(MainActivity.STATE_IDLE);
+					done();
+				} catch (InfoException|CredentialsException e) {
+					e.printStackTrace();
+				}
+			}
+		}.execute();
 	}
 
 	private void startDisclosure() {
