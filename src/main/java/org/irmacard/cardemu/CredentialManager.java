@@ -76,6 +76,7 @@ import java.util.*;
 public class CredentialManager {
 	private static HashMap<Short, IRMAIdemixCredential> credentials = new HashMap<>();
 	private static List<LogEntry> logs = new LinkedList<>();
+	private static BigInteger secretKey;
 
 	// Type tokens for Gson (de)serialization
 	private static Type credentialsType = new TypeToken<HashMap<Short, IRMAIdemixCredential>>() {}.getType();
@@ -89,8 +90,6 @@ public class CredentialManager {
 
 	// Issuing state
 	private static List<CredentialBuilder> credentialBuilders;
-
-	private static BigInteger secretKey;
 
 	public static void init(SharedPreferences s) {
 		settings = s;
@@ -376,21 +375,30 @@ public class CredentialManager {
 	 * @throws CredentialsException if something goes wrong
 	 */
 	public static ProofList getProofs(DisclosureProofRequest request) throws CredentialsException {
-		if (!isApproved(request))
+		ProofListBuilder builder = new ProofListBuilder(request.getContext(), request.getNonce());
+		return getProofs(request.getContent(), builder).build();
+	}
+
+	/**
+	 * For the selected attribute of each disjunction, add a disclosure proof-commitment to the specified
+	 * proof builder.
+	 */
+	private static ProofListBuilder getProofs(List<AttributeDisjunction> attributes, ProofListBuilder builder)
+			throws CredentialsException {
+		if (!isApproved(attributes))
 			throw new CredentialsException("Select an attribute in each disjunction first");
 
-		Map<Short, List<Integer>> toDisclose = groupAttributesById(request.getContent());
-		ProofListBuilder builder = new ProofListBuilder(request.getContext(), request.getNonce());
+		Map<Short, List<Integer>> toDisclose = groupAttributesById(attributes);
 
 		for (short id : toDisclose.keySet()) {
-			List<Integer> attributes = toDisclose.get(id);
+			List<Integer> attrs = toDisclose.get(id);
 			IdemixCredential credential = credentials.get(id).getCredential();
-			builder.addProofD(credential, attributes);
+			builder.addProofD(credential, attrs);
 		}
 
 		logs.addAll(0, generateLogEntries(toDisclose));
 
-		return builder.build();
+		return builder;
 	}
 
 	/**
@@ -431,6 +439,9 @@ public class CredentialManager {
 		return toDisclose;
 	}
 
+	/**
+	 * Log that we disclosed the specified attributes.
+	 */
 	private static List<LogEntry> generateLogEntries(Map<Short, List<Integer>> toDisclose)
 	throws CredentialsException {
 		List<LogEntry> logs = new ArrayList<>(toDisclose.size());
@@ -493,8 +504,8 @@ public class CredentialManager {
 	 * Returns true if the request has been approved by the user - that is, if each disjunction of the request has a
 	 * selected attribute
 	 */
-	public static boolean isApproved(DisclosureProofRequest request) {
-		for (AttributeDisjunction disjunction : request.getContent())
+	public static boolean isApproved(List<AttributeDisjunction> list) {
+		for (AttributeDisjunction disjunction : list)
 			if (disjunction.getSelected() == null)
 				return false;
 
@@ -503,7 +514,8 @@ public class CredentialManager {
 
 	/**
 	 * Given an {@link AttributeDisjunction}, return attributes (and their values) that we have and that are
-	 * contained in the disjunction.
+	 * contained in the disjunction. If the disjunction has values for each identifier, then this returns
+	 * only those attributes matching those values.
 	 */
 	public static LinkedHashMap<AttributeIdentifier, String> getCandidates(AttributeDisjunction disjunction) {
 		LinkedHashMap<AttributeIdentifier, String> map = new LinkedHashMap<>();
@@ -522,9 +534,12 @@ public class CredentialManager {
 				if (attribute.isCredential() && cd != null) {
 					map.put(attribute, cd.getIssuerDescription().getName() + " - " + cd.getShortName());
 				}
-				if (!attribute.isCredential() && foundAttrs.get(attribute.getAttributeName()) != null){
+				if (!attribute.isCredential() && foundAttrs.get(attribute.getAttributeName()) != null) {
+					String requiredValue = disjunction.getValues().get(attribute);
 					String value = new String(foundAttrs.get(attribute.getAttributeName()));
-					map.put(attribute, value);
+
+					if (requiredValue == null || requiredValue.equals(value))
+						map.put(attribute, value);
 				}
 			}
 		}
@@ -532,6 +547,9 @@ public class CredentialManager {
 		return map;
 	}
 
+	/**
+	 * Check if we have the specified attribute.
+	 */
 	public static boolean contains(AttributeIdentifier identifier) {
 		try {
 			Attributes attrs = getAttributes(identifier.getIssuerName(), identifier.getCredentialName());
@@ -570,7 +588,7 @@ public class CredentialManager {
 	 *         does not match our DescriptionStore
 	 */
 	public static IssueCommitmentMessage getIssueCommitments(IssuingRequest request)
-			throws InfoException {
+			throws InfoException, CredentialsException {
 		if (!request.credentialsMatchStore())
 			throw new InfoException("Request contains mismatching attributes");
 
@@ -591,6 +609,10 @@ public class CredentialManager {
 			credentialBuilders.add(cb);
 		}
 
+		// Add disclosures, if any
+		if (request.getRequiredAttributes().size() > 0)
+			getProofs(request.getRequiredAttributes(), proofsBuilder);
+
 		return new IssueCommitmentMessage(proofsBuilder.build(), nonce2);
 	}
 
@@ -608,6 +630,7 @@ public class CredentialManager {
 			throw new CredentialsException("Received unexpected amount of signatures");
 
 		for (int i = 0; i < sigs.size(); ++i) {
+			// TODO what about the IdemixFlags contained in IRMAIdemixCredential?
 			IRMAIdemixCredential irmaCred = new IRMAIdemixCredential(null);
 			IdemixCredential cred = credentialBuilders.get(i).constructCredential(sigs.get(i));
 			irmaCred.setCredential(cred);
@@ -616,7 +639,7 @@ public class CredentialManager {
 			credentials.put(id, irmaCred);
 
 			CredentialDescription cd = DescriptionStore.getInstance().getCredentialDescription(id);
-			logs.add(new IssueLogEntry(Calendar.getInstance().getTime(), cd));
+			logs.add(0, new IssueLogEntry(Calendar.getInstance().getTime(), cd));
 		}
 
 		save();

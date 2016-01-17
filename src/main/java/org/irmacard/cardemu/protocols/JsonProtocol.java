@@ -26,6 +26,10 @@ public class JsonProtocol extends Protocol {
 
 	private String server;
 
+	// While asking for permission for disclosure during a bound issue/disclosure session, this keeps track
+	// of the issuing request
+	private IssuingRequest issuingRequest;
+
 	public void connect(String url) {
 		if (!url.endsWith("/"))
 			url = url + "/";
@@ -67,6 +71,16 @@ public class JsonProtocol extends Protocol {
 		activity.setState(MainActivity.STATE_IDLE);
 	}
 
+	@Override
+	public void onDiscloseOK(DisclosureProofRequest request) {
+		if (issuingRequest != null) {
+			finishIssuance(issuingRequest);
+			issuingRequest = null;
+		}
+		else
+			disclose(request);
+	}
+
 	/**
 	 * Retrieve an {@link IssuingRequest} from the server
 	 */
@@ -80,7 +94,17 @@ public class JsonProtocol extends Protocol {
 		client.get(IssuingRequest.class, server, new HttpResultHandler<IssuingRequest>() {
 			@Override public void onSuccess(IssuingRequest result) {
 				Log.i(TAG, result.toString());
-				finishIssuance(result, client);
+				if (result.getRequiredAttributes().size() == 0) {
+					// Nothing to show? Proceed immediately
+					finishIssuance(result);
+				} else {
+					// First ask if we want to disclose the asked-for attributes. The dialog will select the
+					// attributes to disclose.
+					DisclosureProofRequest disclosureRequest =  new DisclosureProofRequest(
+							result.getNonce(), result.getContext(), result.getRequiredAttributes());
+					issuingRequest = result;
+					askForVerificationPermission(disclosureRequest);
+				}
 			}
 
 			@Override public void onError(HttpClientException exception) {
@@ -94,15 +118,20 @@ public class JsonProtocol extends Protocol {
 	 * (using the specified {@link HttpClient}). If the server returns corresponding CL signatures,
 	 * construct and save the new Idemix credentials.
 	 */
-	private void finishIssuance(IssuingRequest request, final HttpClient client) {
+	private void finishIssuance(IssuingRequest request) {
 		Log.i(TAG, "Posting issuing commitments");
 
+		final HttpClient client = new HttpClient(GsonUtil.getGson());
 		IssueCommitmentMessage msg;
 		try {
 			msg = CredentialManager.getIssueCommitments(request);
 		} catch (InfoException e) {
 			e.printStackTrace();
 			activity.setFeedback("Issuing failed: wrong credential type", "failure");
+			activity.setState(MainActivity.STATE_IDLE);
+			return;
+		} catch (CredentialsException e) {
+			activity.setFeedback("Missing required attributes", "failure");
 			activity.setState(MainActivity.STATE_IDLE);
 			return;
 		}
