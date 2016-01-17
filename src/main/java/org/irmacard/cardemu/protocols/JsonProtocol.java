@@ -7,7 +7,7 @@ import org.acra.ACRA;
 import org.irmacard.cardemu.*;
 import org.irmacard.cardemu.httpclient.HttpClient;
 import org.irmacard.cardemu.httpclient.HttpClientException;
-import org.irmacard.cardemu.httpclient.HttpClientResult;
+import org.irmacard.cardemu.httpclient.HttpResultHandler;
 import org.irmacard.credentials.CredentialsException;
 import org.irmacard.credentials.idemix.messages.IssueCommitmentMessage;
 import org.irmacard.credentials.idemix.messages.IssueSignatureMessage;
@@ -44,6 +44,14 @@ public class JsonProtocol extends Protocol {
 		else
 			feedback = "Server returned status " + e.status;
 
+		fail(feedback);
+	}
+
+	private void fail(Exception e) {
+		fail(e.getMessage());
+	}
+
+	private void fail(String feedback) {
 		Log.w(TAG, feedback);
 
 		activity.setFeedback(feedback, "failure");
@@ -56,28 +64,17 @@ public class JsonProtocol extends Protocol {
 		activity.setState(MainActivity.STATE_CONNECTING_TO_SERVER);
 		final String server = this.server;
 		final HttpClient client = new HttpClient(GsonUtil.getGson());
-
-		new AsyncTask<Void,Void,HttpClientResult<IssuingRequest>>() {
-			@Override
-			protected HttpClientResult<IssuingRequest> doInBackground(Void... params) {
-				try {
-					IssuingRequest request = client.doGet(IssuingRequest.class, server);
-					return new HttpClientResult<>(request);
-				} catch (HttpClientException e) {
-					return new HttpClientResult<>(e);
-				}
+		
+		client.get(IssuingRequest.class, server, new HttpResultHandler<IssuingRequest>() {
+			@Override public void onSuccess(IssuingRequest result) {
+				Log.i(TAG, result.toString());
+				postCommitments(result, client);
 			}
 
-			@Override
-			protected void onPostExecute(HttpClientResult<IssuingRequest> result) {
-				if (result.getObject() != null) {
-					Log.i(TAG, result.getObject().toString());
-					postCommitments(result.getObject(), client);
-				} else {
-					fail(result.getException());
-				}
+			@Override public void onError(HttpClientException exception) {
+				fail(exception);
 			}
-		}.execute();
+		});
 	}
 
 	private void postCommitments(IssuingRequest request, final HttpClient client) {
@@ -93,35 +90,23 @@ public class JsonProtocol extends Protocol {
 			return;
 		}
 
-		new AsyncTask<IssueCommitmentMessage, Void, HttpClientResult<ArrayList<IssueSignatureMessage>>>() {
-			@Override
-			protected HttpClientResult<ArrayList<IssueSignatureMessage>> doInBackground(IssueCommitmentMessage... params) {
-				IssueCommitmentMessage msg = params[0];
-				Type t = new TypeToken<ArrayList<IssueSignatureMessage>>(){}.getType();
+		Type t = new TypeToken<ArrayList<IssueSignatureMessage>>(){}.getType();
+		client.post(t, server + "commitments", msg, new HttpResultHandler<ArrayList<IssueSignatureMessage>>() {
+			@Override public void onSuccess(ArrayList<IssueSignatureMessage> result) {
 				try {
-					ArrayList<IssueSignatureMessage> sigs = client.doPost(t, server + "commitments", msg);
-					return new HttpClientResult<>(sigs);
-				} catch (HttpClientException e) {
-					return new HttpClientResult<>(e);
+					CredentialManager.constructCredentials(result);
+					activity.setFeedback("Issuing was successfull", "success");
+					activity.setState(MainActivity.STATE_IDLE);
+					done();
+				} catch (InfoException|CredentialsException e) {
+					fail(e);
 				}
 			}
 
-			@Override
-			protected void onPostExecute(HttpClientResult<ArrayList<IssueSignatureMessage>> sigs) {
-				if (sigs.getObject() != null) {
-					try {
-						CredentialManager.constructCredentials(sigs.getObject());
-						activity.setFeedback("Issuing was successfull", "success");
-						activity.setState(MainActivity.STATE_IDLE);
-						done();
-					} catch (InfoException|CredentialsException e) {
-						fail(new HttpClientException(e));
-					}
-				} else {
-					fail(sigs.getException());
-				}
+			@Override public void onError(HttpClientException exception) {
+				fail(exception);
 			}
-		}.execute(msg);
+		});
 	}
 
 	private void startDisclosure() {
@@ -131,96 +116,57 @@ public class JsonProtocol extends Protocol {
 		final String server = this.server;
 		final HttpClient client = new HttpClient(GsonUtil.getGson());
 
-		new AsyncTask<Void,Void,HttpClientResult<DisclosureProofRequest>>() {
-			@Override
-			protected HttpClientResult<DisclosureProofRequest> doInBackground(Void... params) {
-				try {
-					DisclosureProofRequest request = client.doGet(DisclosureProofRequest.class, server);
-					return new HttpClientResult<>(request);
-				} catch (HttpClientException e) {
-					return new HttpClientResult<>(e);
+		client.get(DisclosureProofRequest.class, server, new HttpResultHandler<DisclosureProofRequest>() {
+			@Override public void onSuccess(DisclosureProofRequest result) {
+				if (result.getContent().size() == 0 || result.getNonce() == null || result.getContext() == null) {
+					activity.setFeedback("Got malformed disclosure request", "failure");
+					cancelDisclosure();
+					return;
 				}
+				activity.setState(MainActivity.STATE_READY);
+				askForVerificationPermission(result);
 			}
 
-			@Override
-			protected void onPostExecute(HttpClientResult<DisclosureProofRequest> result) {
-				if (result.getObject() != null) {
-					activity.setState(MainActivity.STATE_READY);
-					DisclosureProofRequest request = result.getObject();
-					if (request.getContent().size() == 0 || request.getNonce() == null || request.getContext() == null) {
-						activity.setFeedback("Got malformed disclosure request", "failure");
-						cancelDisclosure();
-						return;
-					}
-					askForVerificationPermission(request);
-				} else {
-					cancelDisclosure();
-					fail(result.getException());
-				}
+			@Override public void onError(HttpClientException exception) {
+				cancelDisclosure();
+				fail(exception);
 			}
-		}.execute();
+		});
 	}
 
 	public void disclose(final DisclosureProofRequest request) {
 		activity.setState(MainActivity.STATE_COMMUNICATING);
 		Log.i(TAG, "Sending disclosure proofs to " + server);
 
-		new AsyncTask<Void,Void,String>() {
-			HttpClient client = new HttpClient(GsonUtil.getGson());
-			String successMessage = "Done";
-			String server = JsonProtocol.this.server;
-			boolean shouldCancel = false;
+		ProofList proofs;
+		try {
+			proofs = CredentialManager.getProofs(request);
+		} catch (CredentialsException e) {
+			e.printStackTrace();
+			cancelDisclosure();
+			fail(e);
+			return;
+		}
 
-			@Override
-			protected String doInBackground(Void[] params) {
-				DisclosureProofResult.Status status;
-
-				try {
-					ProofList proofs;
-					try {
-						proofs = CredentialManager.getProofs(request);
-					} catch (CredentialsException e) {
-						e.printStackTrace();
-						shouldCancel = true;
-						return e.getMessage();
-					}
-
-					status = client.doPost(DisclosureProofResult.Status.class, server + "proofs", proofs);
-				} catch (HttpClientException e) {
-					e.printStackTrace();
-					if (e.getCause() != null)
-						return e.getCause().getMessage();
-					else
-						return "Server returned status " + e.status;
-				}
-
-				if (status == DisclosureProofResult.Status.VALID)
-					return successMessage;
-				else { // We successfully computed a proof but server rejects it? That's fishy, report it
-					String feedback = "Server rejected proof: " + status.name().toLowerCase();
+		HttpClient client = new HttpClient(GsonUtil.getGson());
+		client.post(DisclosureProofResult.Status.class, server + "proofs", proofs,
+			new HttpResultHandler<DisclosureProofResult.Status>() {
+			@Override public void onSuccess(DisclosureProofResult.Status result) {
+				if (result == DisclosureProofResult.Status.VALID) {
+					activity.setFeedback("Successfully disclosed attributes", "success");
+					activity.setState(MainActivity.STATE_IDLE);
+					done();
+				} else { // We successfully computed a proof but server rejects it? That's fishy, report it
+					String feedback = "Server rejected proof: " + result.name().toLowerCase();
 					ACRA.getErrorReporter().handleException(new Exception(feedback));
-					return feedback;
+					fail(feedback);
 				}
 			}
 
-			@Override
-			protected void onPostExecute(String result) {
-				activity.setState(MainActivity.STATE_IDLE);
-				String status = result.equals(successMessage) ? "success" : "failure";
-
-				if (shouldCancel)
-					cancelDisclosure();
-
-				// Translate some possible problems to more human-readable versions
-				if (result.startsWith("failed to connect"))
-					result = "Could not connect";
-				if (result.startsWith("Supplied sessionToken not found or expired"))
-					result = "Server refused connection";
-
-				activity.setFeedback(result, status);
-				done();
+			@Override public void onError(HttpClientException exception) {
+				fail(exception);
 			}
-		}.execute();
+		});
 	}
 
 	/**
