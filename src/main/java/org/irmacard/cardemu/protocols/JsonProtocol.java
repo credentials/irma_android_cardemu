@@ -37,6 +37,19 @@ public class JsonProtocol extends Protocol {
 			startIssuance();
 	}
 
+	private void fail(HttpClientException e) {
+		String feedback;
+		if (e.getCause() != null)
+			feedback =  e.getCause().getMessage();
+		else
+			feedback = "Server returned status " + e.status;
+
+		Log.w(TAG, feedback);
+
+		activity.setFeedback(feedback, "failure");
+		activity.setState(MainActivity.STATE_IDLE);
+	}
+
 	public void startIssuance() {
 		Log.i(TAG, "Retrieving issuing request: " + server);
 
@@ -57,23 +70,33 @@ public class JsonProtocol extends Protocol {
 
 			@Override
 			protected void onPostExecute(HttpClientResult<IssuingRequest> result) {
-				Log.i(TAG, result.getObject().toString());
-				if (result.getObject() == null)
-					return;
-
-				try {
-					postCommitments(CredentialManager.getIssueCommitments(result.getObject()), client);
-				} catch (InfoException e) {
-					e.printStackTrace();
+				if (result.getObject() != null) {
+					Log.i(TAG, result.getObject().toString());
+					postCommitments(result.getObject(), client);
+				} else {
+					fail(result.getException());
 				}
 			}
 		}.execute();
 	}
 
-	private void postCommitments(final IssueCommitmentMessage msg, final HttpClient client) {
-		new AsyncTask<Void, Void, HttpClientResult<ArrayList<IssueSignatureMessage>>>() {
+	private void postCommitments(IssuingRequest request, final HttpClient client) {
+		Log.i(TAG, "Posting issuing commitments");
+
+		IssueCommitmentMessage msg;
+		try {
+			msg = CredentialManager.getIssueCommitments(request);
+		} catch (InfoException e) {
+			e.printStackTrace();
+			activity.setFeedback("Issuing failed: wrong credential type", "failure");
+			activity.setState(MainActivity.STATE_IDLE);
+			return;
+		}
+
+		new AsyncTask<IssueCommitmentMessage, Void, HttpClientResult<ArrayList<IssueSignatureMessage>>>() {
 			@Override
-			protected HttpClientResult<ArrayList<IssueSignatureMessage>> doInBackground(Void... params) {
+			protected HttpClientResult<ArrayList<IssueSignatureMessage>> doInBackground(IssueCommitmentMessage... params) {
+				IssueCommitmentMessage msg = params[0];
 				Type t = new TypeToken<ArrayList<IssueSignatureMessage>>(){}.getType();
 				try {
 					ArrayList<IssueSignatureMessage> sigs = client.doPost(t, server + "commitments", msg);
@@ -85,19 +108,20 @@ public class JsonProtocol extends Protocol {
 
 			@Override
 			protected void onPostExecute(HttpClientResult<ArrayList<IssueSignatureMessage>> sigs) {
-				if (sigs.getObject() == null)
-					return; // TODO
-
-				try {
-					CredentialManager.constructCredentials(sigs.getObject());
-					activity.setFeedback("Issuing was successfull", "success");
-					activity.setState(MainActivity.STATE_IDLE);
-					done();
-				} catch (InfoException|CredentialsException e) {
-					e.printStackTrace();
+				if (sigs.getObject() != null) {
+					try {
+						CredentialManager.constructCredentials(sigs.getObject());
+						activity.setFeedback("Issuing was successfull", "success");
+						activity.setState(MainActivity.STATE_IDLE);
+						done();
+					} catch (InfoException|CredentialsException e) {
+						fail(new HttpClientException(e));
+					}
+				} else {
+					fail(sigs.getException());
 				}
 			}
-		}.execute();
+		}.execute(msg);
 	}
 
 	private void startDisclosure() {
@@ -114,7 +138,7 @@ public class JsonProtocol extends Protocol {
 					DisclosureProofRequest request = client.doGet(DisclosureProofRequest.class, server);
 					return new HttpClientResult<>(request);
 				} catch (HttpClientException e) {
-					return new HttpClientResult<DisclosureProofRequest>(e);
+					return new HttpClientResult<>(e);
 				}
 			}
 
@@ -131,12 +155,7 @@ public class JsonProtocol extends Protocol {
 					askForVerificationPermission(request);
 				} else {
 					cancelDisclosure();
-					String feedback;
-					if (result.getException().getCause() != null)
-						feedback =  result.getException().getCause().getMessage();
-					else
-						feedback = "Server returned status " + result.getException().status;
-					activity.setFeedback(feedback, "failure");
+					fail(result.getException());
 				}
 			}
 		}.execute();
