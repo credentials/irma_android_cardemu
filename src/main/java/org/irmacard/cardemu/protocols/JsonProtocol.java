@@ -37,6 +37,9 @@ public class JsonProtocol extends Protocol {
 			startIssuance();
 	}
 
+	/**
+	 * Report the specified exception to the MainActivity
+	 */
 	private void fail(HttpClientException e) {
 		String feedback;
 		if (e.getCause() != null)
@@ -47,10 +50,16 @@ public class JsonProtocol extends Protocol {
 		fail(feedback);
 	}
 
+	/**
+	 * Report the specified exception to the MainActivity
+	 */
 	private void fail(Exception e) {
 		fail(e.getMessage());
 	}
 
+	/**
+	 * Report the specified feedback as a failure to the MainActivity
+	 */
 	private void fail(String feedback) {
 		Log.w(TAG, feedback);
 
@@ -58,6 +67,9 @@ public class JsonProtocol extends Protocol {
 		activity.setState(MainActivity.STATE_IDLE);
 	}
 
+	/**
+	 * Retrieve an {@link IssuingRequest} from the server
+	 */
 	public void startIssuance() {
 		Log.i(TAG, "Retrieving issuing request: " + server);
 
@@ -68,7 +80,7 @@ public class JsonProtocol extends Protocol {
 		client.get(IssuingRequest.class, server, new HttpResultHandler<IssuingRequest>() {
 			@Override public void onSuccess(IssuingRequest result) {
 				Log.i(TAG, result.toString());
-				postCommitments(result, client);
+				finishIssuance(result, client);
 			}
 
 			@Override public void onError(HttpClientException exception) {
@@ -77,7 +89,12 @@ public class JsonProtocol extends Protocol {
 		});
 	}
 
-	private void postCommitments(IssuingRequest request, final HttpClient client) {
+	/**
+	 * Given an {@link IssuingRequest}, compute the first issuing message and post it to the server
+	 * (using the specified {@link HttpClient}). If the server returns corresponding CL signatures,
+	 * construct and save the new Idemix credentials.
+	 */
+	private void finishIssuance(IssuingRequest request, final HttpClient client) {
 		Log.i(TAG, "Posting issuing commitments");
 
 		IssueCommitmentMessage msg;
@@ -109,6 +126,10 @@ public class JsonProtocol extends Protocol {
 		});
 	}
 
+	/**
+	 * Retrieve a {@link DisclosureProofRequest} from the server, see if we can satisfy it, and if so,
+	 * ask the user which attributes she wants to disclose.
+	 */
 	private void startDisclosure() {
 		Log.i(TAG, "Retrieving disclosure request: " + server);
 
@@ -134,6 +155,9 @@ public class JsonProtocol extends Protocol {
 		});
 	}
 
+	/**
+	 * Given a {@link DisclosureProofRequest} with selected attributes, perform the disclosure.
+	 */
 	public void disclose(final DisclosureProofRequest request) {
 		activity.setState(MainActivity.STATE_COMMUNICATING);
 		Log.i(TAG, "Sending disclosure proofs to " + server);
