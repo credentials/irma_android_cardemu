@@ -43,6 +43,7 @@ import org.irmacard.credentials.CredentialsException;
 import org.irmacard.credentials.idemix.CredentialBuilder;
 import org.irmacard.credentials.idemix.IdemixCredential;
 import org.irmacard.credentials.idemix.IdemixCredentials;
+import org.irmacard.credentials.idemix.IdemixSystemParameters;
 import org.irmacard.credentials.idemix.messages.IssueCommitmentMessage;
 import org.irmacard.credentials.idemix.messages.IssueSignatureMessage;
 import org.irmacard.credentials.idemix.proofs.ProofList;
@@ -64,6 +65,7 @@ import org.irmacard.api.common.DisclosureProofRequest;
 
 import java.lang.reflect.Type;
 import java.math.BigInteger;
+import java.security.SecureRandom;
 import java.util.*;
 
 /**
@@ -87,6 +89,8 @@ public class CredentialManager {
 
 	// Issuing state
 	private static List<CredentialBuilder> credentialBuilders;
+
+	private static BigInteger secretKey;
 
 	public static void init(SharedPreferences s) {
 		settings = s;
@@ -543,6 +547,21 @@ public class CredentialManager {
 	}
 
 	/**
+	 * Returns the secret key from one of our credentials; or, if we do not yet have any credentials,
+	 * a new secret key.
+	 */
+	private static BigInteger getSecretKey() {
+		if (secretKey == null) {
+			if (credentials == null || credentials.size() == 0)
+				secretKey = new BigInteger(new IdemixSystemParameters().l_m, new SecureRandom());
+			else
+				secretKey = credentials.values().iterator().next().getCredential().getAttribute(0);
+		}
+
+		return secretKey;
+	}
+
+	/**
 	 * Compute the first message in the issuing protocol: the commitments to the secret key and v_prime,
 	 * the corresponding proofs of correctness, and the user nonce.
 	 * @param request The request containing the description of the credentials that will be issued
@@ -563,6 +582,8 @@ public class CredentialManager {
 
 		// Construct the commitment proofs
 		ProofListBuilder proofsBuilder = new ProofListBuilder(request.getContext(), request.getNonce());
+		proofsBuilder.setSecretKey(getSecretKey());
+
 		for (CredentialRequest cred : request.getCredentials()) {
 			CredentialBuilder cb = new CredentialBuilder(
 					cred.getPublicKey(), cred.convertToBigIntegers(), request.getContext(), nonce2);

@@ -13,7 +13,7 @@ import org.irmacard.cardemu.disclosuredialog.DisclosureDialogFragment;
 import org.irmacard.cardemu.disclosuredialog.DisclosureInformationActivity;
 import org.irmacard.api.common.AttributeDisjunction;
 import org.irmacard.api.common.DisclosureProofRequest;
-import org.irmacard.api.common.DisclosureQr;
+import org.irmacard.api.common.ClientQr;
 import org.irmacard.api.common.util.GsonUtil;
 
 import java.util.ArrayList;
@@ -51,13 +51,12 @@ public abstract class Protocol implements DisclosureDialogFragment.DisclosureDia
 	 * Create a new session
 	 * @param qrcontent Contents of the QR code, containing the server to connect to and protocol version number
 	 * @param activity The activity to report progress to
-	 * @return A new Protocol instance of the appropriate version
 	 */
 	public static void NewSession(String qrcontent, MainActivity activity, boolean launchedFromBrowser) {
 		// Decide on the protocol version and the URL to connect to
 		String url, protocolVersion;
 		try {
-			DisclosureQr contents = GsonUtil.getGson().fromJson(qrcontent, DisclosureQr.class);
+			ClientQr contents = GsonUtil.getGson().fromJson(qrcontent, ClientQr.class);
 			protocolVersion = contents.getVersion();
 			url = contents.getUrl();
 		} catch (Exception e) {
