@@ -30,6 +30,7 @@
 
 package org.irmacard.cardemu.httpclient;
 
+import android.os.AsyncTask;
 import com.google.gson.Gson;
 import com.google.gson.JsonSyntaxException;
 
@@ -223,6 +224,54 @@ public class HttpClient {
 				c.disconnect();
 			}
 		}
+	}
+
+	/**
+	 * Asynchroniously performs a POST. See {@link #doPost(Type, String, Object)}.
+	 */
+	public <T> void post(final Type type, final String url, Object object, final HttpResultHandler<T> handler) {
+		doAsyncRequest(type, url, object, "POST", handler);
+	}
+
+	/**
+	 * Asynchroniously performs a POST, ignoring the response object from the server. See {@link #doPost(String, Object)}.
+	 */
+	public void post(final String url, Object object, final HttpResultHandler<Void> handler) {
+		doAsyncRequest(Object.class, url, null, "POST", handler);
+	}
+
+	/**
+	 * Asynchroniously performs a GET. See {@link #doGet(Type, String)}.
+	 */
+	public <T> void get(final Type type, final String url, final HttpResultHandler<T> handler) {
+		doAsyncRequest(type, url, null, "GET", handler);
+	}
+
+	/**
+	 * Worker method: wraps {@link #doRequest(Type, String, Object, String, String)} in an
+	 * {@link AsyncTask}.
+	 */
+	private <T> void doAsyncRequest(final Type type, final String url, final Object object, final String method,
+	                                final HttpResultHandler<T> handler) {
+		new AsyncTask<Void, Void, HttpClientResult<T>>() {
+			@Override
+			protected HttpClientResult<T> doInBackground(Void... params) {
+				try {
+					T result = doRequest(type, url, object, "", method);
+					return new HttpClientResult<>(result);
+				} catch (HttpClientException e) {
+					return new HttpClientResult<>(e);
+				}
+			}
+
+			@Override
+			protected void onPostExecute(HttpClientResult<T> result) {
+				if (result.getObject() != null)
+					handler.onSuccess(result.getObject());
+				else
+					handler.onError(result.getException());
+			}
+		}.execute();
 	}
 
 	public static String inputStreamToString(InputStream is) throws IOException {
