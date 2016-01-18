@@ -128,11 +128,11 @@ public class JsonProtocol extends Protocol {
 		} catch (InfoException e) {
 			e.printStackTrace();
 			activity.setFeedback("Issuing failed: wrong credential type", "failure");
-			activity.setState(MainActivity.STATE_IDLE);
+			cancelSession();
 			return;
 		} catch (CredentialsException e) {
 			activity.setFeedback("Missing required attributes", "failure");
-			activity.setState(MainActivity.STATE_IDLE);
+			cancelSession();
 			return;
 		}
 
@@ -170,7 +170,7 @@ public class JsonProtocol extends Protocol {
 			@Override public void onSuccess(DisclosureProofRequest result) {
 				if (result.getContent().size() == 0 || result.getNonce() == null || result.getContext() == null) {
 					activity.setFeedback("Got malformed disclosure request", "failure");
-					cancelDisclosure();
+					cancelSession();
 					return;
 				}
 				activity.setState(MainActivity.STATE_READY);
@@ -178,7 +178,7 @@ public class JsonProtocol extends Protocol {
 			}
 
 			@Override public void onError(HttpClientException exception) {
-				cancelDisclosure();
+				cancelSession();
 				fail(exception);
 			}
 		});
@@ -196,7 +196,7 @@ public class JsonProtocol extends Protocol {
 			proofs = CredentialManager.getProofs(request);
 		} catch (CredentialsException e) {
 			e.printStackTrace();
-			cancelDisclosure();
+			cancelSession();
 			fail(e);
 			return;
 		}
@@ -226,8 +226,8 @@ public class JsonProtocol extends Protocol {
 	 * Cancels the current disclosure session by DELETE-ing the specified url and setting the state to idle.
 	 */
 	@Override
-	public void cancelDisclosure() {
-		super.cancelDisclosure();
+	public void cancelSession() {
+		super.cancelSession();
 		Log.i(TAG, "Canceling disclosure to " + server);
 
 		new AsyncTask<String,Void,Void>() {

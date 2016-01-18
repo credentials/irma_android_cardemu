@@ -34,9 +34,9 @@ public abstract class Protocol implements DisclosureDialogFragment.DisclosureDia
 	abstract public void disclose(final DisclosureProofRequest request);
 
 	/**
-	 * Cancel the current disclosure.
+	 * Cancel the current session.
 	 */
-	public void cancelDisclosure() {
+	public void cancelSession() {
 		activity.setState(MainActivity.STATE_IDLE);
 	}
 
@@ -129,7 +129,7 @@ public abstract class Protocol implements DisclosureDialogFragment.DisclosureDia
 					.setPositiveButton("OK", new DialogInterface.OnClickListener() {
 						@Override
 						public void onClick(DialogInterface dialog, int which) {
-							cancelDisclosure();
+							cancelSession();
 							done();
 						}
 					})
@@ -143,7 +143,7 @@ public abstract class Protocol implements DisclosureDialogFragment.DisclosureDia
 					dialog.getButton(AlertDialog.BUTTON_NEUTRAL).setOnClickListener(new View.OnClickListener() {
 						@Override
 						public void onClick(View v) {
-							cancelDisclosure();
+							cancelSession();
 							Intent intent = new Intent(activity, DisclosureInformationActivity.class);
 							intent.putExtra("request", request);
 							activity.startActivity(intent);
@@ -163,7 +163,7 @@ public abstract class Protocol implements DisclosureDialogFragment.DisclosureDia
 
 	@Override
 	public void onDiscloseCancel() {
-		cancelDisclosure();
+		cancelSession();
 		done();
 	}
 

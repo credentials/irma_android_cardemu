@@ -110,16 +110,13 @@ public class APDUProtocol extends Protocol {
 		handler.sendMessage(msg);
 	}
 
-	@Override
-	public void cancelDisclosure() {
-		super.cancelDisclosure();
-		abortConnection();
-	}
-
 	/**
 	 * Aborts the connection to the server: sends ISO7816.SW_COMMAND_NOT_ALLOWED.
 	 */
-	public void abortConnection() {
+	@Override
+	public void cancelSession() {
+		super.cancelSession();
+
 		ResponseAPDU response = sw(ISO7816.SW_COMMAND_NOT_ALLOWED); // TODO is this the appropriate response?
 		ProtocolResponses responses = new ProtocolResponses();
 
