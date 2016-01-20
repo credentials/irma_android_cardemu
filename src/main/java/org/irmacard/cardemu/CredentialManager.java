@@ -610,7 +610,7 @@ public class CredentialManager {
 		}
 
 		// Add disclosures, if any
-		if (request.getRequiredAttributes().size() > 0)
+		if (!request.getRequiredAttributes().isEmpty())
 			getProofs(request.getRequiredAttributes(), proofsBuilder);
 
 		return new IssueCommitmentMessage(proofsBuilder.build(), nonce2);

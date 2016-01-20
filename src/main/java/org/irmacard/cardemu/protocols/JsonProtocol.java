@@ -81,6 +81,16 @@ public class JsonProtocol extends Protocol {
 			disclose(request);
 	}
 
+	@Override
+	public void onIssueOK(IssuingRequest request) {
+		finishIssuance(request);
+	}
+
+	@Override
+	public void onIssueCancel() {
+		cancelSession();
+	}
+
 	/**
 	 * Retrieve an {@link IssuingRequest} from the server
 	 */
@@ -94,17 +104,7 @@ public class JsonProtocol extends Protocol {
 		client.get(IssuingRequest.class, server, new HttpResultHandler<IssuingRequest>() {
 			@Override public void onSuccess(IssuingRequest result) {
 				Log.i(TAG, result.toString());
-				if (result.getRequiredAttributes().size() == 0) {
-					// Nothing to show? Proceed immediately
-					finishIssuance(result);
-				} else {
-					// First ask if we want to disclose the asked-for attributes. The dialog will select the
-					// attributes to disclose.
-					DisclosureProofRequest disclosureRequest =  new DisclosureProofRequest(
-							result.getNonce(), result.getContext(), result.getRequiredAttributes());
-					issuingRequest = result;
-					askForVerificationPermission(disclosureRequest);
-				}
+				askForIssuancePermission(result);
 			}
 
 			@Override public void onError(HttpClientException exception) {

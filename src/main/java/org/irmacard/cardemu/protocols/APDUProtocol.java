@@ -440,7 +440,7 @@ public class APDUProtocol extends Protocol {
 	}
 
 	public DisclosureProofRequest convertToRequest(List<VerificationSetupData> list) {
-		List<AttributeDisjunction> disjunctions = new ArrayList<>();
+		ArrayList<AttributeDisjunction> disjunctions = new ArrayList<>();
 		IdemixCredentials ic = new IdemixCredentials(is);
 
 		try {

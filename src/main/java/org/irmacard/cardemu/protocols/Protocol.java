@@ -7,6 +7,7 @@ import android.text.Html;
 import android.util.Log;
 import android.util.Patterns;
 import android.view.View;
+import org.irmacard.api.common.IssuingRequest;
 import org.irmacard.cardemu.CredentialManager;
 import org.irmacard.cardemu.MainActivity;
 import org.irmacard.cardemu.disclosuredialog.SessionDialogFragment;
@@ -46,6 +47,16 @@ public abstract class Protocol implements SessionDialogFragment.SessionDialogLis
 
 	// Automatically return to browser when launched using a URL
 	private boolean launchedFromBrowser;
+
+	@Override
+	public void onIssueOK(IssuingRequest request) {
+	}
+
+	@Override
+	public void onIssueCancel() {
+		cancelSession();
+		done();
+	}
 
 	/**
 	 * Create a new session
@@ -91,6 +102,78 @@ public abstract class Protocol implements SessionDialogFragment.SessionDialogLis
 		protocol.connect(url);
 	}
 
+	private List<AttributeDisjunction> getUnsatisfiableDisjunctions(List<AttributeDisjunction> disjunctions) {
+		List<AttributeDisjunction> missing = new ArrayList<>();
+		for (AttributeDisjunction disjunction : disjunctions) {
+			if (CredentialManager.getCandidates(disjunction).isEmpty()) {
+				missing.add(disjunction);
+			}
+		}
+		return missing;
+	}
+
+	private void showUnsatisfiableRequestDialog(List<AttributeDisjunction> missing, final DisclosureProofRequest request) {
+		String message = "The verifier requires attributes of the following kind: ";
+		int count = 0;
+		int max = missing.size();
+		for (AttributeDisjunction disjunction : missing) {
+			count++;
+			message += "<b>" + disjunction.getLabel() + "</b>";
+			if (count < max - 1 || count == max)
+				message += ", ";
+			if (count == max - 1 && max > 1)
+				message += " and ";
+		}
+		message += " but you do not have the appropriate attributes.";
+
+		final AlertDialog dialog = new AlertDialog.Builder(activity)
+				.setTitle("Missing attributes")
+				.setMessage(Html.fromHtml(message))
+				.setPositiveButton("OK", new DialogInterface.OnClickListener() {
+					@Override
+					public void onClick(DialogInterface dialog, int which) {
+						cancelSession();
+						done();
+					}
+				})
+				.setNeutralButton("More Information", null)
+				.create();
+
+		// Set the listener for the More Info button here, so that it does not close the dialog
+		dialog.setOnShowListener(new DialogInterface.OnShowListener() {
+			@Override
+			public void onShow(DialogInterface d) {
+				dialog.getButton(AlertDialog.BUTTON_NEUTRAL).setOnClickListener(new View.OnClickListener() {
+					@Override
+					public void onClick(View v) {
+						cancelSession();
+						Intent intent = new Intent(activity, DisclosureInformationActivity.class);
+						intent.putExtra("request", request);
+						activity.startActivity(intent);
+					}
+				});
+			}
+		});
+
+		dialog.show();
+	}
+
+	public void askForIssuancePermission(final IssuingRequest request) {
+		ArrayList<AttributeDisjunction> requiredAttributes = request.getRequiredAttributes();
+		if (!requiredAttributes.isEmpty()) {
+			List<AttributeDisjunction> missing = getUnsatisfiableDisjunctions(requiredAttributes);
+
+			if (!missing.isEmpty()) {
+				showUnsatisfiableRequestDialog(missing,
+						new DisclosureProofRequest(null, null, requiredAttributes)); // FIXME this is ugly
+				return;
+			}
+		}
+
+		SessionDialogFragment dialog = SessionDialogFragment.newIssueDialog(request, this);
+		dialog.show(activity.getFragmentManager(), "issuingdialog");
+	}
+
 	/**
 	 * Asks the user if he is OK with disclosing the attributes specified in the request. If she agrees then
 	 * they are disclosed immediately; if she does not, or the request cannot be satisfied, then the connection is
@@ -98,61 +181,14 @@ public abstract class Protocol implements SessionDialogFragment.SessionDialogLis
 	 * @param request The disclosure request
 	 */
 	public void askForVerificationPermission(final DisclosureProofRequest request) {
-		List<AttributeDisjunction> missing = new ArrayList<>();
-		for (AttributeDisjunction disjunction : request.getContent()) {
-			if (CredentialManager.getCandidates(disjunction).isEmpty()) {
-				missing.add(disjunction);
-			}
-		}
+		List<AttributeDisjunction> missing = getUnsatisfiableDisjunctions(request.getContent());
 
 		if (missing.isEmpty()) {
-			SessionDialogFragment dialog = SessionDialogFragment.newInstance(request, this);
+			SessionDialogFragment dialog = SessionDialogFragment.newDiscloseDialog(request, this);
 			dialog.show(activity.getFragmentManager(), "disclosuredialog");
 		}
 		else {
-			String message = "The verifier requires attributes of the following kind: ";
-			int count = 0;
-			int max = missing.size();
-			for (AttributeDisjunction disjunction : missing) {
-				count++;
-				message += "<b>" + disjunction.getLabel() + "</b>";
-				if (count < max - 1 || count == max)
-					message += ", ";
-				if (count == max - 1 && max > 1)
-					message += " and ";
-			}
-			message += " but you do not have the appropriate attributes.";
-
-			final AlertDialog dialog = new AlertDialog.Builder(activity)
-					.setTitle("Missing attributes")
-					.setMessage(Html.fromHtml(message))
-					.setPositiveButton("OK", new DialogInterface.OnClickListener() {
-						@Override
-						public void onClick(DialogInterface dialog, int which) {
-							cancelSession();
-							done();
-						}
-					})
-					.setNeutralButton("More Information", null)
-					.create();
-
-			// Set the listener for the More Info button here, so that it does not close the dialog
-			dialog.setOnShowListener(new DialogInterface.OnShowListener() {
-				@Override
-				public void onShow(DialogInterface d) {
-					dialog.getButton(AlertDialog.BUTTON_NEUTRAL).setOnClickListener(new View.OnClickListener() {
-						@Override
-						public void onClick(View v) {
-							cancelSession();
-							Intent intent = new Intent(activity, DisclosureInformationActivity.class);
-							intent.putExtra("request", request);
-							activity.startActivity(intent);
-						}
-					});
-				}
-			});
-
-			dialog.show();
+			showUnsatisfiableRequestDialog(missing, request);
 		}
 	}
 

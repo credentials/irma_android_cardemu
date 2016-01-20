@@ -11,6 +11,23 @@
             android:layout_height="wrap_content"
             android:textSize="14sp"
             android:textColor="#000"
+            android:text="An issuer wants to issue the following attributes to you."
+            android:id="@+id/issuance_question"
+            android:paddingBottom="@dimen/detail_small_vspace"/>
+
+    <LinearLayout
+            android:orientation="vertical"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:id="@+id/issuance_container"
+            android:paddingBottom="@dimen/detail_small_vspace">
+    </LinearLayout>
+
+    <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:textSize="14sp"
+            android:textColor="#000"
             android:text="First part of disclosure question here"
             android:id="@+id/disclosure_question_1"
             android:paddingBottom="@dimen/detail_small_vspace"/>
