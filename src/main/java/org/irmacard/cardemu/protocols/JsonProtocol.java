@@ -104,6 +104,7 @@ public class JsonProtocol extends Protocol {
 		client.get(IssuingRequest.class, server, new HttpResultHandler<IssuingRequest>() {
 			@Override public void onSuccess(IssuingRequest result) {
 				Log.i(TAG, result.toString());
+				activity.setState(MainActivity.STATE_READY);
 				askForIssuancePermission(result);
 			}
 
@@ -119,6 +120,7 @@ public class JsonProtocol extends Protocol {
 	 * construct and save the new Idemix credentials.
 	 */
 	private void finishIssuance(IssuingRequest request) {
+		activity.setState(MainActivity.STATE_COMMUNICATING);
 		Log.i(TAG, "Posting issuing commitments");
 
 		final HttpClient client = new HttpClient(GsonUtil.getGson());
