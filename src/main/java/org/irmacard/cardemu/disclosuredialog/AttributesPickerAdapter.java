@@ -49,7 +49,7 @@ import java.util.LinkedHashMap;
 import java.util.List;
 
 /**
- * Adapter for picking an attribute from a {@link AttributeDisjunction}, for use in a {@link DisclosureDialogFragment}.
+ * Adapter for picking an attribute from a {@link AttributeDisjunction}, for use in a {@link SessionDialogFragment}.
  */
 public class AttributesPickerAdapter extends BaseAdapter {
 	Context context;

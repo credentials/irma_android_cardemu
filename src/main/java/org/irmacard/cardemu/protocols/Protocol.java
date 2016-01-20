@@ -9,7 +9,7 @@ import android.util.Patterns;
 import android.view.View;
 import org.irmacard.cardemu.CredentialManager;
 import org.irmacard.cardemu.MainActivity;
-import org.irmacard.cardemu.disclosuredialog.DisclosureDialogFragment;
+import org.irmacard.cardemu.disclosuredialog.SessionDialogFragment;
 import org.irmacard.cardemu.disclosuredialog.DisclosureInformationActivity;
 import org.irmacard.api.common.AttributeDisjunction;
 import org.irmacard.api.common.DisclosureProofRequest;
@@ -19,7 +19,7 @@ import org.irmacard.api.common.util.GsonUtil;
 import java.util.ArrayList;
 import java.util.List;
 
-public abstract class Protocol implements DisclosureDialogFragment.DisclosureDialogListener {
+public abstract class Protocol implements SessionDialogFragment.SessionDialogListener {
 	/**
 	 * Connect to the IRMA server at the specified URL
 	 * @param url The server to connect to
@@ -106,7 +106,7 @@ public abstract class Protocol implements DisclosureDialogFragment.DisclosureDia
 		}
 
 		if (missing.isEmpty()) {
-			DisclosureDialogFragment dialog = DisclosureDialogFragment.newInstance(request, this);
+			SessionDialogFragment dialog = SessionDialogFragment.newInstance(request, this);
 			dialog.show(activity.getFragmentManager(), "disclosuredialog");
 		}
 		else {

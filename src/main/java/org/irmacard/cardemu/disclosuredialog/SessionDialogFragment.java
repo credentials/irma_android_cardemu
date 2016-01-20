@@ -50,22 +50,22 @@ import org.irmacard.api.common.DisclosureProofRequest;
  * ones. It takes a {@link DisclosureProofRequest}, and in the onDiscloseOK method that the caller should implement,
  * the same request is returned but with an attribute selected for each disjunction in the request.
  */
-public class DisclosureDialogFragment extends DialogFragment {
+public class SessionDialogFragment extends DialogFragment {
 	private DisclosureProofRequest request;
-	private static DisclosureDialogListener listener;
+	private static SessionDialogListener listener;
 
-	public interface DisclosureDialogListener {
+	public interface SessionDialogListener {
 		void onDiscloseOK(DisclosureProofRequest request);
 		void onDiscloseCancel();
 	}
 
 	/**
-	 * Constructs and returns a new DisclosureDialogFragment. Users must implement the DisclosureDialogListener
+	 * Constructs and returns a new SessionDialogFragment. Users must implement the SessionDialogListener
 	 * interface.
 	 */
-	public static DisclosureDialogFragment newInstance(DisclosureProofRequest request, DisclosureDialogListener listener) {
-		DisclosureDialogFragment.listener = listener;
-		DisclosureDialogFragment dialog = new DisclosureDialogFragment();
+	public static SessionDialogFragment newInstance(DisclosureProofRequest request, SessionDialogListener listener) {
+		SessionDialogFragment.listener = listener;
+		SessionDialogFragment dialog = new SessionDialogFragment();
 
 		Bundle args = new Bundle();
 		args.putSerializable("request", request);
