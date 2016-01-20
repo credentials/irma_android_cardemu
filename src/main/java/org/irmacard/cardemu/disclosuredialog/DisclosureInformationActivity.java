@@ -34,18 +34,23 @@ import android.app.Activity;
 import android.app.FragmentTransaction;
 import android.os.Bundle;
 import android.view.View;
+import org.irmacard.api.common.util.GsonUtil;
 import org.irmacard.cardemu.R;
 import org.irmacard.api.common.AttributeDisjunction;
-import org.irmacard.api.common.DisclosureProofRequest;
+import org.irmacard.api.common.AttributeDisjunctionList;
 
 public class DisclosureInformationActivity extends Activity {
-	DisclosureProofRequest request;
+	AttributeDisjunctionList disjunctions;
 
 	@Override
 	protected void onCreate(Bundle savedInstanceState) {
 		super.onCreate(savedInstanceState);
 
-		request = (DisclosureProofRequest) getIntent().getSerializableExtra("request");
+		// The extras framework does not seem to retain type information: putting the AttributeDisjunctionList
+		// into it directly as a Serializable causes a ClassCastException here when we try to deserialize it,
+		// saying that it is an ArrayList, not an AttributeDisjunctionList. So, we use Gson.
+		disjunctions = GsonUtil.getGson().fromJson(
+				getIntent().getStringExtra("disjunctions"), AttributeDisjunctionList.class);
 
 		setContentView(R.layout.activity_disclose_info);
 
@@ -53,7 +58,7 @@ public class DisclosureInformationActivity extends Activity {
 			return;
 
 		FragmentTransaction transaction = getFragmentManager().beginTransaction();
-		for (AttributeDisjunction disjunction : request.getContent()) {
+		for (AttributeDisjunction disjunction : disjunctions) {
 			DisjunctionFragment fragment = new DisjunctionFragment();
 			Bundle bundle = new Bundle();
 			bundle.putSerializable("disjunction", disjunction);

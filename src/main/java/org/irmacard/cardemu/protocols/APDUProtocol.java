@@ -15,6 +15,7 @@ import net.sf.scuba.smartcards.*;
 import org.acra.ACRA;
 import org.apache.http.Header;
 import org.apache.http.entity.StringEntity;
+import org.irmacard.api.common.AttributeDisjunctionList;
 import org.irmacard.cardemu.*;
 import org.irmacard.cardemu.messages.*;
 import org.irmacard.credentials.idemix.IdemixCredentials;
@@ -440,7 +441,7 @@ public class APDUProtocol extends Protocol {
 	}
 
 	public DisclosureProofRequest convertToRequest(List<VerificationSetupData> list) {
-		ArrayList<AttributeDisjunction> disjunctions = new ArrayList<>();
+		AttributeDisjunctionList disjunctions = new AttributeDisjunctionList();
 		IdemixCredentials ic = new IdemixCredentials(is);
 
 		try {

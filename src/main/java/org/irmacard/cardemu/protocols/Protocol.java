@@ -7,14 +7,11 @@ import android.text.Html;
 import android.util.Log;
 import android.util.Patterns;
 import android.view.View;
-import org.irmacard.api.common.IssuingRequest;
+import org.irmacard.api.common.*;
 import org.irmacard.cardemu.CredentialManager;
 import org.irmacard.cardemu.MainActivity;
 import org.irmacard.cardemu.disclosuredialog.SessionDialogFragment;
 import org.irmacard.cardemu.disclosuredialog.DisclosureInformationActivity;
-import org.irmacard.api.common.AttributeDisjunction;
-import org.irmacard.api.common.DisclosureProofRequest;
-import org.irmacard.api.common.ClientQr;
 import org.irmacard.api.common.util.GsonUtil;
 
 import java.util.ArrayList;
@@ -159,7 +156,7 @@ public abstract class Protocol implements SessionDialogFragment.SessionDialogLis
 	}
 
 	public void askForIssuancePermission(final IssuingRequest request) {
-		ArrayList<AttributeDisjunction> requiredAttributes = request.getRequiredAttributes();
+		AttributeDisjunctionList requiredAttributes = request.getRequiredAttributes();
 		if (!requiredAttributes.isEmpty()) {
 			List<AttributeDisjunction> missing = getUnsatisfiableDisjunctions(requiredAttributes);
 

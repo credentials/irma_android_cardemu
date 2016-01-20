@@ -36,8 +36,7 @@ import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
 import com.google.gson.reflect.TypeToken;
 import net.sf.scuba.smartcards.CardServiceException;
-import org.irmacard.api.common.CredentialRequest;
-import org.irmacard.api.common.IssuingRequest;
+import org.irmacard.api.common.*;
 import org.irmacard.credentials.Attributes;
 import org.irmacard.credentials.CredentialsException;
 import org.irmacard.credentials.idemix.CredentialBuilder;
@@ -59,9 +58,6 @@ import org.irmacard.credentials.util.log.LogEntry;
 import org.irmacard.credentials.util.log.RemoveLogEntry;
 import org.irmacard.credentials.util.log.VerifyLogEntry;
 import org.irmacard.idemix.IdemixService;
-import org.irmacard.api.common.AttributeDisjunction;
-import org.irmacard.api.common.AttributeIdentifier;
-import org.irmacard.api.common.DisclosureProofRequest;
 
 import java.lang.reflect.Type;
 import java.math.BigInteger;
@@ -383,9 +379,9 @@ public class CredentialManager {
 	 * For the selected attribute of each disjunction, add a disclosure proof-commitment to the specified
 	 * proof builder.
 	 */
-	private static ProofListBuilder getProofs(List<AttributeDisjunction> attributes, ProofListBuilder builder)
+	private static ProofListBuilder getProofs(AttributeDisjunctionList attributes, ProofListBuilder builder)
 			throws CredentialsException {
-		if (!isApproved(attributes))
+		if (!attributes.haveSelected())
 			throw new CredentialsException("Select an attribute in each disjunction first");
 
 		Map<Short, List<Integer>> toDisclose = groupAttributesById(attributes);
@@ -495,18 +491,6 @@ public class CredentialManager {
 	public static boolean canSatisfy(DisclosureProofRequest request) {
 		for (AttributeDisjunction disjunction : request.getContent())
 			if (getCandidates(disjunction).isEmpty())
-				return false;
-
-		return true;
-	}
-
-	/**
-	 * Returns true if the request has been approved by the user - that is, if each disjunction of the request has a
-	 * selected attribute
-	 */
-	public static boolean isApproved(List<AttributeDisjunction> list) {
-		for (AttributeDisjunction disjunction : list)
-			if (disjunction.getSelected() == null)
 				return false;
 
 		return true;

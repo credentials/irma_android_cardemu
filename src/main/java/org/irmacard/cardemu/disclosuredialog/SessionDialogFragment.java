@@ -41,19 +41,16 @@ import android.os.Bundle;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.widget.*;
-import org.irmacard.api.common.CredentialRequest;
-import org.irmacard.api.common.IssuingRequest;
+import org.irmacard.api.common.*;
+import org.irmacard.api.common.util.GsonUtil;
 import org.irmacard.cardemu.R;
-import org.irmacard.api.common.AttributeDisjunction;
-import org.irmacard.api.common.DisclosureProofRequest;
 
-import java.util.ArrayList;
 import java.util.Map;
 
 /**
- * DialogFragment for asking permission of a user to disclose specified attributes, and allowing him to choose which
- * ones. It takes a {@link DisclosureProofRequest}, and in the onDiscloseOK method that the caller should implement,
- * the same request is returned but with an attribute selected for each disjunction in the request.
+ * DialogFragment for asking permission of a user to disclose specified attributes, issue new credentials, or both.
+ * If attributes are to be disclosed the user can also choose which ones. The user's choice is stored in each of
+ * the {@link AttributeDisjunction#getSelected()} members.
  */
 public class SessionDialogFragment extends DialogFragment {
 	private DisclosureProofRequest proofRequest;
@@ -70,7 +67,7 @@ public class SessionDialogFragment extends DialogFragment {
 	}
 
 	/**
-	 * Constructs and returns a new SessionDialogFragment. Users must implement the SessionDialogListener
+	 * Constructs and returns a new SessionDialogFragment for disclosing. Users must implement the SessionDialogListener
 	 * interface.
 	 */
 	public static SessionDialogFragment newDiscloseDialog(DisclosureProofRequest request, SessionDialogListener listener) {
@@ -84,6 +81,10 @@ public class SessionDialogFragment extends DialogFragment {
 		return dialog;
 	}
 
+	/**
+	 * Constructs and returns a new SessionDialogFragment for issuing. Users must implement the SessionDialogListener
+	 * interface.
+	 */
 	public static SessionDialogFragment newIssueDialog(IssuingRequest request, SessionDialogListener listener) {
 		SessionDialogFragment.listener = listener;
 		SessionDialogFragment dialog = new SessionDialogFragment();
@@ -107,7 +108,7 @@ public class SessionDialogFragment extends DialogFragment {
 		dislosing = issuingRequest == null || !issuingRequest.getRequiredAttributes().isEmpty();
 	}
 
-	public static void populateDisclosurePart(Activity activity, View view, final DisclosureProofRequest request) {
+	private static void populateDisclosurePart(Activity activity, View view, final DisclosureProofRequest request) {
 		LayoutInflater inflater = activity.getLayoutInflater();
 		Resources resources = activity.getResources();
 		LinearLayout list = (LinearLayout) view.findViewById(R.id.attributes_container);
@@ -180,7 +181,7 @@ public class SessionDialogFragment extends DialogFragment {
 	@Override
 	public Dialog onCreateDialog(Bundle savedInstanceState) {
 		LayoutInflater inflater = getActivity().getLayoutInflater();
-		View view = inflater.inflate(R.layout.dialog_disclosure, null); // TODO getActivity(), false?
+		View view = inflater.inflate(R.layout.dialog_disclosure, null);
 
 		if (!issuing) {
 			view.findViewById(R.id.issuance_question).setVisibility(View.GONE);
@@ -190,18 +191,20 @@ public class SessionDialogFragment extends DialogFragment {
 		else {
 			populateIssuingPart(getActivity(), view, issuingRequest);
 
-			ArrayList<AttributeDisjunction> requiredAttrs = issuingRequest.getRequiredAttributes();
+			AttributeDisjunctionList requiredAttrs = issuingRequest.getRequiredAttributes();
 			if (requiredAttrs.isEmpty()) {
 				((TextView) view.findViewById(R.id.disclosure_question_2)).setText("Continue issuance?");
 				view.findViewById(R.id.attributes_container).setVisibility(View.GONE);
 				view.findViewById(R.id.disclosure_question_1).setVisibility(View.GONE);
 			} else {
-				DisclosureProofRequest disclosureRequest =  new DisclosureProofRequest(
+				DisclosureProofRequest disclosureRequest = new DisclosureProofRequest(
 						issuingRequest.getNonce(), issuingRequest.getContext(), requiredAttrs);
 				populateDisclosurePart(getActivity(), view, disclosureRequest);
 
-				((TextView) view.findViewById(R.id.disclosure_question_1)).setText("However, the following attributes will be sent to the issuer during issuance.");
-				((TextView) view.findViewById(R.id.disclosure_question_2)).setText("Disclose these attributes and continue issuance?");
+				((TextView) view.findViewById(R.id.disclosure_question_1))
+						.setText("However, the following attributes will be sent to the issuer during issuance.");
+				((TextView) view.findViewById(R.id.disclosure_question_2))
+						.setText("Disclose these attributes and continue issuance?");
 			}
 		}
 
@@ -235,8 +238,9 @@ public class SessionDialogFragment extends DialogFragment {
 		// We set the listener for the neutral ("More Information") button instead of above, because if we set it
 		// above then the dialog is dismissed afterwards and we don't want that.
 		if (dislosing) {
-			final DisclosureProofRequest request = (!issuing) ? proofRequest
-					: new DisclosureProofRequest(null, null, issuingRequest.getRequiredAttributes());
+			final AttributeDisjunctionList disjunctions = (!issuing) ?
+					proofRequest.getContent() : issuingRequest.getRequiredAttributes();
+
 			d.setOnShowListener(new DialogInterface.OnShowListener() {
 				@Override
 				public void onShow(DialogInterface dialog) {
@@ -244,7 +248,7 @@ public class SessionDialogFragment extends DialogFragment {
 						@Override
 						public void onClick(View v) {
 							Intent intent = new Intent(getActivity(), DisclosureInformationActivity.class);
-							intent.putExtra("request", request);
+							intent.putExtra("disjunctions", GsonUtil.getGson().toJson(disjunctions));
 							startActivity(intent);
 						}
 					});
