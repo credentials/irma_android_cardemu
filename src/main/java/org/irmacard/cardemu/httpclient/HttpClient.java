@@ -42,9 +42,9 @@ import java.net.HttpURLConnection;
 import java.net.URL;
 
 /**
- * Convenience class to synchroniously do HTTP GET and PUT requests,
+ * Convenience class to (a)synchroniously do HTTP GET and PUT requests,
  * and serialize the in- and output automatically using Gson. <br/>
- * NOTE: the methods of this class must not be used on the main thread,
+ * NOTE: the synchronious methods of this class must not be used on the main thread,
  * as otherwise a NetworkOnMainThreadException will occur.
  */
 public class HttpClient {

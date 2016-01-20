@@ -516,7 +516,7 @@ public class CredentialManager {
 
 			if (foundAttrs != null) {
 				if (attribute.isCredential() && cd != null) {
-					map.put(attribute, cd.getIssuerDescription().getName() + " - " + cd.getShortName());
+					map.put(attribute, cd.getIssuerID() + " - " + cd.getShortName());
 				}
 				if (!attribute.isCredential() && foundAttrs.get(attribute.getAttributeName()) != null) {
 					String requiredValue = disjunction.getValues().get(attribute);

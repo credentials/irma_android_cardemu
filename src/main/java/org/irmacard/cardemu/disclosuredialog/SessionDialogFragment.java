@@ -44,6 +44,8 @@ import android.widget.*;
 import org.irmacard.api.common.*;
 import org.irmacard.api.common.util.GsonUtil;
 import org.irmacard.cardemu.R;
+import org.irmacard.credentials.info.CredentialDescription;
+import org.irmacard.credentials.info.InfoException;
 
 import java.util.Map;
 
@@ -159,16 +161,28 @@ public class SessionDialogFragment extends DialogFragment {
 
 		for (CredentialRequest cred : request.getCredentials()) {
 			View credContainer = inflater.inflate(R.layout.disjunction_fragment, list, false);
+			CredentialDescription cd;
+			try {
+				cd = cred.getCredentialDescription();
+			} catch (InfoException e) {
+				throw new RuntimeException(e);
+			}
 
-			((TextView) credContainer.findViewById(R.id.disjunction_title)).setText(cred.getFullName());
+			String credentialname = cred.getIssuerName() + " - " + cd.getShortName();
+			((TextView) credContainer.findViewById(R.id.disjunction_title)).setText(credentialname);
 			LinearLayout attrList = (LinearLayout) credContainer.findViewById(R.id.disjunction_content);
 
-			for (Map.Entry<String, String> attr : cred.getAttributes().entrySet()) {
+			// We loop here over the attribute names as specified by the DescriptionStore, instead of
+			// those from the CredentialRequest, because those from the DescriptionStore are odered.
+			// This is safe because if these don't match, then an exception will have been thrown long
+			// before we're here.
+			for (String attrName : cd.getAttributeNames()) {
+				String attrValue = cred.getAttributes().get(attrName);
 				View attrView = inflater.inflate(R.layout.credential_item_attribute, attrList, false);
 
-				((TextView) attrView.findViewById(R.id.credential_attribute_value)).setText(attr.getValue());
+				((TextView) attrView.findViewById(R.id.credential_attribute_value)).setText(attrValue);
 				TextView name = (TextView) attrView.findViewById(R.id.credential_attribute_name);
-				name.setText(attr.getKey());
+				name.setText(attrName);
 				name.setPadding(0, 0, 0, 0);
 
 				attrList.addView(attrView);

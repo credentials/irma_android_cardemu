@@ -162,11 +162,10 @@ public class JsonProtocol extends Protocol {
 	 * ask the user which attributes she wants to disclose.
 	 */
 	private void startDisclosure() {
+		activity.setState(MainActivity.STATE_CONNECTING_TO_SERVER);
 		Log.i(TAG, "Retrieving disclosure request: " + server);
 
-		activity.setState(MainActivity.STATE_CONNECTING_TO_SERVER);
-		final String server = this.server;
-		final HttpClient client = new HttpClient(GsonUtil.getGson());
+		HttpClient client = new HttpClient(GsonUtil.getGson());
 
 		client.get(DisclosureProofRequest.class, server, new HttpResultHandler<DisclosureProofRequest>() {
 			@Override public void onSuccess(DisclosureProofRequest result) {
