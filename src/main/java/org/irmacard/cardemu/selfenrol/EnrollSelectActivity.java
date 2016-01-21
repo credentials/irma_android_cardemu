@@ -32,10 +32,6 @@ package org.irmacard.cardemu.selfenrol;
 
 import android.app.*;
 import android.content.*;
-import android.content.res.Resources;
-import android.nfc.NfcAdapter;
-import android.nfc.Tag;
-import android.nfc.tech.IsoDep;
 import android.os.*;
 import android.provider.Settings;
 import android.telephony.TelephonyManager;
@@ -54,28 +50,15 @@ import android.widget.RelativeLayout;
 import android.widget.Spinner;
 import android.widget.TextView;
 
-import com.google.gson.Gson;
-import com.google.gson.GsonBuilder;
-import com.google.gson.JsonSyntaxException;
 import com.google.zxing.integration.android.IntentIntegrator;
 import com.google.zxing.integration.android.IntentResult;
 
-import org.acra.ACRA;
-
-import net.sf.scuba.smartcards.*;
 import org.irmacard.cardemu.*;
 import org.irmacard.cardemu.BuildConfig;
-import org.irmacard.credentials.idemix.smartcard.IRMACard;
-import org.irmacard.credentials.idemix.smartcard.SmartCardEmulatorService;
-import org.irmacard.cardemu.HttpClient.HttpClientException;
-import org.irmacard.idemix.IdemixService;
-import org.irmacard.mno.common.*;
 import java.text.DateFormat;
 import java.text.ParseException;
-import java.text.SimpleDateFormat;
 import java.util.Calendar;
 import java.util.GregorianCalendar;
-import java.util.Locale;
 
 
 public class EnrollSelectActivity extends AbstractGUIEnrollActivity {
@@ -87,11 +70,7 @@ public class EnrollSelectActivity extends AbstractGUIEnrollActivity {
     protected static final int DL_ACTIVITY = 1;
 
     // State variables
-    private PassportDataMessage passportMsg = null;
-
     protected int next_activity;
-
-
     protected DateFormat hrDateFormat = DateFormat.getDateInstance();
 
 
@@ -106,12 +85,10 @@ public class EnrollSelectActivity extends AbstractGUIEnrollActivity {
             getWindow().setFlags(WindowManager.LayoutParams.FLAG_SECURE, WindowManager.LayoutParams.FLAG_SECURE);
         }
 
-
         setContentView(R.layout.enroll_activity_start);
         setTitle(R.string.app_name_enroll);
 
         enableContinueButton();
-
 
         screen = SCREEN_START;
         updateProgressCounter();
