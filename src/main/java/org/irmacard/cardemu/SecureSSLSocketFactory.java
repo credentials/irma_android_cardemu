@@ -39,13 +39,11 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.net.InetAddress;
 import java.net.Socket;
-import java.security.KeyManagementException;
-import java.security.KeyStore;
-import java.security.KeyStoreException;
-import java.security.NoSuchAlgorithmException;
+import java.security.*;
 import java.security.cert.Certificate;
 import java.security.cert.CertificateException;
 import java.security.cert.CertificateFactory;
+import java.security.cert.X509Certificate;
 import java.util.*;
 
 /**
@@ -260,6 +258,39 @@ public class SecureSSLSocketFactory extends SSLSocketFactory
 			ACRA.getErrorReporter().handleException(e);
 			e.printStackTrace();
 			return null;
+		}
+	}
+
+	/**
+	 * Trust any incoming TLS certificate. For debug purposes only, do not use!
+	 * This is permanent for all future HTTPS requests made using {@link HttpsURLConnection}.
+	 */
+	public static void trustAllCertificates() {
+		try {
+			HttpsURLConnection.setDefaultHostnameVerifier(new HostnameVerifier() {
+				@Override
+				public boolean verify(String hostname, SSLSession session) {
+					return true;
+				}
+			});
+
+			SSLContext context = SSLContext.getInstance("TLS");
+			context.init(null, new X509TrustManager[]{ new X509TrustManager() {
+				@Override
+				public void checkClientTrusted(X509Certificate[] chain, String authType) throws CertificateException {
+				}
+				@Override
+				public void checkServerTrusted(X509Certificate[] chain, String authType) throws CertificateException {
+				}
+				@Override
+				public X509Certificate[] getAcceptedIssuers() {
+					return new X509Certificate[0];
+				}
+			}}, new SecureRandom());
+
+			HttpsURLConnection.setDefaultSSLSocketFactory(context.getSocketFactory());
+		} catch (Exception e) { // should never happen
+			e.printStackTrace();
 		}
 	}
 }
