@@ -574,14 +574,21 @@ public class DriversLicenseEnrollActivity extends AbstractNFCEnrollActivity {
                 publishProgress();
 
                 try {
+                    // The doAA() method does not use its first three arguments, it only passes the challenge
+                    // on to another functio within JMRTD.
+                    if (pdm.getResponse() == null) {
+                        pdm.setResponse(passportService.doAA(null, null, null, pdm.getChallenge()));
+                        Log.i(TAG, "doing AA");
+                        publishProgress();
+                    }
                     if (pdm.getDg1File() == null) {
                         pdm.setDg1File(new DG1File(passportService.getInputStream(PassportService.EF_DG1)));
-                        Log.i(TAG, "PassportEnrollActivity: reading DG1");
+                        Log.i(TAG, "reading DG1");
                         publishProgress();
                     }
                     if (pdm.getSodFile() == null) {
                         pdm.setSodFile(new SODFile(passportService.getInputStream(PassportService.EF_SOD)));
-                        Log.i(TAG, "PassportEnrollActivity: reading SOD");
+                        Log.i(TAG, "reading SOD");
                         publishProgress();
                     }
                     if (pdm.getSodFile() != null) { // We need the SOD file to check if DG14 exists
@@ -592,22 +599,16 @@ public class DriversLicenseEnrollActivity extends AbstractNFCEnrollActivity {
                                 publishProgress();
                             }
                         } else { // If DG14 does not exist, just advance the progress bar
-                            Log.i(TAG, "PassportEnrollActivity: reading DG14 not necessary, skipping");
+                            Log.i(TAG, "reading DG14 not necessary, skipping");
                             publishProgress();
                         }
                     }
                     if (pdm.getDg15File() == null) {
                         pdm.setDg15File(new DG15File(passportService.getInputStream(PassportService.EF_DG15)));
-                        Log.i(TAG, "PassportEnrollActivity: reading DG15");
+                        Log.i(TAG, "reading DG15");
                         publishProgress();
                     }
-                    // The doAA() method does not use its first three arguments, it only passes the challenge
-                    // on to another functio within JMRTD.
-                    if (pdm.getResponse() == null) {
-                        pdm.setResponse(passportService.doAA(null, null, null, pdm.getChallenge()));
-                        Log.i(TAG, "PassportEnrollActivity: doing AA");
-                        publishProgress();
-                    }
+
                 } catch (NullPointerException e) {
                     // JMRTD sometimes throws a nullpointer exception if the passport communcation goes wrong
                     // (I've seen it happening if the passport is removed from the device halfway through)
