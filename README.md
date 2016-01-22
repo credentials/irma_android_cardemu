@@ -1,28 +1,26 @@
 # irma_android_cardemu
 
-This android app emulates an IRMA card. Credentials can be issued to it using self-enrollment.
-
-## This is an experimental branch!
-
-We are currently in the process of switching to a new verification protocol (see the [verification_server project](https://github.com/credentials/irma_verification_server/)), and therefore not everything will work normally. Use at your own risk.
+An IRMA credential manager for Android. Credentials can be issued to it, after which it can disclose the attributes contained in those credentials. New credentials can be tied to other existing credentials, or to other trusted data using self-enrollment processes.
 
 ## Prerequisites
 
 This application has the following dependencies.  All these dependencies will be automatically downloaded by gradle when building or installing the library.
 
-External depenencies:
+External dependencies:
 
  * [Android Asynchronous HTTP Client](http://loopj.com/android-async-http/)
  * Android support v4
- * [Google GSON](https://code.google.com/p/google-gson/)
+ * [Google GSON](https://code.google.com/p/google-gson/), for serializing to and from JSON
+ * [ACRA](https://github.com/ACRA/acra/), the Application Crash Reports for Android
+ * [ZXing](https://github.com/zxing/zxing), for scanning QR codes
+ * [Spongycastle](https://rtyley.github.io/spongycastle/), a repackage of BouncyCastle for Android
 
 Internal dependencies:
 
  * [irma_android_library](https://github.com/credentials/irma_android_library/), The IRMA android library
+ * [irma_api_common](https://github.com/credentials/irma_api_common/), The common classes for the verification and issuance protocol
  * [Scuba](https://github.com/credentials/scuba), The smartcard abstraction layer, uses `scuba_sc_android` and `scuba_smartcard`
- * [jmrtd](http://jmrtd.org/), A library for easy reading of ICAO documents. This should become an external library, but untill it is, this version was changed from the original build using the JarJar tool (https://code.google.com/p/jarjar/) to change any occurences of Scuba to our Scuba version.
-
-Gradle will take care of the transitive dependencies. However, you must make sure that you [build and install the idemix_library](https://github.com/credentials/idemix_library/) yourself.
+ * [jmrtd](http://jmrtd.org/), A library for easy reading of ICAO documents.
 
 The build system depends on gradle version at least 2.1, which is why we've included the gradle wrapper, so you always have the right version.
 
