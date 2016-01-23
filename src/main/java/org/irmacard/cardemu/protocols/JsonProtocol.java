@@ -21,6 +21,7 @@ import org.irmacard.credentials.info.InfoException;
 
 import java.lang.reflect.Type;
 import java.util.ArrayList;
+import java.util.regex.Pattern;
 
 public class JsonProtocol extends Protocol {
 	private static String TAG = "CardEmuJson";
@@ -32,9 +33,9 @@ public class JsonProtocol extends Protocol {
 			url = url + "/";
 		server = url;
 
-		if (server.contains("/verification/"))
+		if (Pattern.matches(".*/verification/[^/]+/$", server))
 			startDisclosure();
-		else if (server.contains("/issue/"))
+		else if (Pattern.matches(".*/issue/[^/]+/$", server))
 			startIssuance();
 	}
 
