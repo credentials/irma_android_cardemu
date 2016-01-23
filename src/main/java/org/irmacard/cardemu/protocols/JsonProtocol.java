@@ -4,6 +4,7 @@ import android.os.AsyncTask;
 import android.util.Log;
 import com.google.gson.reflect.TypeToken;
 import org.acra.ACRA;
+import org.irmacard.api.common.exceptions.ApiErrorMessage;
 import org.irmacard.cardemu.*;
 import org.irmacard.cardemu.httpclient.HttpClient;
 import org.irmacard.cardemu.httpclient.HttpClientException;
@@ -26,10 +27,6 @@ public class JsonProtocol extends Protocol {
 
 	private String server;
 
-	// While asking for permission for disclosure during a bound issue/disclosure session, this keeps track
-	// of the issuing request
-	private IssuingRequest issuingRequest;
-
 	public void connect(String url) {
 		if (!url.endsWith("/"))
 			url = url + "/";
@@ -42,16 +39,28 @@ public class JsonProtocol extends Protocol {
 	}
 
 	/**
+	 * Report the specified error message (if present) or the exception (if not) to the MainActivity
+	 */
+	private void fail(HttpClientException e, ApiErrorMessage errorMessage) {
+		String feedback;
+
+		if (errorMessage != null && errorMessage.getError() != null) {
+			feedback = "Server returned: " + errorMessage.getError().getDescription();
+			Log.w(TAG, "API error: " + errorMessage.getError().name() + ", " + errorMessage.getDescription());
+			Log.w(TAG, errorMessage.getStacktrace());
+		} else if (e.getCause() != null)
+			feedback = "Could not connect: " + e.getCause().getMessage();
+		else
+			feedback = "Could not connect: Server returned status " + e.status;
+
+		fail(feedback);
+	}
+
+	/**
 	 * Report the specified exception to the MainActivity
 	 */
 	private void fail(HttpClientException e) {
-		String feedback;
-		if (e.getCause() != null)
-			feedback =  e.getCause().getMessage();
-		else
-			feedback = "Server returned status " + e.status;
-
-		fail(feedback);
+		fail(e, null);
 	}
 
 	/**
@@ -72,23 +81,8 @@ public class JsonProtocol extends Protocol {
 	}
 
 	@Override
-	public void onDiscloseOK(DisclosureProofRequest request) {
-		if (issuingRequest != null) {
-			finishIssuance(issuingRequest);
-			issuingRequest = null;
-		}
-		else
-			disclose(request);
-	}
-
-	@Override
 	public void onIssueOK(IssuingRequest request) {
 		finishIssuance(request);
-	}
-
-	@Override
-	public void onIssueCancel() {
-		cancelSession();
 	}
 
 	/**
@@ -101,15 +95,11 @@ public class JsonProtocol extends Protocol {
 		final String server = this.server;
 		final HttpClient client = new HttpClient(GsonUtil.getGson());
 		
-		client.get(IssuingRequest.class, server, new HttpResultHandler<IssuingRequest>() {
+		client.get(IssuingRequest.class, server, new JsonResultHandler<IssuingRequest>() {
 			@Override public void onSuccess(IssuingRequest result) {
 				Log.i(TAG, result.toString());
 				activity.setState(MainActivity.STATE_READY);
 				askForIssuancePermission(result);
-			}
-
-			@Override public void onError(HttpClientException exception) {
-				fail(exception);
 			}
 		});
 	}
@@ -139,7 +129,7 @@ public class JsonProtocol extends Protocol {
 		}
 
 		Type t = new TypeToken<ArrayList<IssueSignatureMessage>>(){}.getType();
-		client.post(t, server + "commitments", msg, new HttpResultHandler<ArrayList<IssueSignatureMessage>>() {
+		client.post(t, server + "commitments", msg, new JsonResultHandler<ArrayList<IssueSignatureMessage>>() {
 			@Override public void onSuccess(ArrayList<IssueSignatureMessage> result) {
 				try {
 					CredentialManager.constructCredentials(result);
@@ -149,10 +139,6 @@ public class JsonProtocol extends Protocol {
 				} catch (InfoException|CredentialsException e) {
 					fail(e);
 				}
-			}
-
-			@Override public void onError(HttpClientException exception) {
-				fail(exception);
 			}
 		});
 	}
@@ -167,7 +153,7 @@ public class JsonProtocol extends Protocol {
 
 		HttpClient client = new HttpClient(GsonUtil.getGson());
 
-		client.get(DisclosureProofRequest.class, server, new HttpResultHandler<DisclosureProofRequest>() {
+		client.get(DisclosureProofRequest.class, server, new JsonResultHandler<DisclosureProofRequest>() {
 			@Override public void onSuccess(DisclosureProofRequest result) {
 				if (result.getContent().size() == 0 || result.getNonce() == null || result.getContext() == null) {
 					activity.setFeedback("Got malformed disclosure request", "failure");
@@ -176,11 +162,6 @@ public class JsonProtocol extends Protocol {
 				}
 				activity.setState(MainActivity.STATE_READY);
 				askForVerificationPermission(result);
-			}
-
-			@Override public void onError(HttpClientException exception) {
-				cancelSession();
-				fail(exception);
 			}
 		});
 	}
@@ -204,7 +185,7 @@ public class JsonProtocol extends Protocol {
 
 		HttpClient client = new HttpClient(GsonUtil.getGson());
 		client.post(DisclosureProofResult.Status.class, server + "proofs", proofs,
-			new HttpResultHandler<DisclosureProofResult.Status>() {
+			new JsonResultHandler<DisclosureProofResult.Status>() {
 			@Override public void onSuccess(DisclosureProofResult.Status result) {
 				if (result == DisclosureProofResult.Status.VALID) {
 					activity.setFeedback("Successfully disclosed attributes", "success");
@@ -215,10 +196,6 @@ public class JsonProtocol extends Protocol {
 					ACRA.getErrorReporter().handleException(new Exception(feedback));
 					fail(feedback);
 				}
-			}
-
-			@Override public void onError(HttpClientException exception) {
-				fail(exception);
 			}
 		});
 	}
@@ -244,4 +221,20 @@ public class JsonProtocol extends Protocol {
 
 		server = null;
 	}
+
+	/**
+	 * Error handler that deserializes a server API error, if present
+	 */
+	private abstract class JsonResultHandler<T> implements HttpResultHandler<T> {
+		@Override
+		public void onError(HttpClientException exception) {
+			try {
+				ApiErrorMessage msg = GsonUtil.getGson().fromJson(exception.getMessage(), ApiErrorMessage.class);
+				fail(exception, msg);
+			} catch (Exception e) {
+				fail(exception);
+			}
+		}
+	}
+
 }
