@@ -1,9 +1,11 @@
 package org.irmacard.cardemu.selfenrol;
 
+import android.net.wifi.WifiConfiguration;
 import android.os.AsyncTask;
 import android.os.Bundle;
 import android.os.Handler;
 import android.os.Message;
+import android.util.Base64;
 import android.util.Log;
 import android.view.View;
 import android.widget.ProgressBar;
@@ -24,12 +26,23 @@ import net.sf.scuba.smartcards.ResponseAPDU;
 import net.sf.scuba.tlv.TLVInputStream;
 
 import org.acra.ACRA;
+import org.irmacard.api.common.ClientQr;
+import org.irmacard.api.common.CredentialRequest;
+import org.irmacard.api.common.IdentityProviderRequest;
+import org.irmacard.api.common.IssuingRequest;
+import org.irmacard.api.common.util.GsonUtil;
 import org.irmacard.cardemu.BuildConfig;
 import org.irmacard.cardemu.CardManager;
+
 import org.irmacard.cardemu.httpclient.HttpClient;
 import org.irmacard.cardemu.MetricsReporter;
 import org.irmacard.cardemu.R;
 import org.irmacard.cardemu.httpclient.HttpClientException;
+
+import org.irmacard.cardemu.MainActivity;
+import org.irmacard.cardemu.protocols.Protocol;
+import org.irmacard.cardemu.httpclient.HttpResultHandler;
+
 import org.irmacard.credentials.Attributes;
 import org.irmacard.credentials.CredentialsException;
 import org.irmacard.credentials.idemix.IdemixCredentials;
@@ -65,6 +78,7 @@ import java.security.NoSuchAlgorithmException;
 import java.security.SecureRandom;
 import java.security.Security;
 import java.text.SimpleDateFormat;
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Locale;
 import java.util.Map;
@@ -242,6 +256,75 @@ public class DriversLicenseEnrollActivity extends AbstractNFCEnrollActivity {
         }
 
     }
+
+
+    private void issue() {
+        DriverDemographicInfo driverInfo = eDLMsg.getDriverInfo();
+        HashMap<String, String> attributes = new HashMap<>(4);
+        attributes.put("firstnames", driverInfo.getGivenNames());
+        attributes.put("firstname", driverInfo.getGivenNames());
+        attributes.put("familyname", driverInfo.getFamilyName());
+        attributes.put("prefix", "");
+        CredentialRequest cred = new CredentialRequest(1483228800, "MijnOverheid.fullName", attributes);
+
+        HashMap<String, String> attributesAge = new HashMap<>(4);
+        String dob = driverInfo.getDob();
+        int date = Integer.parseInt(dob.substring(4));
+        if (date <= 2004) {
+            attributesAge.put("over12", "True");
+        } else {
+            attributesAge.put("over12", "False");
+        }
+        if (date <= 2000) {
+            attributesAge.put("over16", "True");
+        } else {
+            attributesAge.put("over16", "False");
+        }if (date <= 1998) {
+            attributesAge.put("over18", "True");
+        } else {
+            attributesAge.put("over18", "False");
+        }if (date <= 1995) {
+            attributesAge.put("over21", "True");
+        } else {
+            attributesAge.put("over21", "False");
+        }
+        CredentialRequest credAge = new CredentialRequest(1483228800, "MijnOverheid.ageLower", attributes);
+
+        ArrayList<CredentialRequest> credentials = new ArrayList<>();
+        credentials.add(cred);
+        credentials.add(credAge);
+
+        IssuingRequest request = new IssuingRequest(null, null, credentials);
+        IdentityProviderRequest ipRequest = new IdentityProviderRequest("foo", request, 6);
+
+        // Manually create JWT
+        String header = Base64.encodeToString("{\"typ\":\"JWT\",\"alg\":\"none\"}".getBytes(), Base64.URL_SAFE | Base64.NO_WRAP | Base64.NO_PADDING);
+        Map<String, Object> jwtBody = new HashMap<>(4);
+        jwtBody.put("iss", "testip");
+        jwtBody.put("sub", "issue_request");
+        jwtBody.put("iat", System.currentTimeMillis() / 1000);
+        jwtBody.put("iprequest", ipRequest);
+        String json = GsonUtil.getGson().toJson(jwtBody);
+        String jwt = header + "." + Base64.encodeToString(json.getBytes(), Base64.URL_SAFE | Base64.NO_WRAP | Base64.NO_PADDING) + ".";
+
+        // Post JWT to the API server
+        final String server = "https://demo.irmacard.org/tomcat/irma_api_server/api/v2/issue/";
+        new org.irmacard.cardemu.httpclient.HttpClient(GsonUtil.getGson()).post(ClientQr.class, server, jwt, new org.irmacard.cardemu.httpclient.HttpResultHandler<ClientQr>() {
+                    @Override
+                    public void onSuccess(ClientQr result) {
+                        ClientQr qr = new ClientQr(result.getVersion(), server + result.getUrl());
+                        Protocol.NewSession(GsonUtil.getGson().toJson(qr), DriversLicenseEnrollActivity.this, false);
+                    }
+
+                    @Override
+                    public void onError(HttpClientException exception) {
+                        Log.e()
+                        //setFeedback("Selfenroll failed!", "failure");
+                    }
+                }
+        );
+    }
+
 
     /***********************************************************************************************
      * FROM HERE MIGHT BE MOVED BACK TO JMRTD                                                         *
@@ -656,7 +739,7 @@ public class DriversLicenseEnrollActivity extends AbstractNFCEnrollActivity {
                 }
                 int dataGroupLength = tlvIn.readLength();
                 byte [] contents = tlvIn.readValue();
-                Log.e(TAG,"reading contents: " + toHexString(contents));
+                Log.e(TAG, "reading contents: " + toHexString(contents));
                 parseDG1(new ByteArrayInputStream(contents));
                 //inputStream = new SplittableInputStream(inputStream, dataGroupLength);
             }
