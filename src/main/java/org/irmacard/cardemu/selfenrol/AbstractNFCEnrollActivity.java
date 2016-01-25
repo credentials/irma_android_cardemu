@@ -65,7 +65,7 @@ public abstract class AbstractNFCEnrollActivity extends AbstractGUIEnrollActivit
     private Handler handler = new Handler();
     private int SCREEN_NFC_EVENT = -2;
     protected final static int MAX_TAG_READ_ATTEMPTS = 5;
-    protected final static int MAX_TAG_READ_TIME = 15 * 1000;
+    protected final static int MAX_TAG_READ_TIME = 40 * 1000;
 
     // Enrolling variables
     protected HttpClient client = null;
@@ -197,7 +197,7 @@ public abstract class AbstractNFCEnrollActivity extends AbstractGUIEnrollActivit
         IsoDep tag = IsoDep.get(tagFromIntent);
         // Prevents "Tag is lost" messages (at least on a Nexus 5)
         // TODO how about on other devices?
-        tag.setTimeout(1500);
+        tag.setTimeout(4000);
         CardService cs = new IsoDepCardService(tag);
 
         handleNfcEvent(cs, enrollSession);

@@ -12,6 +12,8 @@ import android.widget.TextView;
 import com.google.gson.JsonSyntaxException;
 import com.google.gson.reflect.TypeToken;
 
+import net.sf.scuba.smartcards.APDUWrapper;
+import net.sf.scuba.smartcards.CardFileInputStream;
 import net.sf.scuba.smartcards.CardService;
 import net.sf.scuba.smartcards.CardServiceException;
 import net.sf.scuba.smartcards.CommandAPDU;
@@ -19,6 +21,7 @@ import net.sf.scuba.smartcards.ISO7816;
 import net.sf.scuba.smartcards.ProtocolCommands;
 import net.sf.scuba.smartcards.ProtocolResponses;
 import net.sf.scuba.smartcards.ResponseAPDU;
+import net.sf.scuba.tlv.TLVInputStream;
 
 import org.acra.ACRA;
 import org.irmacard.cardemu.BuildConfig;
@@ -35,23 +38,24 @@ import org.irmacard.credentials.info.InfoException;
 import org.irmacard.idemix.IdemixService;
 import org.irmacard.idemix.IdemixSmartcard;
 import org.irmacard.mno.common.BasicClientMessage;
+import org.irmacard.mno.common.DriverDemographicInfo;
+import org.irmacard.mno.common.EDLDataMessage;
+import org.irmacard.mno.common.EDL_DG1File;
 import org.irmacard.mno.common.EnrollmentStartMessage;
 import org.irmacard.mno.common.PassportDataMessage;
 import org.irmacard.mno.common.PassportVerificationResult;
 import org.irmacard.mno.common.PassportVerificationResultMessage;
 import org.irmacard.mno.common.RequestFinishIssuanceMessage;
 import org.irmacard.mno.common.RequestStartIssuanceMessage;
-import org.jmrtd.BACKeySpec;
-import org.jmrtd.DESedeSecureMessagingWrapper;
 import org.jmrtd.PassportService;
+import org.jmrtd.SecureMessagingWrapper;
 import org.jmrtd.Util;
-import org.jmrtd.lds.DG14File;
-import org.jmrtd.lds.DG15File;
-import org.jmrtd.lds.DG1File;
+import org.jmrtd.io.SplittableInputStream;
 import org.jmrtd.lds.MRZInfo;
-import org.jmrtd.lds.SODFile;
 
+import java.io.ByteArrayInputStream;
 import java.io.IOException;
+import java.io.InputStream;
 import java.io.UnsupportedEncodingException;
 import java.lang.reflect.Type;
 import java.security.GeneralSecurityException;
@@ -71,6 +75,7 @@ import javax.crypto.NoSuchPaddingException;
 import javax.crypto.SecretKey;
 import javax.crypto.spec.IvParameterSpec;
 
+//import org.isodl.service.DrivingLicenseService;
 
 public class DriversLicenseEnrollActivity extends AbstractNFCEnrollActivity {
     // Configuration
@@ -85,16 +90,22 @@ public class DriversLicenseEnrollActivity extends AbstractNFCEnrollActivity {
     protected int tagReadAttempt = 0;
 
     // State variables
-    private PassportDataMessage passportMsg = null;
+    private EDLDataMessage eDLMsg = null;
 
     // Date stuff
     protected SimpleDateFormat bacDateFormat = new SimpleDateFormat("yyMMdd", Locale.US);
+
+    /** The applet we select when we start a session. */
+    protected static final byte[] APPLET_AID = { (byte) 0xA0, (byte) 0x00, (byte) 0x00, (byte) 0x02, (byte) 0x48, (byte) 0x02, (byte) 0x00};
 
     /** Copied from JMRTD.. to be removed when functional */
     private transient Cipher cipher;
     private transient Mac mac;
     private static final IvParameterSpec ZERO_IV_PARAM_SPEC = new IvParameterSpec(new byte[] { 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00 });
     protected Random random;
+
+
+    protected SecureMessagingWrapper wrapper;
 
 
     @Override
@@ -149,7 +160,7 @@ public class DriversLicenseEnrollActivity extends AbstractNFCEnrollActivity {
         new Handler().postDelayed(new Runnable() {
             @Override
             public void run() {
-                if (screen == SCREEN_PASSPORT && (passportMsg == null || !passportMsg.isComplete())) {
+                if (screen == SCREEN_PASSPORT && (eDLMsg == null || !eDLMsg.isComplete())) {
                     showErrorScreen(getString(R.string.error_enroll_passporterror));
                 }
             }
@@ -165,13 +176,14 @@ public class DriversLicenseEnrollActivity extends AbstractNFCEnrollActivity {
 
         try {
             service.open();
+           // DrivingLicenseService eDLService = new DrivingLicenseService(service)
             PassportService passportService = new PassportService(service);
-            //passportService.sendSelectApplet(false);
+            //passportService.sendSelectApplet(null,APPLET_AID);
 
-            if (passportMsg == null) {
-                passportMsg = new PassportDataMessage(message.getSessionToken(), imsi, message.getNonce());
+            if (eDLMsg == null) {
+                eDLMsg = new EDLDataMessage(message.getSessionToken(), imsi, message.getNonce());
             }
-            readDriversLicense(passportService, passportMsg);
+            readDriversLicense(passportService, eDLMsg);
         } catch (CardServiceException e) {
             // TODO under what circumstances does this happen? Maybe handle it more intelligently?
             ACRA.getErrorReporter().handleException(e);
@@ -231,7 +243,7 @@ public class DriversLicenseEnrollActivity extends AbstractNFCEnrollActivity {
     }
 
     /***********************************************************************************************
-     * FROM HERE SHOULD BE MOVED TO JMRTD                                                         *
+     * FROM HERE MIGHT BE MOVED BACK TO JMRTD                                                         *
      **********************************************************************************************/
     public synchronized void doBAP(PassportService ps) throws CardServiceException {
         String mrz = settings.getString("mrz", "");
@@ -252,7 +264,8 @@ public class DriversLicenseEnrollActivity extends AbstractNFCEnrollActivity {
                 Log.e(TAG, "kEnc = "+ toHexString(kEnc.getEncoded()));
                 Log.e(TAG, "kMac = "+ toHexString(kMac.getEncoded()));
                 try {
-                    doBAC(ps, kEnc, kMac);
+                    //doBAC(ps, kEnc, kMac);
+                    ps.doBAC(kEnc,kMac);
                 } catch (CardServiceException cse) {
                     Log.e(TAG,"BAC failed");
                     Log.e(TAG, cse.getMessage().toString());
@@ -288,7 +301,8 @@ public class DriversLicenseEnrollActivity extends AbstractNFCEnrollActivity {
         SecretKey ksEnc = Util.deriveKey(keySeed, Util.ENC_MODE);
         SecretKey ksMac = Util.deriveKey(keySeed, Util.MAC_MODE);
         long ssc = Util.computeSendSequenceCounter(rndICC, rndIFD);
-
+        //wrapper = new DESedeSecureMessagingWrapper(ksEnc, ksMac, ssc);
+        //wrapper = new VeiligeMessagingWrapper(ksEnc,ksMac,ssc);
     }
 
     /**
@@ -494,8 +508,8 @@ public class DriversLicenseEnrollActivity extends AbstractNFCEnrollActivity {
      * Reads the datagroups 1, 14 and 15, and the SOD file and requests an active authentication from an e-passport
      * in a seperate thread.
      */
-    private void readDriversLicense(PassportService ps, PassportDataMessage pdm) {
-        new AsyncTask<Object,Void,PassportDataMessage>(){
+    private void readDriversLicense(PassportService ps, EDLDataMessage eDLMessage) {
+        new AsyncTask<Object,Void,EDLDataMessage>(){
             ProgressBar progressBar = (ProgressBar) findViewById(R.id.se_progress_bar);
             boolean passportError = false;
             boolean bacError = false;
@@ -504,24 +518,24 @@ public class DriversLicenseEnrollActivity extends AbstractNFCEnrollActivity {
             long stop;
 
             @Override
-            protected PassportDataMessage doInBackground(Object... params) {
+            protected EDLDataMessage doInBackground(Object... params) {
                 if (params.length <2) {
                     return null; //TODO appropriate error
                 }
                 PassportService ps = (PassportService) params[0];
-                PassportDataMessage pdm = (PassportDataMessage) params[1];
+                EDLDataMessage eDLMessage = (EDLDataMessage) params[1];
 
                 if (tagReadAttempt == 0) {
                     start = System.currentTimeMillis();
                 }
                 tagReadAttempt++;
 
-                // Do the BAC separately from generating the pdm, so we can be specific in our error message if
+                // Do the BAC separately from generating the eDLMessage, so we can be specific in our error message if
                 // necessary. (Note: the IllegalStateException should not happen, but if it does for some unforseen
                 // reason there is no need to let it crash the app.)
                 try {
                     //TODO
-                    doBAP(ps);//ps.doBAC(getBAPKey());
+                    doBAP(ps);
                     Log.i(TAG, "doing BAP");
                 } catch (CardServiceException | IllegalStateException e) {
                     bacError = true;
@@ -534,28 +548,29 @@ public class DriversLicenseEnrollActivity extends AbstractNFCEnrollActivity {
                 Exception ex = null;
                 try {
                     Log.i(TAG, "PassportEnrollActivity: reading attempt " + tagReadAttempt);
-                    generatePassportDataMessage(ps, pdm);
+                    generateEDLDataMessage(ps, eDLMessage);
                 } catch (IOException |CardServiceException e) {
                     Log.w(TAG, "PassportEnrollActivity: reading attempt " + tagReadAttempt + " failed, stack trace:");
                     Log.w(TAG, "          " + e.getMessage());
                     ex = e;
                 }
 
-                passportError = !pdm.isComplete();
-                if (!pdm.isComplete() && tagReadAttempt == MAX_TAG_READ_ATTEMPTS && ex != null) {
+                passportError = !eDLMessage.isComplete();
+                if (!eDLMessage.isComplete() && tagReadAttempt == MAX_TAG_READ_ATTEMPTS && ex != null) {
                     // Build a fancy report saying which fields we did and which we did not manage to get
                     Log.e(TAG, "PassportEnrollActivity: too many attempts failed, aborting");
                     ACRA.getErrorReporter().reportBuilder()
-                            .customData("sod", String.valueOf(pdm.getSodFile() == null))
-                            .customData("dg1File", String.valueOf(pdm.getDg1File() == null))
-                            .customData("dg14File", String.valueOf(pdm.getDg14File() == null))
-                            .customData("dg15File", String.valueOf(pdm.getDg15File() == null))
-                            .customData("response", String.valueOf(pdm.getResponse() == null))
+                    //        .customData("sod", String.valueOf(eDLMessage.getSodFile() == null))
+                    //        .customData("dg1File", String.valueOf(eDLMessage.getDg1File() == null))
+                    //        .customData("dg14File", String.valueOf(eDLMessage.getDg14File() == null))
+                    //        .customData("dg15File", String.valueOf(eDLMessage.getDg15File() == null))
+                    //        .customData("response", String.valueOf(eDLMessage.getResponse() == null))
                             .exception(ex)
                             .send();
                 }
+                publishProgress();
 
-                return pdm;
+                return eDLMessage;
             }
 
             @Override
@@ -565,47 +580,107 @@ public class DriversLicenseEnrollActivity extends AbstractNFCEnrollActivity {
                 }
             }
 
+            /* we need this method for now to be able to send secured APDUs to cards */
+            private ResponseAPDU transmitWrappedAPDU (PassportService ps, CommandAPDU capdu) throws CardServiceException {
+                APDUWrapper wrapper = ps.getWrapper();
+                if (wrapper == null){
+                    throw new NullPointerException("No wrapper was set for secure messaging");
+                }
+                CommandAPDU wcapdu = wrapper.wrap(capdu);
+                ResponseAPDU wrapdu = ps.transmit(wcapdu);
+                return wrapper.unwrap(wrapdu, wrapdu.getBytes().length);
+
+            }
+
+            private void parseDG1(InputStream in) {
+                try {
+                    int t = in.read();
+                    while ( t !=-1){
+                        if (t == 95 /*0x5F start of tag*/){
+                            readData(in);
+                        }
+                        t = in.read();
+                    }
+
+                } catch (IOException e1) {
+                    // TODO Auto-generated catch block
+                    e1.printStackTrace();
+                }
+            }
+
+            private void readData(InputStream in) throws IOException {
+                int t2 = in.read();
+                int length = in.read();
+                byte[] contents = new byte[length];
+                if (t2 != -1 || length !=-1){
+                    switch (t2) {
+                        case 01:
+                            in.skip(length);/*unsure what this field represents*/
+                            break;
+                        case 02://unclear why, but this field contains no length...
+                            break;
+                        case 03: //country of issuance
+                            in.skip(length);
+                            break;
+                        case 04://last name
+                            in.read(contents,0,length);
+                            driverInfo.setFamilyName(new String(contents));
+                            break;
+                        case 05: //first name
+                            in.read(contents,0,length);
+                            driverInfo.setGivenNames(new String(contents));
+                            break;
+                        case 06: //birth date
+                            in.read(contents,0,length);
+                            driverInfo.setDob(toHexString(contents));
+                            break;
+                        case 07: // birth place
+                            in.read(contents,0,length);
+                            driverInfo.setPlaceOfBirth(new String(contents));
+                            break;
+                        default:
+                            in.skip(length); //we don't care about the rest of the fields for now.
+                    }
+                }
+            }
+
+            private int dataGroupTag = 0x61;
+            private static final short DEMOGRAPHIC_INFO_TAG = 0x5F1F;
+            private DriverDemographicInfo driverInfo = new DriverDemographicInfo();
+            protected void readObject(InputStream inputStream) throws IOException {
+                TLVInputStream tlvIn = inputStream instanceof TLVInputStream ? (TLVInputStream)inputStream : new TLVInputStream(inputStream);
+                int tag = tlvIn.readTag();
+                if (tag != dataGroupTag) {
+                    throw new IllegalArgumentException("Was expecting tag " + Integer.toHexString(dataGroupTag) + ", found " + Integer.toHexString(tag));
+                }
+                int dataGroupLength = tlvIn.readLength();
+                byte [] contents = tlvIn.readValue();
+                Log.e(TAG,"reading contents: " + toHexString(contents));
+                parseDG1(new ByteArrayInputStream(contents));
+                //inputStream = new SplittableInputStream(inputStream, dataGroupLength);
+            }
+
+
             /**
              * Do the AA protocol with the passport using the passportService, and put the response in a new
              * PassportDataMessage. Also read some data groups.
              */
-            public void generatePassportDataMessage(PassportService passportService, PassportDataMessage pdm)
+            public void generateEDLDataMessage(PassportService passportService, EDLDataMessage eDLMessage)
                     throws CardServiceException, IOException {
                 publishProgress();
 
+                //CommandAPDU capdu = new CommandAPDU(ISO7816.CLA_ISO7816,ISO7816.INS_SELECT_FILE, (byte) 0x02, (byte) 0x0C, new byte[]{(byte)0x00,(byte)0x01});
+                //ResponseAPDU rapdu = transmitWrappedAPDU(passportService,capdu);
+                //Log.e(TAG, "received rapdu: "+ toHexString(rapdu.getBytes()));
+                //passportService.sendSelectApplet(passportService.getWrapper(),APPLET_AID);
                 try {
-                    // The doAA() method does not use its first three arguments, it only passes the challenge
-                    // on to another functio within JMRTD.
-                    if (pdm.getResponse() == null) {
-                        pdm.setResponse(passportService.doAA(null, null, null, pdm.getChallenge()));
-                        Log.i(TAG, "doing AA");
-                        publishProgress();
-                    }
-                    if (pdm.getDg1File() == null) {
-                        pdm.setDg1File(new DG1File(passportService.getInputStream(PassportService.EF_DG1)));
-                        Log.i(TAG, "reading DG1");
-                        publishProgress();
-                    }
-                    if (pdm.getSodFile() == null) {
-                        pdm.setSodFile(new SODFile(passportService.getInputStream(PassportService.EF_SOD)));
-                        Log.i(TAG, "reading SOD");
-                        publishProgress();
-                    }
-                    if (pdm.getSodFile() != null) { // We need the SOD file to check if DG14 exists
-                        if (pdm.getSodFile().getDataGroupHashes().get(14) != null) { // Checks if DG14 exists
-                            if (pdm.getDg14File() == null) {
-                                pdm.setDg14File(new DG14File(passportService.getInputStream(PassportService.EF_DG14)));
-                                Log.i(TAG, "PassportEnrollActivity: reading DG14");
-                                publishProgress();
-                            }
-                        } else { // If DG14 does not exist, just advance the progress bar
-                            Log.i(TAG, "reading DG14 not necessary, skipping");
-                            publishProgress();
+                    if (eDLMessage.getDriverInfo() == null) {
+                       // eDLMessage.setDg1File(new DG1File(passportService.getInputStream(PassportService.EF_DG1)));
+                        CardFileInputStream in = passportService.getInputStream((short) 1);
+                        readObject(in);
+                        if (driverInfo.getFamilyName()!=null/*TODO it read somethin*/){
+                            eDLMessage.setDriverInfo(driverInfo);
                         }
-                    }
-                    if (pdm.getDg15File() == null) {
-                        pdm.setDg15File(new DG15File(passportService.getInputStream(PassportService.EF_DG15)));
-                        Log.i(TAG, "reading DG15");
                         publishProgress();
                     }
 
@@ -617,24 +692,16 @@ public class DriversLicenseEnrollActivity extends AbstractNFCEnrollActivity {
             }
 
             @Override
-            protected void onPostExecute(PassportDataMessage pdm) {
+            protected void onPostExecute(EDLDataMessage eDLMessage) {
                 // First set the result, since it may be partially okay
-                passportMsg = pdm;
+                eDLMsg = eDLMessage;
 
-                Boolean done = pdm != null && pdm.isComplete();
+                Boolean done = eDLMessage != null && eDLMessage.isComplete();
+
+                progressBar.setProgress(progressBar.getMax());
 
                 Log.i(TAG, "PassportEnrollActivity: attempt " + tagReadAttempt + " finished, done: " + done);
 
-                // If we're not yet done, we should not advance the screen but just wait for further attempts
-                if (tagReadAttempt < MAX_TAG_READ_ATTEMPTS && !done) {
-                    return;
-                }
-
-                stop = System.currentTimeMillis();
-                MetricsReporter.getInstance().reportMeasurement("passport_data_attempts", tagReadAttempt, false);
-                MetricsReporter.getInstance().reportMeasurement("passport_data_time", stop-start);
-
-                // If we're here, we're done. Check for errors or failures, and advance the screen
                 if (!bacError && !passportError) {
                     advanceScreen();
                 }
@@ -649,7 +716,7 @@ public class DriversLicenseEnrollActivity extends AbstractNFCEnrollActivity {
                     showErrorScreen(R.string.error_enroll_passporterror);
                 }
             }
-        }.execute(ps,pdm);
+        }.execute(ps,eDLMessage);
     }
 
     /**
@@ -664,19 +731,19 @@ public class DriversLicenseEnrollActivity extends AbstractNFCEnrollActivity {
         final String serverUrl = BuildConfig.enrollServer;
 
         // Doing HTTP(S) stuff on the main thread is not allowed.
-        new AsyncTask<PassportDataMessage, Void, Message>() {
+        new AsyncTask<EDLDataMessage, Void, Message>() {
             @Override
-            protected Message doInBackground(PassportDataMessage... params) {
+            protected Message doInBackground(EDLDataMessage... params) {
                 Message msg = Message.obtain();
                 try {
-                    // Get a passportMsg token
-                    PassportDataMessage passportMsg = params[0];
+                    // Get a eDLMsg token
+                    EDLDataMessage eDLMsg = params[0];
 
-                    // Send passport response and let server check it
+                    // Send eDL response and let server check it
                     PassportVerificationResultMessage result = client.doPost(
                             PassportVerificationResultMessage.class,
                             serverUrl + "/verify-passport",
-                            passportMsg
+                            eDLMsg
                     );
 
                     if (result.getResult() != PassportVerificationResult.SUCCESS) {
@@ -684,14 +751,14 @@ public class DriversLicenseEnrollActivity extends AbstractNFCEnrollActivity {
                     }
 
                     // Get a list of credential that the client can issue
-                    BasicClientMessage bcm = new BasicClientMessage(passportMsg.getSessionToken());
+                    BasicClientMessage bcm = new BasicClientMessage(eDLMsg.getSessionToken());
                     Type t = new TypeToken<HashMap<String, Map<String, String>>>() {}.getType();
                     HashMap<String, Map<String, String>> credentialList =
                             client.doPost(t, serverUrl + "/issue/credential-list", bcm);
 
                     // Get them all!
                     for (String credentialType : credentialList.keySet()) {
-                        issue(credentialType, passportMsg);
+                        issue(credentialType, eDLMsg);
                     }
                 } catch (CardServiceException // Issuing the credential to the card failed
                         |InfoException // VerificationDescription not found in configurarion
@@ -753,14 +820,14 @@ public class DriversLicenseEnrollActivity extends AbstractNFCEnrollActivity {
             protected void onPostExecute(Message msg) {
                 uiHandler.sendMessage(msg);
             }
-        }.execute(passportMsg);
+        }.execute(eDLMsg);
     }
 
     @Override
     public void finish() {
         super.finish();
 
-        //remove "old" passportdatamessage object
-        passportMsg = null;
+        //remove "old" eDLdatamessage object
+        eDLMsg = null;
     }
 }
