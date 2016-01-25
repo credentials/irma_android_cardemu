@@ -183,11 +183,16 @@ public class HttpClient {
 			byte[] objectBytes = new byte[] {};
 
 			if (method.equals("POST")) {
-				objectBytes = gson.toJson(object).getBytes();
+				if (object instanceof String) {
+					objectBytes = object.toString().getBytes();
+					c.setRequestProperty("Content-Type", "text/plain;charset=utf-8");
+				} else {
+					objectBytes = gson.toJson(object).getBytes();
+					c.setRequestProperty("Content-Type", "application/json;charset=utf-8");
+				}
 				c.setDoOutput(true);
 				// See http://www.evanjbrunner.info/posts/json-requests-with-httpurlconnection-in-android/
 				c.setFixedLengthStreamingMode(objectBytes.length);
-				c.setRequestProperty("Content-Type", "application/json;charset=utf-8");
 			}
 
 			if (authorization.length() > 0) {
