@@ -40,7 +40,7 @@ public abstract class Protocol implements SessionDialogFragment.SessionDialogLis
 
 	private static final String TAG = "CardEmuProtocol";
 
-	protected MainActivity activity;
+	public static MainActivity activity;
 
 	// Automatically return to browser when launched using a URL
 	private boolean launchedFromBrowser;
@@ -53,6 +53,10 @@ public abstract class Protocol implements SessionDialogFragment.SessionDialogLis
 	public void onIssueCancel() {
 		cancelSession();
 		done();
+	}
+
+	public static void NewSession(String qrcontent, boolean launchedFromBrowser) {
+		NewSession(qrcontent, Protocol.activity, launchedFromBrowser);
 	}
 
 	/**

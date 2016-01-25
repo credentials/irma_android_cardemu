@@ -379,6 +379,7 @@ public class MainActivity extends Activity {
 		Log.i(TAG, "Received qr in intent: " + qr);
 		if(!qr.equals(lastSessionUrl)) {
 			lastSessionUrl = qr;
+			Protocol.activity = this;
 			Protocol.NewSession(qr, this, true);
 		} else {
 			Log.i(TAG, "Already processed this qr");
@@ -394,6 +395,7 @@ public class MainActivity extends Activity {
 	public void onEnrollButtonTouch(View v) {
 		Intent i = new Intent(this, EnrollSelectActivity.class);
 		CredentialManager.save();
+		Protocol.activity = this;
 		startActivityForResult(i, EnrollSelectActivity.EnrollSelectActivityCode);
 	}
 

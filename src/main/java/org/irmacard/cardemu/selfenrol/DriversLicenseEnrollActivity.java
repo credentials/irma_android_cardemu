@@ -54,7 +54,6 @@ import org.irmacard.idemix.IdemixSmartcard;
 import org.irmacard.mno.common.BasicClientMessage;
 import org.irmacard.mno.common.DriverDemographicInfo;
 import org.irmacard.mno.common.EDLDataMessage;
-import org.irmacard.mno.common.EDL_DG1File;
 import org.irmacard.mno.common.EnrollmentStartMessage;
 import org.irmacard.mno.common.PassportDataMessage;
 import org.irmacard.mno.common.PassportVerificationResult;
@@ -313,12 +312,12 @@ public class DriversLicenseEnrollActivity extends AbstractNFCEnrollActivity {
                     @Override
                     public void onSuccess(ClientQr result) {
                         ClientQr qr = new ClientQr(result.getVersion(), server + result.getUrl());
-                        Protocol.NewSession(GsonUtil.getGson().toJson(qr), DriversLicenseEnrollActivity.this, false);
+                        Protocol.NewSession(GsonUtil.getGson().toJson(qr), false);
                     }
 
                     @Override
                     public void onError(HttpClientException exception) {
-                        Log.e()
+                        Log.e(TAG, "Failed to start DL enroll session");
                         //setFeedback("Selfenroll failed!", "failure");
                     }
                 }
