@@ -1,5 +1,7 @@
 package org.irmacard.cardemu.selfenrol;
 
+import android.app.Activity;
+import android.content.Intent;
 import android.net.wifi.WifiConfiguration;
 import android.os.AsyncTask;
 import android.os.Bundle;
@@ -219,9 +221,11 @@ public class DriversLicenseEnrollActivity extends AbstractNFCEnrollActivity {
                 // something goes wrong
                 CardManager.storeCard();
 
-                // Do it!
-                enableContinueButton();
-                issue();
+                // Let MainActivity do the work
+                Intent i = new Intent();
+                i.putExtra("dldata", GsonUtil.getGson().toJson(eDLMsg));
+                setResult(Activity.RESULT_OK, i);
+                finish();
 
                 break;
 
@@ -236,74 +240,6 @@ public class DriversLicenseEnrollActivity extends AbstractNFCEnrollActivity {
                 break;
         }
 
-    }
-
-
-    private void issue() {
-        DriverDemographicInfo driverInfo = eDLMsg.getDriverInfo();
-        HashMap<String, String> attributes = new HashMap<>(4);
-        attributes.put("firstnames", driverInfo.getGivenNames());
-        attributes.put("firstname", driverInfo.getGivenNames());
-        attributes.put("familyname", driverInfo.getFamilyName());
-        attributes.put("prefix", "");
-        CredentialRequest cred = new CredentialRequest(1483228800, "MijnOverheid.fullName", attributes);
-
-        HashMap<String, String> attributesAge = new HashMap<>(4);
-        String dob = driverInfo.getDob();
-        int date = Integer.parseInt(dob.substring(4));
-        if (date <= 2004) {
-            attributesAge.put("over12", "True");
-        } else {
-            attributesAge.put("over12", "False");
-        }
-        if (date <= 2000) {
-            attributesAge.put("over16", "True");
-        } else {
-            attributesAge.put("over16", "False");
-        }if (date <= 1998) {
-            attributesAge.put("over18", "True");
-        } else {
-            attributesAge.put("over18", "False");
-        }if (date <= 1995) {
-            attributesAge.put("over21", "True");
-        } else {
-            attributesAge.put("over21", "False");
-        }
-        CredentialRequest credAge = new CredentialRequest(1483228800, "MijnOverheid.ageLower", attributes);
-
-        ArrayList<CredentialRequest> credentials = new ArrayList<>();
-        credentials.add(cred);
-        credentials.add(credAge);
-
-        IssuingRequest request = new IssuingRequest(null, null, credentials);
-        IdentityProviderRequest ipRequest = new IdentityProviderRequest("foo", request, 6);
-
-        // Manually create JWT
-        String header = Base64.encodeToString("{\"typ\":\"JWT\",\"alg\":\"none\"}".getBytes(), Base64.URL_SAFE | Base64.NO_WRAP | Base64.NO_PADDING);
-        Map<String, Object> jwtBody = new HashMap<>(4);
-        jwtBody.put("iss", "testip");
-        jwtBody.put("sub", "issue_request");
-        jwtBody.put("iat", System.currentTimeMillis() / 1000);
-        jwtBody.put("iprequest", ipRequest);
-        String json = GsonUtil.getGson().toJson(jwtBody);
-        String jwt = header + "." + Base64.encodeToString(json.getBytes(), Base64.URL_SAFE | Base64.NO_WRAP | Base64.NO_PADDING) + ".";
-
-        // Post JWT to the API server
-        final String server = "https://demo.irmacard.org/tomcat/irma_api_server/api/v2/issue/";
-        new org.irmacard.cardemu.httpclient.HttpClient(GsonUtil.getGson()).post(ClientQr.class, server, jwt, new org.irmacard.cardemu.httpclient.HttpResultHandler<ClientQr>() {
-                    @Override
-                    public void onSuccess(ClientQr result) {
-                        ClientQr qr = new ClientQr(result.getVersion(), server + result.getUrl());
-                        Protocol.NewSession(GsonUtil.getGson().toJson(qr), false);
-                    }
-
-                    @Override
-                    public void onError(HttpClientException exception) {
-                        Log.e(TAG, "Failed to start DL enroll session");
-                        //setFeedback("Selfenroll failed!", "failure");
-                    }
-                }
-        );
     }
 
 
