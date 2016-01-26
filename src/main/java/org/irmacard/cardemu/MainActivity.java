@@ -388,7 +388,6 @@ public class MainActivity extends Activity {
 		Log.i(TAG, "Received qr in intent: " + qr);
 		if(!qr.equals(lastSessionUrl)) {
 			lastSessionUrl = qr;
-			Protocol.activity = this;
 			Protocol.NewSession(qr, this, true);
 		} else {
 			Log.i(TAG, "Already processed this qr");
@@ -404,7 +403,6 @@ public class MainActivity extends Activity {
 	public void onEnrollButtonTouch(View v) {
 		Intent i = new Intent(this, EnrollSelectActivity.class);
 		CredentialManager.save();
-		Protocol.activity = this;
 		startActivityForResult(i, EnrollSelectActivity.EnrollSelectActivityCode);
 	}
 
@@ -416,7 +414,7 @@ public class MainActivity extends Activity {
 //			CredentialManager.save();
 
 			try {
-				EDLDataMessage dlData = GsonUtil.getGson().fromJson(data.getStringExtra("dldata"), EDLDataMessage.class);
+				EDLDataMessage dlData = GsonUtil.getGson().fromJson(settings.getString("dldata", null), EDLDataMessage.class);
 				issue(dlData);
 				updateCredentialList();
 			} catch (Exception e) {
@@ -532,24 +530,24 @@ public class MainActivity extends Activity {
 		String dob = driverInfo.getDob();
 		int date = Integer.parseInt(dob.substring(4));
 		if (date <= 2004) {
-			attributesAge.put("over12", "True");
+			attributesAge.put("over12", "true");
 		} else {
-			attributesAge.put("over12", "False");
+			attributesAge.put("over12", "false");
 		}
 		if (date <= 2000) {
-			attributesAge.put("over16", "True");
+			attributesAge.put("over16", "true");
 		} else {
-			attributesAge.put("over16", "False");
+			attributesAge.put("over16", "false");
 		}if (date <= 1998) {
-			attributesAge.put("over18", "True");
+			attributesAge.put("over18", "true");
 		} else {
-			attributesAge.put("over18", "False");
+			attributesAge.put("over18", "false");
 		}if (date <= 1995) {
-			attributesAge.put("over21", "True");
+			attributesAge.put("over21", "true");
 		} else {
-			attributesAge.put("over21", "False");
+			attributesAge.put("over21", "false");
 		}
-		CredentialRequest credAge = new CredentialRequest(1483228800, "MijnOverheid.ageLower", attributes);
+		CredentialRequest credAge = new CredentialRequest(1483228800, "MijnOverheid.ageLower", attributesAge);
 
 		ArrayList<CredentialRequest> credentials = new ArrayList<>();
 		credentials.add(cred);

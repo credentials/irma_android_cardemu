@@ -222,10 +222,9 @@ public class DriversLicenseEnrollActivity extends AbstractNFCEnrollActivity {
                 CardManager.storeCard();
 
                 // Let MainActivity do the work
-                Intent i = new Intent();
-                i.putExtra("dldata", GsonUtil.getGson().toJson(eDLMsg));
-                setResult(Activity.RESULT_OK, i);
-                finish();
+                setResult(Activity.RESULT_OK);
+                settings.edit().putString("dldata", GsonUtil.getGson().toJson(eDLMsg)).commit();
+                super.finish();
 
                 break;
 
@@ -510,6 +509,14 @@ public class DriversLicenseEnrollActivity extends AbstractNFCEnrollActivity {
      * in a seperate thread.
      */
     private void readDriversLicense(PassportService ps, EDLDataMessage eDLMessage) {
+//        DriverDemographicInfo driverInfo = new DriverDemographicInfo();
+//        driverInfo.setDob("14081988");
+//        driverInfo.setPlaceOfBirth("Beers");
+//        driverInfo.setGivenNames("Fabian");
+//        driverInfo.setFamilyName("van den Broek");
+//        eDLMessage.setDriverInfo(driverInfo);
+//        advanceScreen();
+
         new AsyncTask<Object,Void,EDLDataMessage>(){
             ProgressBar progressBar = (ProgressBar) findViewById(R.id.se_progress_bar);
             boolean passportError = false;
