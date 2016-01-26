@@ -104,7 +104,7 @@ public abstract class AbstractNFCEnrollActivity extends AbstractGUIEnrollActivit
         }
 
 
-        client = new HttpClient(gson, new SecureSSLSocketFactory(Util.getSocketFactory(this, "ca")));
+        client = new HttpClient(gson, new SecureSSLSocketFactory(this, "ca"));
 
         // Load the card and open the IdemixService
         card = CardManager.loadCard();

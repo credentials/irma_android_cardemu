@@ -43,6 +43,7 @@ import net.sf.scuba.smartcards.*;
 import org.acra.ACRA;
 import org.irmacard.cardemu.*;
 import org.irmacard.cardemu.BuildConfig;
+import org.irmacard.cardemu.httpclient.HttpClientException;
 import org.irmacard.credentials.Attributes;
 import org.irmacard.credentials.CredentialsException;
 import org.irmacard.credentials.idemix.IdemixCredentials;
@@ -424,7 +425,7 @@ public class PassportEnrollActivity extends AbstractNFCEnrollActivity {
 					//e.printStackTrace();
 					msg.obj = e;
 					msg.what = R.string.error_enroll_issuing_failed;
-				} catch (HttpClient.HttpClientException e) {
+				} catch (HttpClientException e) {
 					msg.obj = e;
 					if (e.cause instanceof JsonSyntaxException) {
 						ACRA.getErrorReporter().handleException(e);
@@ -438,7 +439,7 @@ public class PassportEnrollActivity extends AbstractNFCEnrollActivity {
 			}
 
 			private void issue(String credentialType, BasicClientMessage session)
-					throws HttpClient.HttpClientException, CardServiceException, InfoException, CredentialsException {
+					throws HttpClientException, CardServiceException, InfoException, CredentialsException {
 				// Get the first batch of commands for issuing
 				RequestStartIssuanceMessage startMsg = new RequestStartIssuanceMessage(
 						session.getSessionToken(),
