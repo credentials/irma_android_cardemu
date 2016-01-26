@@ -40,7 +40,7 @@ public abstract class Protocol implements SessionDialogFragment.SessionDialogLis
 
 	private static final String TAG = "CardEmuProtocol";
 
-	protected MainActivity activity;
+	public static MainActivity activity;
 
 	// Automatically return to browser when launched using a URL
 	private boolean launchedFromBrowser;
@@ -58,9 +58,9 @@ public abstract class Protocol implements SessionDialogFragment.SessionDialogLis
 	/**
 	 * Create a new session
 	 * @param qrcontent Contents of the QR code, containing the server to connect to and protocol version number
-	 * @param activity The activity to report progress to
+	 * //@param activity The activity to report progress to
 	 */
-	public static void NewSession(String qrcontent, MainActivity activity, boolean launchedFromBrowser) {
+	public static void NewSession(String qrcontent, boolean launchedFromBrowser) {
 		// Decide on the protocol version and the URL to connect to
 		String url, protocolVersion;
 		try {
@@ -94,7 +94,7 @@ public abstract class Protocol implements SessionDialogFragment.SessionDialogLis
 				return;
 		}
 
-		protocol.activity = activity;
+		//protocol.activity = activity;
 		protocol.launchedFromBrowser = launchedFromBrowser;
 		protocol.connect(url);
 	}

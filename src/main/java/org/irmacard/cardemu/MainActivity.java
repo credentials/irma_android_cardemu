@@ -155,6 +155,8 @@ public class MainActivity extends Activity {
 		updater = new AppUpdater(this, BuildConfig.updateServer);
 
 		settings = getSharedPreferences(SETTINGS, 0);
+
+		Protocol.activity = this;
 	}
 
 	public int getState() {
@@ -389,52 +391,13 @@ public class MainActivity extends Activity {
 		Log.i(TAG, "Received qr in intent: " + qr);
 		if(!qr.equals(lastSessionUrl)) {
 			lastSessionUrl = qr;
-			Protocol.NewSession(qr, this, true);
+			Protocol.NewSession(qr, true);
 		} else {
 			Log.i(TAG, "Already processed this qr");
 		}
 	}
 
 	public void onMainShapeTouch(View v) {
-		HashMap<String, String> attributes = new HashMap<>(4);
-		attributes.put("country", "The Netherlands");
-		attributes.put("city", "Nijmegen");
-		attributes.put("street", "Toernooiveld 212");
-		attributes.put("zipcode", "6525 EC");
-		CredentialRequest cred = new CredentialRequest(0, "MijnOverheid.address", attributes);
-
-		ArrayList<CredentialRequest> credentials = new ArrayList<>();
-		credentials.add(cred);
-
-		IssuingRequest request = new IssuingRequest(null, null, credentials);
-		IdentityProviderRequest ipRequest = new IdentityProviderRequest("foo", request , 6);
-
-		// Manually create JWT
-		String header = Base64.encodeToString("{\"typ\":\"JWT\",\"alg\":\"none\"}".getBytes(), Base64.URL_SAFE|Base64.NO_WRAP|Base64.NO_PADDING);
-		Map<String,Object> jwtBody = new HashMap<>(4);
-		jwtBody.put("iss", "testip");
-		jwtBody.put("sub", "issue_request");
-		jwtBody.put("iat", System.currentTimeMillis() / 1000);
-		jwtBody.put("iprequest", ipRequest);
-		String json = GsonUtil.getGson().toJson(jwtBody);
-		String jwt = header + "." + Base64.encodeToString(json.getBytes(), Base64.URL_SAFE|Base64.NO_WRAP|Base64.NO_PADDING) + ".";
-
-		// Post JWT to the API server
-		final String server = "https://demo.irmacard.org/tomcat/irma_api_server/api/v2/issue/";
-		new HttpClient(GsonUtil.getGson()).post(ClientQr.class, server, jwt, new HttpResultHandler<ClientQr>() {
-					@Override public void onSuccess(ClientQr result) {
-						ClientQr qr = new ClientQr(result.getVersion(), server + result.getUrl());
-						Protocol.NewSession(GsonUtil.getGson().toJson(qr), MainActivity.this, false);
-					}
-					@Override public void onError(HttpClientException exception) {
-						setFeedback("Selfenroll failed!", "failure");
-					}
-				}
-		);
-
-//		if (activityState == STATE_IDLE) {
-//			startQRScanner("Scan the QR image in the browser.");
-//		}
 	}
 
 	public void onEnrollButtonTouch(View v) {
@@ -467,7 +430,7 @@ public class MainActivity extends Activity {
 			if (scanResult != null) {
 				String contents = scanResult.getContents();
 				if (contents != null) {
-					Protocol.NewSession(contents, this, false);
+					Protocol.NewSession(contents, false);
 				}
 			}
 		}

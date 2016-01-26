@@ -30,18 +30,10 @@
 
 package org.irmacard.cardemu.selfenrol;
 
-import android.app.DatePickerDialog;
-import android.content.Context;
 import android.os.AsyncTask;
 import android.os.Bundle;
 import android.os.Handler;
 import android.os.Message;
-import android.provider.Settings;
-import android.telephony.TelephonyManager;
-import android.text.Editable;
-import android.text.Html;
-import android.text.TextWatcher;
-import android.text.method.LinkMovementMethod;
 import android.util.Log;
 import android.view.View;
 import android.widget.*;
@@ -51,7 +43,6 @@ import net.sf.scuba.smartcards.*;
 import org.acra.ACRA;
 import org.irmacard.cardemu.*;
 import org.irmacard.cardemu.BuildConfig;
-import org.irmacard.cardemu.httpclient.HttpClientException;
 import org.irmacard.credentials.Attributes;
 import org.irmacard.credentials.CredentialsException;
 import org.irmacard.credentials.idemix.IdemixCredentials;
@@ -71,19 +62,24 @@ import org.jmrtd.lds.SODFile;
 import java.io.IOException;
 import java.lang.reflect.Type;
 import java.security.Security;
-import java.text.ParseException;
+import java.text.SimpleDateFormat;
 import java.util.*;
 
-public class PassportEnrollActivity extends EnrollActivity {
+public class PassportEnrollActivity extends AbstractNFCEnrollActivity {
 	// Configuration
 	private static final String TAG = "cardemu.PassportEnrollA";
+	public static final int PassportEnrollActivityCode = 300;
 	private static final int SCREEN_BAC = 2;
 	private static final int SCREEN_PASSPORT = 3;
 	private static final int SCREEN_ISSUE = 4;
 
+	protected int tagReadAttempt = 0;
+
 	// State variables
-	private String imsi;
 	private PassportDataMessage passportMsg = null;
+
+	// Date stuff
+	protected SimpleDateFormat bacDateFormat = new SimpleDateFormat("yyMMdd", Locale.US);
 
 	@Override
 	protected void onCreate(Bundle savedInstanceState) {
@@ -91,30 +87,45 @@ public class PassportEnrollActivity extends EnrollActivity {
 
 		setNfcScreen(SCREEN_PASSPORT);
 
-		screen = SCREEN_START;
-		updateProgressCounter();
+        // Get the BasicClientMessage containing our nonce to send to the passport.
+        getEnrollmentSession(new Handler() {
+            @Override
+            public void handleMessage(Message msg) {
+                EnrollmentStartResult result = (EnrollmentStartResult) msg.obj;
 
-		String enrollServer = BuildConfig.enrollServer.substring(8); // Strip "https://"
-		enrollServer = enrollServer.substring(0, enrollServer.indexOf('/')); // Strip path from the url
-		String helpHtml = String.format(getString(R.string.se_connect_mno), enrollServer);
+                if (result.exception != null) { // Something went wrong
+                    showErrorScreen(result.errorId);
+                } else {
+                    TextView connectedTextView = (TextView) findViewById(R.id.se_connected);
+                    connectedTextView.setTextColor(getResources().getColor(R.color.irmagreen));
+                    connectedTextView.setText(R.string.se_connected_mno);
 
-		TextView helpTextView = (TextView)findViewById(R.id.se_feedback_text);
-		if (helpTextView != null) { // Can be null if we are on error screen
-			helpTextView.setText(Html.fromHtml(helpHtml));
-			helpTextView.setMovementMethod(LinkMovementMethod.getInstance());
-			helpTextView.setLinksClickable(true);
-		}
+                    findViewById(R.id.se_feedback_text).setVisibility(View.VISIBLE);
+                    findViewById(R.id.se_progress_bar).setVisibility(View.VISIBLE);
+                }
+            }
+        });
 
-		Context context = getApplicationContext();
-		TelephonyManager telephonyManager = (TelephonyManager) context.getSystemService(Context.TELEPHONY_SERVICE);
-		imsi = telephonyManager.getSubscriberId();
+        // Spongycastle provides the MAC ISO9797Alg3Mac, which JMRTD usesin the doBAC method below (at
+        // DESedeSecureMessagingWrapper.java, line 115)
+        Security.addProvider(new org.spongycastle.jce.provider.BouncyCastleProvider());
 
-		if (imsi == null)
-			imsi = "FAKE_IMSI_" +  Settings.Secure.getString(
-					context.getContentResolver(), Settings.Secure.ANDROID_ID);
-		TextView imsiTextView = ((TextView) findViewById(R.id.IMSI));
-		if (imsiTextView != null)
-			imsiTextView.setText("IMSI: " + imsi);
+        // Update the UI
+        setContentView(R.layout.enroll_activity_passport);
+        screen = SCREEN_PASSPORT;
+        updateProgressCounter();
+
+        // The next advanceScreen() is called when the passport reading was successful (see onPostExecute() in
+        // readPassport() above). Thus, if no passport arrives or we can't successfully read it, we have to
+        // ensure here that we don't stay on the passport screen forever with this timeout.
+        new Handler().postDelayed(new Runnable() {
+            @Override
+            public void run() {
+                if (screen == SCREEN_PASSPORT && (passportMsg == null || !passportMsg.isComplete())) {
+                    showErrorScreen(getString(R.string.error_enroll_passporterror));
+                }
+            }
+        }, MAX_TAG_READ_TIME);
 	}
 
 
@@ -304,115 +315,6 @@ public class PassportEnrollActivity extends EnrollActivity {
 	@Override
 	protected void advanceScreen() {
 		switch (screen) {
-			case SCREEN_START:
-				setContentView(R.layout.enroll_activity_bac);
-				screen = SCREEN_BAC;
-				updateProgressCounter();
-				enableContinueButton();
-
-				// Restore the BAC input fields from the settings, if present
-				long bacDob = settings.getLong("enroll_bac_dob", 0);
-				long bacDoe = settings.getLong("enroll_bac_doe", 0);
-				String docnr = settings.getString("enroll_bac_docnr", "");
-
-				EditText docnrEditText = (EditText) findViewById(R.id.doc_nr_edittext);
-				EditText dobEditText = (EditText) findViewById(R.id.dob_edittext);
-				EditText doeEditText = (EditText) findViewById(R.id.doe_edittext);
-
-				Calendar c = Calendar.getInstance();
-				if (bacDob != 0) {
-					c.setTimeInMillis(bacDob);
-					setDateEditText(dobEditText, c);
-				}
-				if (bacDoe != 0) {
-					c.setTimeInMillis(bacDoe);
-					setDateEditText(doeEditText, c);
-				}
-				if (docnr.length() != 0)
-					docnrEditText.setText(docnr);
-
-				setBacFieldWatcher();
-
-				break;
-
-			case SCREEN_BAC:
-				// Store the entered document number and dates in the settings.
-				docnrEditText = (EditText) findViewById(R.id.doc_nr_edittext);
-				dobEditText = (EditText) findViewById(R.id.dob_edittext);
-				doeEditText = (EditText) findViewById(R.id.doe_edittext);
-
-				if (docnrEditText != null && dobEditText != null && doeEditText != null) {
-					bacDob = 0;
-					bacDoe = 0;
-					try {
-						String dobString = dobEditText.getText().toString();
-						String doeString = doeEditText.getText().toString();
-						if (dobString.length() != 0)
-							bacDob = hrDateFormat.parse(dobString).getTime();
-						if (doeString.length() != 0)
-							bacDoe = hrDateFormat.parse(doeString).getTime();
-					} catch (ParseException e) {
-						// Should not happen: the DOB and DOE EditTexts are set only by the DatePicker's,
-						// OnDateSetListener, which should always set a properly formatted string.
-						e.printStackTrace();
-					}
-
-					if (bacDoe < System.currentTimeMillis()) {
-						showErrorScreen(getString(R.string.error_enroll_passport_expired),
-								getString(R.string.abort), 0,
-								getString(R.string.retry), SCREEN_BAC);
-						return;
-					}
-
-					settings.edit()
-							.putLong("enroll_bac_dob", bacDob)
-							.putLong("enroll_bac_doe", bacDoe)
-							.putString("enroll_bac_docnr", docnrEditText.getText().toString())
-							.apply();
-				}
-
-				// Get the BasicClientMessage containing our nonce to send to the passport.
-				getEnrollmentSession(new Handler() {
-					@Override
-					public void handleMessage(Message msg) {
-						EnrollmentStartResult result = (EnrollmentStartResult) msg.obj;
-
-						if (result.exception != null) { // Something went wrong
-							showErrorScreen(result.errorId);
-						} else {
-							TextView connectedTextView = (TextView) findViewById(R.id.se_connected);
-							connectedTextView.setTextColor(getResources().getColor(R.color.irmagreen));
-							connectedTextView.setText(R.string.se_connected_mno);
-
-							findViewById(R.id.se_feedback_text).setVisibility(View.VISIBLE);
-							findViewById(R.id.se_progress_bar).setVisibility(View.VISIBLE);
-						}
-					}
-				});
-
-				// Spongycastle provides the MAC ISO9797Alg3Mac, which JMRTD usesin the doBAC method below (at
-				// DESedeSecureMessagingWrapper.java, line 115)
-				Security.addProvider(new org.spongycastle.jce.provider.BouncyCastleProvider());
-
-				// Update the UI
-				setContentView(R.layout.enroll_activity_passport);
-				screen = SCREEN_PASSPORT;
-				updateProgressCounter();
-
-				// The next advanceScreen() is called when the passport reading was successful (see onPostExecute() in
-				// readPassport() above). Thus, if no passport arrives or we can't successfully read it, we have to
-				// ensure here that we don't stay on the passport screen forever with this timeout.
-				new Handler().postDelayed(new Runnable() {
-					@Override
-					public void run() {
-						if (screen == SCREEN_PASSPORT && (passportMsg == null || !passportMsg.isComplete())) {
-							showErrorScreen(getString(R.string.error_enroll_passporterror));
-						}
-					}
-				}, MAX_TAG_READ_TIME);
-
-				break;
-
 			case SCREEN_PASSPORT:
 				setContentView(R.layout.enroll_activity_issue);
 				screen = SCREEN_ISSUE;
@@ -443,9 +345,7 @@ public class PassportEnrollActivity extends EnrollActivity {
 						}
 					}
 				});
-
 				break;
-
 			case SCREEN_ISSUE:
 			case SCREEN_ERROR:
 				screen = SCREEN_START;
@@ -456,58 +356,6 @@ public class PassportEnrollActivity extends EnrollActivity {
 				Log.e(TAG, "Error, screen switch fall through");
 				break;
 		}
-	}
-
-	public void onDateTouch(View v) {
-		final EditText dateView = (EditText) v;
-		final String name = v.getId() == R.id.dob_edittext ? "dob" : "doe";
-		Long current = settings.getLong("enroll_bac_" + name, 0);
-
-		final Calendar c = Calendar.getInstance();
-		if (current != 0)
-			c.setTimeInMillis(current);
-
-		int currentYear = c.get(Calendar.YEAR);
-		int currentMonth = c.get(Calendar.MONTH);
-		int currentDay = c.get(Calendar.DAY_OF_MONTH);
-
-		DatePickerDialog dpd = new DatePickerDialog(this, new DatePickerDialog.OnDateSetListener() {
-			@Override
-			public void onDateSet(DatePicker view, int year, int monthOfYear, int dayOfMonth) {
-				Calendar date = new GregorianCalendar(year, monthOfYear, dayOfMonth);
-				setDateEditText(dateView, date);
-			}
-		}, currentYear, currentMonth, currentDay);
-		dpd.show();
-	}
-
-	private void setDateEditText(EditText dateView, Calendar c) {
-		dateView.setText(hrDateFormat.format(c.getTime()));
-	}
-
-	private void setBacFieldWatcher() {
-		final EditText docnrEditText = (EditText) findViewById(R.id.doc_nr_edittext);
-		final EditText dobEditText = (EditText) findViewById(R.id.dob_edittext);
-		final EditText doeEditText = (EditText) findViewById(R.id.doe_edittext);
-		final Button continueButton = (Button) findViewById(R.id.se_button_continue);
-
-		TextWatcher bacFieldWatcher = new TextWatcher() {
-			@Override public void beforeTextChanged(CharSequence s, int start, int count, int after) {}
-			@Override public void afterTextChanged(Editable s) {}
-			@Override
-			public void onTextChanged(CharSequence s, int start, int before, int count) {
-				boolean enableButton = docnrEditText.getText().length() > 0
-						&& dobEditText.getText().length() > 0
-						&& doeEditText.getText().length() > 0;
-				continueButton.setEnabled(enableButton);
-			}
-		};
-
-		docnrEditText.addTextChangedListener(bacFieldWatcher);
-		dobEditText.addTextChangedListener(bacFieldWatcher);
-		doeEditText.addTextChangedListener(bacFieldWatcher);
-
-		bacFieldWatcher.onTextChanged("", 0, 0, 0);
 	}
 
 	/**
@@ -526,9 +374,7 @@ public class PassportEnrollActivity extends EnrollActivity {
 		return new BACKey(docnr, dobString, doeString);
 	}
 
-	private void updateProgressCounter() {
-		super.updateProgressCounter(screen - 1);
-	}
+
 
 	/**
 	 * Do the enrolling and send a message to uiHandler when done. If something
@@ -578,7 +424,7 @@ public class PassportEnrollActivity extends EnrollActivity {
 					//e.printStackTrace();
 					msg.obj = e;
 					msg.what = R.string.error_enroll_issuing_failed;
-				} catch (HttpClientException e) {
+				} catch (HttpClient.HttpClientException e) {
 					msg.obj = e;
 					if (e.cause instanceof JsonSyntaxException) {
 						ACRA.getErrorReporter().handleException(e);
@@ -592,7 +438,7 @@ public class PassportEnrollActivity extends EnrollActivity {
 			}
 
 			private void issue(String credentialType, BasicClientMessage session)
-					throws HttpClientException, CardServiceException, InfoException, CredentialsException {
+					throws HttpClient.HttpClientException, CardServiceException, InfoException, CredentialsException {
 				// Get the first batch of commands for issuing
 				RequestStartIssuanceMessage startMsg = new RequestStartIssuanceMessage(
 						session.getSessionToken(),

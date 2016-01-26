@@ -62,12 +62,12 @@
     <string name="error_enroll_serverdied">Received no response from the enrollment server.</string>
     <string name="error_enroll_invalidresponse">The enrollment server returned an invalid response.</string>
     <string name="error_enroll_passporterror">Failed to establish contact with the passport.</string>
-    <string name="error_enroll_bacfailed">The passport data you supplied seems to be wrong.</string>
+    <string name="error_enroll_bacfailed">The document data you supplied seems to be wrong.</string>
     <string name="error_enroll_passport_expired">You cannot enroll with an expired identity document.</string>
     <string name="unknown_error">An unknown error occurred.</string>
-    <string name="enroll_enter_bac_title">Passport data</string>
-    <string name="enroll_enter_bac_desc">Please enter the following data from your passport, to allow the app
-        to communicate with the passport.</string>
+    <string name="enroll_enter_bac_title">Document data</string>
+    <string name="enroll_enter_bac_desc">Please enter the following data from your document, to allow the app
+        to communicate with the document.</string>
     <string name="menu_show_log">Show log</string>
     <string name="check_for_updates">Check for updates</string>
     <string name="no_new_updates">No updates found.</string>
@@ -78,9 +78,18 @@
     <string name="no">No</string>
     <string name="more_info">More Info</string>
 
+    <string name="or">or enter</string>
+    <string-array name="document_list">
+        <item>Passport / ID card</item>
+        <item>Drivers License</item>
+    </string-array>
+
+
     <plurals name="disclose_question_1">
 		<item quantity="one">The following attribute will be sent to the verifier.</item>
 		<item quantity="other">The following attributes will be sent to the verifier.</item>
     </plurals>
     <string name="disclose_question_2">Are you sure you want to disclose these attributes?</string>
+    <string name="feedback_communicating_driverslicense">Communicating with driving license</string>
+    <string name="error_enroll_driverslicense_error">An error occured during enrolment</string>
 </resources>
