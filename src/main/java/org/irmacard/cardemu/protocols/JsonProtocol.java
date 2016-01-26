@@ -33,14 +33,18 @@ public class JsonProtocol extends Protocol {
 			url = url + "/";
 		server = url;
 
-		if (Pattern.matches(".*/verification/[^/]+/$", server))
+		if (Pattern.matches(".*/verification/[^/]+/$", server)) {
+			action = ProtocolHandler.Action.DISCLOSING;
 			startDisclosure();
-		else if (Pattern.matches(".*/issue/[^/]+/$", server))
+		}
+		else if (Pattern.matches(".*/issue/[^/]+/$", server)) {
+			action = ProtocolHandler.Action.ISSUING;
 			startIssuance();
+		}
 	}
 
 	/**
-	 * Report the specified error message (if present) or the exception (if not) to the MainActivity
+	 * Report the specified error message (if present) or the exception (if not) to the handler
 	 */
 	private void fail(HttpClientException e, ApiErrorMessage errorMessage) {
 		String feedback;
@@ -54,36 +58,49 @@ public class JsonProtocol extends Protocol {
 		else
 			feedback = "Could not connect: Server returned status " + e.status;
 
-		fail(feedback);
+		// Since we got a HttpClientException, the server is either not reachable, or it returned
+		// some error message. In the first case DELETEing the session will probably also fail;
+		// in the second case, the server already knows to delete the session itself
+		fail(feedback, false);
 	}
 
 	/**
-	 * Report the specified exception to the MainActivity
+	 * Report the specified exception as a failure to the handler.
+	 * @param e The feedback
+	 * @param deleteSession Whether or not we should DELETE the session
 	 */
-	private void fail(HttpClientException e) {
-		fail(e, null);
+	private void fail(Exception e, boolean deleteSession) {
+		fail(e.getMessage(), deleteSession);
 	}
 
 	/**
-	 * Report the specified exception to the MainActivity
+	 * Report the specified feedback as a failure to the handler.
+	 * @param feedback The feedback
+	 * @param deleteSession Whether or not we should DELETE the session
 	 */
-	private void fail(Exception e) {
-		fail(e.getMessage());
-	}
-
-	/**
-	 * Report the specified feedback as a failure to the MainActivity
-	 */
-	private void fail(String feedback) {
+	private void fail(String feedback, boolean deleteSession) {
 		Log.w(TAG, feedback);
 
-		activity.setFeedback(feedback, "failure");
-		activity.setState(MainActivity.STATE_IDLE);
+		handler.onFailure(action, feedback);
+		if (deleteSession)
+			deleteSession();
 	}
 
 	@Override
 	public void onIssueOK(IssuingRequest request) {
 		finishIssuance(request);
+	}
+
+	@Override
+	public void onIssueCancel() {
+		deleteSession();
+		super.onIssueCancel();
+	}
+
+	@Override
+	public void onDiscloseCancel() {
+		deleteSession();
+		super.onDiscloseCancel();
 	}
 
 	/**
@@ -92,14 +109,14 @@ public class JsonProtocol extends Protocol {
 	public void startIssuance() {
 		Log.i(TAG, "Retrieving issuing request: " + server);
 
-		activity.setState(MainActivity.STATE_CONNECTING_TO_SERVER);
+		handler.onStatusUpdate(ProtocolHandler.Action.ISSUING, ProtocolHandler.Status.COMMUNICATING);
 		final String server = this.server;
 		final HttpClient client = new HttpClient(GsonUtil.getGson());
 		
 		client.get(IssuingRequest.class, server, new JsonResultHandler<IssuingRequest>() {
 			@Override public void onSuccess(IssuingRequest result) {
 				Log.i(TAG, result.toString());
-				activity.setState(MainActivity.STATE_READY);
+				handler.onStatusUpdate(ProtocolHandler.Action.ISSUING, ProtocolHandler.Status.CONNECTED);
 				askForIssuancePermission(result);
 			}
 		});
@@ -111,7 +128,7 @@ public class JsonProtocol extends Protocol {
 	 * construct and save the new Idemix credentials.
 	 */
 	private void finishIssuance(IssuingRequest request) {
-		activity.setState(MainActivity.STATE_COMMUNICATING);
+		handler.onStatusUpdate(ProtocolHandler.Action.ISSUING, ProtocolHandler.Status.COMMUNICATING);
 		Log.i(TAG, "Posting issuing commitments");
 
 		final HttpClient client = new HttpClient(GsonUtil.getGson());
@@ -120,12 +137,10 @@ public class JsonProtocol extends Protocol {
 			msg = CredentialManager.getIssueCommitments(request);
 		} catch (InfoException e) {
 			e.printStackTrace();
-			activity.setFeedback("Issuing failed: wrong credential type", "failure");
-			cancelSession();
+			fail("wrong credential type", true);
 			return;
 		} catch (CredentialsException e) {
-			activity.setFeedback("Missing required attributes", "failure");
-			cancelSession();
+			fail("missing required attributes", true);
 			return;
 		}
 
@@ -134,11 +149,9 @@ public class JsonProtocol extends Protocol {
 			@Override public void onSuccess(ArrayList<IssueSignatureMessage> result) {
 				try {
 					CredentialManager.constructCredentials(result);
-					activity.setFeedback("Issuing was successfull", "success");
-					activity.setState(MainActivity.STATE_IDLE);
-					done();
+					handler.onSuccess(ProtocolHandler.Action.ISSUING);
 				} catch (InfoException|CredentialsException e) {
-					fail(e);
+					fail(e, false); // No need to inform the server if this failed
 				}
 			}
 		});
@@ -149,7 +162,7 @@ public class JsonProtocol extends Protocol {
 	 * ask the user which attributes she wants to disclose.
 	 */
 	private void startDisclosure() {
-		activity.setState(MainActivity.STATE_CONNECTING_TO_SERVER);
+		handler.onStatusUpdate(ProtocolHandler.Action.DISCLOSING, ProtocolHandler.Status.COMMUNICATING);
 		Log.i(TAG, "Retrieving disclosure request: " + server);
 
 		HttpClient client = new HttpClient(GsonUtil.getGson());
@@ -157,11 +170,10 @@ public class JsonProtocol extends Protocol {
 		client.get(DisclosureProofRequest.class, server, new JsonResultHandler<DisclosureProofRequest>() {
 			@Override public void onSuccess(DisclosureProofRequest result) {
 				if (result.getContent().size() == 0 || result.getNonce() == null || result.getContext() == null) {
-					activity.setFeedback("Got malformed disclosure request", "failure");
-					cancelSession();
+					fail("Got malformed disclosure request", true);
 					return;
 				}
-				activity.setState(MainActivity.STATE_READY);
+				handler.onStatusUpdate(ProtocolHandler.Action.DISCLOSING, ProtocolHandler.Status.CONNECTED);
 				askForVerificationPermission(result);
 			}
 		});
@@ -171,7 +183,7 @@ public class JsonProtocol extends Protocol {
 	 * Given a {@link DisclosureProofRequest} with selected attributes, perform the disclosure.
 	 */
 	public void disclose(final DisclosureProofRequest request) {
-		activity.setState(MainActivity.STATE_COMMUNICATING);
+		handler.onStatusUpdate(ProtocolHandler.Action.DISCLOSING, ProtocolHandler.Status.COMMUNICATING);
 		Log.i(TAG, "Sending disclosure proofs to " + server);
 
 		ProofList proofs;
@@ -180,7 +192,7 @@ public class JsonProtocol extends Protocol {
 		} catch (CredentialsException e) {
 			e.printStackTrace();
 			cancelSession();
-			fail(e);
+			fail(e, true);
 			return;
 		}
 
@@ -189,24 +201,20 @@ public class JsonProtocol extends Protocol {
 			new JsonResultHandler<DisclosureProofResult.Status>() {
 			@Override public void onSuccess(DisclosureProofResult.Status result) {
 				if (result == DisclosureProofResult.Status.VALID) {
-					activity.setFeedback("Successfully disclosed attributes", "success");
-					activity.setState(MainActivity.STATE_IDLE);
-					done();
+					handler.onSuccess(ProtocolHandler.Action.DISCLOSING);
 				} else { // We successfully computed a proof but server rejects it? That's fishy, report it
 					String feedback = "Server rejected proof: " + result.name().toLowerCase();
 					ACRA.getErrorReporter().handleException(new Exception(feedback));
-					fail(feedback);
+					fail(feedback, false);
 				}
 			}
 		});
 	}
 
 	/**
-	 * Cancels the current disclosure session by DELETE-ing the specified url and setting the state to idle.
+	 * Deletes the current disclosure session by DELETE-ing the specified url and setting the state to idle.
 	 */
-	@Override
-	public void cancelSession() {
-		super.cancelSession();
+	public void deleteSession() {
 		Log.i(TAG, "Canceling disclosure to " + server);
 
 		new AsyncTask<String,Void,Void>() {
@@ -224,7 +232,7 @@ public class JsonProtocol extends Protocol {
 	}
 
 	/**
-	 * Error handler that deserializes a server API error, if present
+	 * Error messageHandler that deserializes a server API error, if present
 	 */
 	private abstract class JsonResultHandler<T> implements HttpResultHandler<T> {
 		@Override
@@ -233,7 +241,7 @@ public class JsonProtocol extends Protocol {
 				ApiErrorMessage msg = GsonUtil.getGson().fromJson(exception.getMessage(), ApiErrorMessage.class);
 				fail(exception, msg);
 			} catch (Exception e) {
-				fail(exception);
+				fail(exception, null);
 			}
 		}
 	}

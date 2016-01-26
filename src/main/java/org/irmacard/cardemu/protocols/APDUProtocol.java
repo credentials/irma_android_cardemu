@@ -43,6 +43,8 @@ public class APDUProtocol extends Protocol {
 
 	private long issuingStartTime;
 
+	private MainActivity mainActivity;
+
 	// Card state
 	private IRMACard card;
 	private IdemixService is = null;
@@ -80,7 +82,7 @@ public class APDUProtocol extends Protocol {
 	}
 
 	private void askForPIN() {
-		activity.setState(MainActivity.STATE_COMMUNICATING);
+		mainActivity.setState(MainActivity.STATE_COMMUNICATING);
 		new ProcessReaderMessage().execute(new ReaderInput(lastReaderMessage, "0000"));
 	}
 
@@ -104,11 +106,17 @@ public class APDUProtocol extends Protocol {
 
 		Log.i(TAG, "Start channel listening: " + url);
 
+		try {
+			mainActivity = (MainActivity) activity;
+		} catch (ClassCastException e) { // Add a message to the exception
+			throw new ClassCastException("APDUProtocol can only be used by MainActivity");
+		}
+
 		currentReaderURL = url;
 		Message msg = new Message();
 		msg.what = MESSAGE_STARTGET;
-		activity.setState(MainActivity.STATE_CONNECTING_TO_SERVER);
-		handler.sendMessage(msg);
+		mainActivity.setState(MainActivity.STATE_CONNECTING_TO_SERVER);
+		messageHandler.sendMessage(msg);
 	}
 
 	/**
@@ -134,18 +142,18 @@ public class APDUProtocol extends Protocol {
 		postMessage(disclosureproof);
 	}
 
-	Handler handler = new Handler() {
+	Handler messageHandler = new Handler() {
 		@Override
 		public void handleMessage(Message msg) {
 			if (msg.what != MESSAGE_STARTGET)
 				return;
 
-			Log.i(TAG, "MESSAGE_STARTGET received in handler!");
+			Log.i(TAG, "MESSAGE_STARTGET received in messageHandler!");
 			AsyncHttpClient client = new AsyncHttpClient();
 			client.setTimeout(50000); // timeout of 50 seconds
 			client.setUserAgent("org.irmacard.cardemu");
 
-			client.get(activity, currentReaderURL, new AsyncHttpResponseHandler() {
+			client.get(mainActivity, currentReaderURL, new AsyncHttpResponseHandler() {
 				@Override
 				public void onSuccess(int statusCode, Header[] headers, byte[] responseBody) {
 					String responseData = new String(responseBody);
@@ -159,15 +167,15 @@ public class APDUProtocol extends Protocol {
 					if (currentHandlers <= 1) {
 						Message newMsg = new Message();
 						newMsg.what = MESSAGE_STARTGET;
-						if (!(activity.getState() == MainActivity.STATE_IDLE))
-							handler.sendMessageDelayed(newMsg, 200);
+						if (!(mainActivity.getState() == MainActivity.STATE_IDLE))
+							messageHandler.sendMessageDelayed(newMsg, 200);
 					}
 				}
 
 				@Override
 				//public void onFailure(Throwable arg0, String arg1) {
 				public void onFailure(int statusCode, Header[] headers, byte[] responseBody, Throwable error) {
-					if (activity.getState() != MainActivity.STATE_CONNECTING_TO_SERVER) {
+					if (mainActivity.getState() != MainActivity.STATE_CONNECTING_TO_SERVER) {
 						retry_counter = 0;
 						return;
 					}
@@ -178,13 +186,13 @@ public class APDUProtocol extends Protocol {
 					// and we should wait a bit longer
 					if (currentHandlers <= 1 && retry_counter < MAX_RETRIES) {
 						Message newMsg = new Message();
-						activity.setFeedback("Trying to reach server again...", "none");
+						mainActivity.setFeedback("Trying to reach server again...", "none");
 						newMsg.what = MESSAGE_STARTGET;
-						handler.sendMessageDelayed(newMsg, 5000);
+						messageHandler.sendMessageDelayed(newMsg, 5000);
 					} else {
 						retry_counter = 0;
-						activity.setFeedback("Failed to connect to server", "warning");
-						activity.setState(MainActivity.STATE_IDLE);
+						mainActivity.setFeedback("Failed to connect to server", "warning");
+						mainActivity.setState(MainActivity.STATE_IDLE);
 					}
 
 				}
@@ -207,7 +215,7 @@ public class APDUProtocol extends Protocol {
 				create();
 
 
-		if (activity.getState() == MainActivity.STATE_CONNECTING_TO_SERVER) {
+		if (mainActivity.getState() == MainActivity.STATE_CONNECTING_TO_SERVER) {
 			// this is the message that containts the url to write to
 			JsonParser p = new JsonParser();
 			JsonElement write_url = p.parse(data).getAsJsonObject().get("write_url");
@@ -217,7 +225,7 @@ public class APDUProtocol extends Protocol {
 			// write_url, we let the rest of this method deal with it.
 			if (write_url != null) {
 				currentWriteURL = write_url.getAsString();
-				activity.setState(MainActivity.STATE_READY); // This ensures we will be in this block only once
+				mainActivity.setState(MainActivity.STATE_READY); // This ensures we will be in this block only once
 				postMessage(
 						new ReaderMessage(ReaderMessage.TYPE_EVENT, ReaderMessage.NAME_EVENT_CARDREADERFOUND, null,
 								new EventArguments().withEntry("type", "phone")));
@@ -247,7 +255,7 @@ public class APDUProtocol extends Protocol {
 		if (rm.type.equals(ReaderMessage.TYPE_COMMAND)) {
 			Log.i(TAG, "Got command message");
 
-			if (activity.getState() != MainActivity.STATE_READY) {
+			if (mainActivity.getState() != MainActivity.STATE_READY) {
 				// FIXME: Only when ready can we handle commands
 				throw new RuntimeException(
 						"Illegal command from server, no card currently connected");
@@ -256,7 +264,7 @@ public class APDUProtocol extends Protocol {
 			if (rm.name.equals(ReaderMessage.NAME_COMMAND_AUTHPIN)) {
 				askForPIN();
 			} else {
-				activity.setState(MainActivity.STATE_COMMUNICATING);
+				mainActivity.setState(MainActivity.STATE_COMMUNICATING);
 				new ProcessReaderMessage().execute(new ReaderInput(rm));
 			}
 		}
@@ -268,16 +276,15 @@ public class APDUProtocol extends Protocol {
 				String state = ea.data.get("state");
 				String feedback = ea.data.get("feedback");
 				if (state != null) {
-					activity.setFeedback(feedback, state);
+					mainActivity.setFeedback(feedback, state);
 				}
 			} else if (rm.name.equals(ReaderMessage.NAME_EVENT_TIMEOUT)) {
-				activity.setState(MainActivity.STATE_IDLE);
+				mainActivity.setState(MainActivity.STATE_IDLE);
 			} else if (rm.name.equals(ReaderMessage.NAME_EVENT_DONE)) {
 				CardManager.storeCard();
 				CredentialManager.loadFromCard();
 				CredentialManager.save();
-				activity.setState(MainActivity.STATE_IDLE);
-				done();
+				mainActivity.setState(MainActivity.STATE_IDLE);
 			}
 		}
 	}
@@ -407,10 +414,10 @@ public class APDUProtocol extends Protocol {
 			if (result.type.equals(ReaderMessage.TYPE_EVENT) &&
 					result.name.equals(ReaderMessage.NAME_EVENT_CARDLOST)) {
 				// Connection to the card is lost
-				activity.setState(MainActivity.STATE_CONNECTED);
+				mainActivity.setState(MainActivity.STATE_CONNECTED);
 			} else {
-				if (activity.getState() == MainActivity.STATE_COMMUNICATING) {
-					activity.setState(MainActivity.STATE_READY);
+				if (mainActivity.getState() == MainActivity.STATE_COMMUNICATING) {
+					mainActivity.setState(MainActivity.STATE_READY);
 				}
 			}
 
@@ -421,7 +428,7 @@ public class APDUProtocol extends Protocol {
 				if (!args.success) {
 					if (args.tries > 0) {
 						// Still some tries left, asking again
-						activity.setState(MainActivity.STATE_WAITING_FOR_PIN);
+						mainActivity.setState(MainActivity.STATE_WAITING_FOR_PIN);
 						askForPIN();
 						return; // do not send a response yet.
 					}

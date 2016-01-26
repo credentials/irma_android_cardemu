@@ -1,5 +1,6 @@
 package org.irmacard.cardemu.protocols;
 
+import android.app.Activity;
 import android.app.AlertDialog;
 import android.content.DialogInterface;
 import android.content.Intent;
@@ -18,6 +19,10 @@ import java.util.ArrayList;
 import java.util.List;
 
 public abstract class Protocol implements SessionDialogFragment.SessionDialogListener {
+	protected Activity activity;
+	protected ProtocolHandler.Action action = ProtocolHandler.Action.UNKNOWN;
+	protected ProtocolHandler handler;
+
 	/**
 	 * Connect to the IRMA server at the specified URL
 	 * @param url The server to connect to
@@ -35,24 +40,7 @@ public abstract class Protocol implements SessionDialogFragment.SessionDialogLis
 	 * Cancel the current session.
 	 */
 	public void cancelSession() {
-		activity.setState(MainActivity.STATE_IDLE);
-	}
-
-	private static final String TAG = "CardEmuProtocol";
-
-	protected MainActivity activity;
-
-	// Automatically return to browser when launched using a URL
-	private boolean launchedFromBrowser;
-
-	@Override
-	public void onIssueOK(IssuingRequest request) {
-	}
-
-	@Override
-	public void onIssueCancel() {
-		cancelSession();
-		done();
+		handler.onCancelled(action);
 	}
 
 	/**
@@ -60,7 +48,7 @@ public abstract class Protocol implements SessionDialogFragment.SessionDialogLis
 	 * @param qrcontent Contents of the QR code, containing the server to connect to and protocol version number
 	 * @param activity The activity to report progress to
 	 */
-	public static void NewSession(String qrcontent, MainActivity activity, boolean launchedFromBrowser) {
+	public static void NewSession(String qrcontent, Activity activity, ProtocolHandler handler) {
 		// Decide on the protocol version and the URL to connect to
 		String url, protocolVersion;
 		try {
@@ -76,7 +64,7 @@ public abstract class Protocol implements SessionDialogFragment.SessionDialogLis
 
 		// Check URL validity
 		if (!Patterns.WEB_URL.matcher(url).matches()) {
-			activity.setFeedback("Protocol not supported", "failure");
+			handler.onFailure(ProtocolHandler.Action.UNKNOWN, "Protocol not supported");
 			return;
 		}
 
@@ -90,12 +78,12 @@ public abstract class Protocol implements SessionDialogFragment.SessionDialogLis
 				protocol = new JsonProtocol();
 				break;
 			default:
-				activity.setFeedback("Protocol not supported", "failure");
+				handler.onFailure(ProtocolHandler.Action.UNKNOWN, "Protocol not supported");
 				return;
 		}
 
 		protocol.activity = activity;
-		protocol.launchedFromBrowser = launchedFromBrowser;
+		protocol.handler = handler;
 		protocol.connect(url);
 	}
 
@@ -130,7 +118,6 @@ public abstract class Protocol implements SessionDialogFragment.SessionDialogLis
 					@Override
 					public void onClick(DialogInterface dialog, int which) {
 						cancelSession();
-						done();
 					}
 				})
 				.setNeutralButton("More Information", null)
@@ -197,15 +184,14 @@ public abstract class Protocol implements SessionDialogFragment.SessionDialogLis
 	@Override
 	public void onDiscloseCancel() {
 		cancelSession();
-		done();
 	}
 
-	public void done() {
-		if(launchedFromBrowser) {
-			launchedFromBrowser = false;
-			Log.i(TAG, "Programatically returning to browser");
-			activity.onBackPressed();
-		}
+	@Override
+	public void onIssueOK(IssuingRequest request) {}
+
+	@Override
+	public void onIssueCancel() {
+		cancelSession();
 	}
 }
 

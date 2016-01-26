@@ -43,6 +43,7 @@ import org.irmacard.android.util.credentials.CredentialPackage;
 import org.irmacard.android.util.credentialdetails.*;
 import org.irmacard.android.util.cardlog.*;
 import org.irmacard.cardemu.protocols.Protocol;
+import org.irmacard.cardemu.protocols.ProtocolHandler;
 import org.irmacard.cardemu.selfenrol.PassportEnrollActivity;
 import org.irmacard.cardemu.updates.AppUpdater;
 import org.irmacard.credentials.Attributes;
@@ -96,6 +97,63 @@ public class MainActivity extends Activity {
 
 	// Keep track of last verification url to ensure we handle it only once
 	private String lastSessionUrl = "()";
+
+	private boolean launchedFromBrowser;
+
+	private ProtocolHandler protocolHandler = new ProtocolHandler() {
+		@Override public void onStatusUpdate(Action action, Status status) {
+			switch (status) {
+				case COMMUNICATING:
+					setState(STATE_COMMUNICATING); break;
+				case CONNECTED:
+					setState(STATE_CONNECTED); break;
+				case DONE:
+					setState(STATE_IDLE); break;
+			}
+		}
+
+		@Override public void onSuccess(Action action) {
+			switch (action) {
+				case DISCLOSING:
+					setFeedback("Successfully disclosed attributes", "success"); break;
+				case ISSUING:
+					setFeedback("Issuing was successful", "success"); break;
+			}
+			finish(true);
+		}
+
+		@Override public void onCancelled(Action action) {
+			switch (action) {
+				case DISCLOSING:
+					setFeedback("Cancelled disclosure", "warning"); break;
+				case ISSUING:
+					setFeedback("Cancelled issuing", "warning"); break;
+			}
+			finish(true);
+		}
+
+		@Override public void onFailure(Action action, String message) {
+			String feedback;
+			switch (action) {
+				case DISCLOSING:
+					feedback = "Disclosure failed: "; break;
+				case ISSUING:
+					feedback = "Issuing failed: "; break;
+				case UNKNOWN:
+				default:
+					feedback = "Failed: "; break;
+			}
+			feedback += message;
+			setFeedback(feedback, "failure");
+			finish(false);
+		}
+
+		private void finish(boolean returnToBrowser) {
+			setState(STATE_IDLE);
+			if (launchedFromBrowser && returnToBrowser)
+				onBackPressed();
+		}
+	};
 
 	@Override
 	protected void onCreate(Bundle savedInstanceState) {
@@ -382,7 +440,8 @@ public class MainActivity extends Activity {
 		Log.i(TAG, "Received qr in intent: " + qr);
 		if(!qr.equals(lastSessionUrl)) {
 			lastSessionUrl = qr;
-			Protocol.NewSession(qr, this, true);
+			launchedFromBrowser = true;
+			Protocol.NewSession(qr, this, protocolHandler);
 		} else {
 			Log.i(TAG, "Already processed this qr");
 		}
@@ -424,7 +483,8 @@ public class MainActivity extends Activity {
 			if (scanResult != null) {
 				String contents = scanResult.getContents();
 				if (contents != null) {
-					Protocol.NewSession(contents, this, false);
+					launchedFromBrowser = false;
+					Protocol.NewSession(contents, this, protocolHandler);
 				}
 			}
 		}
