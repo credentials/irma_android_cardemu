@@ -1,22 +1,10 @@
 package org.irmacard.cardemu.protocols;
 
 import android.app.Activity;
-import android.app.AlertDialog;
-import android.content.DialogInterface;
-import android.content.Intent;
-import android.text.Html;
-import android.util.Log;
 import android.util.Patterns;
-import android.view.View;
 import org.irmacard.api.common.*;
-import org.irmacard.cardemu.CredentialManager;
-import org.irmacard.cardemu.MainActivity;
 import org.irmacard.cardemu.disclosuredialog.SessionDialogFragment;
-import org.irmacard.cardemu.disclosuredialog.DisclosureInformationActivity;
 import org.irmacard.api.common.util.GsonUtil;
-
-import java.util.ArrayList;
-import java.util.List;
 
 public abstract class Protocol implements SessionDialogFragment.SessionDialogListener {
 	protected Activity activity;
@@ -84,96 +72,8 @@ public abstract class Protocol implements SessionDialogFragment.SessionDialogLis
 
 		protocol.activity = activity;
 		protocol.handler = handler;
+		handler.setProtocol(protocol);
 		protocol.connect(url);
-	}
-
-	private List<AttributeDisjunction> getUnsatisfiableDisjunctions(List<AttributeDisjunction> disjunctions) {
-		List<AttributeDisjunction> missing = new ArrayList<>();
-		for (AttributeDisjunction disjunction : disjunctions) {
-			if (CredentialManager.getCandidates(disjunction).isEmpty()) {
-				missing.add(disjunction);
-			}
-		}
-		return missing;
-	}
-
-	private void showUnsatisfiableRequestDialog(List<AttributeDisjunction> missing, final DisclosureProofRequest request) {
-		String message = "The verifier requires attributes of the following kind: ";
-		int count = 0;
-		int max = missing.size();
-		for (AttributeDisjunction disjunction : missing) {
-			count++;
-			message += "<b>" + disjunction.getLabel() + "</b>";
-			if (count < max - 1 || count == max)
-				message += ", ";
-			if (count == max - 1 && max > 1)
-				message += " and ";
-		}
-		message += " but you do not have the appropriate attributes.";
-
-		final AlertDialog dialog = new AlertDialog.Builder(activity)
-				.setTitle("Missing attributes")
-				.setMessage(Html.fromHtml(message))
-				.setPositiveButton("OK", new DialogInterface.OnClickListener() {
-					@Override
-					public void onClick(DialogInterface dialog, int which) {
-						cancelSession();
-					}
-				})
-				.setNeutralButton("More Information", null)
-				.create();
-
-		// Set the listener for the More Info button here, so that it does not close the dialog
-		dialog.setOnShowListener(new DialogInterface.OnShowListener() {
-			@Override
-			public void onShow(DialogInterface d) {
-				dialog.getButton(AlertDialog.BUTTON_NEUTRAL).setOnClickListener(new View.OnClickListener() {
-					@Override
-					public void onClick(View v) {
-						cancelSession();
-						Intent intent = new Intent(activity, DisclosureInformationActivity.class);
-						intent.putExtra("request", request);
-						activity.startActivity(intent);
-					}
-				});
-			}
-		});
-
-		dialog.show();
-	}
-
-	public void askForIssuancePermission(final IssuingRequest request) {
-		AttributeDisjunctionList requiredAttributes = request.getRequiredAttributes();
-		if (!requiredAttributes.isEmpty()) {
-			List<AttributeDisjunction> missing = getUnsatisfiableDisjunctions(requiredAttributes);
-
-			if (!missing.isEmpty()) {
-				showUnsatisfiableRequestDialog(missing,
-						new DisclosureProofRequest(null, null, requiredAttributes)); // FIXME this is ugly
-				return;
-			}
-		}
-
-		SessionDialogFragment dialog = SessionDialogFragment.newIssueDialog(request, this);
-		dialog.show(activity.getFragmentManager(), "issuingdialog");
-	}
-
-	/**
-	 * Asks the user if he is OK with disclosing the attributes specified in the request. If she agrees then
-	 * they are disclosed immediately; if she does not, or the request cannot be satisfied, then the connection is
-	 * aborted after disclosing the dialog.
-	 * @param request The disclosure request
-	 */
-	public void askForVerificationPermission(final DisclosureProofRequest request) {
-		List<AttributeDisjunction> missing = getUnsatisfiableDisjunctions(request.getContent());
-
-		if (missing.isEmpty()) {
-			SessionDialogFragment dialog = SessionDialogFragment.newDiscloseDialog(request, this);
-			dialog.show(activity.getFragmentManager(), "disclosuredialog");
-		}
-		else {
-			showUnsatisfiableRequestDialog(missing, request);
-		}
 	}
 
 	@Override

@@ -18,7 +18,6 @@ import org.apache.http.entity.StringEntity;
 import org.irmacard.api.common.AttributeDisjunctionList;
 import org.irmacard.cardemu.*;
 import org.irmacard.cardemu.messages.*;
-import org.irmacard.credentials.idemix.IdemixCredentials;
 import org.irmacard.credentials.idemix.smartcard.IRMACard;
 import org.irmacard.credentials.idemix.smartcard.SmartCardEmulatorService;
 import org.irmacard.credentials.idemix.smartcard.VerificationStartListener;
@@ -441,7 +440,7 @@ public class APDUProtocol extends Protocol {
 			} else {
 				// We're doing disclosure proofs: ask for permission first
 				disclosureproof = result;
-				askForVerificationPermission(convertToRequest(verificationList));
+				handler.askForVerificationPermission(convertToRequest(verificationList));
 				verificationList.clear();
 			}
 		}
@@ -449,7 +448,6 @@ public class APDUProtocol extends Protocol {
 
 	public DisclosureProofRequest convertToRequest(List<VerificationSetupData> list) {
 		AttributeDisjunctionList disjunctions = new AttributeDisjunctionList();
-		IdemixCredentials ic = new IdemixCredentials(is);
 
 		try {
 			for (VerificationSetupData entry : list) {

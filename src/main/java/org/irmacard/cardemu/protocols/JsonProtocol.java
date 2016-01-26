@@ -117,7 +117,7 @@ public class JsonProtocol extends Protocol {
 			@Override public void onSuccess(IssuingRequest result) {
 				Log.i(TAG, result.toString());
 				handler.onStatusUpdate(ProtocolHandler.Action.ISSUING, ProtocolHandler.Status.CONNECTED);
-				askForIssuancePermission(result);
+				handler.askForIssuancePermission(result);
 			}
 		});
 	}
@@ -174,7 +174,7 @@ public class JsonProtocol extends Protocol {
 					return;
 				}
 				handler.onStatusUpdate(ProtocolHandler.Action.DISCLOSING, ProtocolHandler.Status.CONNECTED);
-				askForVerificationPermission(result);
+				handler.askForVerificationPermission(result);
 			}
 		});
 	}

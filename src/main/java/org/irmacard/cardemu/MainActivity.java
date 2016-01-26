@@ -34,8 +34,6 @@ package org.irmacard.cardemu;
 import java.util.*;
 
 import android.content.SharedPreferences;
-import android.net.Uri;
-import android.support.annotation.NonNull;
 import android.view.*;
 import android.widget.*;
 
@@ -100,7 +98,7 @@ public class MainActivity extends Activity {
 
 	private boolean launchedFromBrowser;
 
-	private ProtocolHandler protocolHandler = new ProtocolHandler() {
+	private ProtocolHandler protocolHandler = new ProtocolHandler(this) {
 		@Override public void onStatusUpdate(Action action, Status status) {
 			switch (status) {
 				case COMMUNICATING:
@@ -230,7 +228,6 @@ public class MainActivity extends Activity {
 	private void setUIForState() {
 		int imageResource = 0;
 		int statusTextResource = 0;
-		int feedbackTextResource = 0;
 
 		switch (activityState) {
 			case STATE_IDLE:
@@ -244,7 +241,6 @@ public class MainActivity extends Activity {
 			case STATE_CONNECTED:
 				imageResource = R.drawable.irma_icon_place_card_520px;
 				statusTextResource = R.string.status_connected;
-				feedbackTextResource = R.string.feedback_waiting_for_card;
 				break;
 			case STATE_READY:
 				imageResource = R.drawable.irma_icon_card_found_520px;
@@ -265,9 +261,6 @@ public class MainActivity extends Activity {
 		((TextView) findViewById(R.id.status_text)).setText(statusTextResource);
 		if (!showingFeedback)
 			((ImageView) findViewById(R.id.statusimage)).setImageResource(imageResource);
-
-		if (feedbackTextResource != 0)
-			((TextView) findViewById(R.id.status_text)).setText(feedbackTextResource);
 	}
 
 	public void setFeedback(String message, String state) {
