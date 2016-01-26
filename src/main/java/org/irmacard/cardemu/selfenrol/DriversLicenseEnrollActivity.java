@@ -220,26 +220,8 @@ public class DriversLicenseEnrollActivity extends AbstractNFCEnrollActivity {
                 CardManager.storeCard();
 
                 // Do it!
-                enroll(new Handler() {
-                    @Override
-                    public void handleMessage(Message msg) {
-                        if (msg.obj == null) {
-                            // Success, save our new credentials
-                            CardManager.storeCard();
-                            enableContinueButton();
-                            findViewById(R.id.se_done_text).setVisibility(View.VISIBLE);
-                        } else {
-                            // Rollback the card
-                            card = CardManager.loadCard();
-                            is = new IdemixService(new SmartCardEmulatorService(card));
-
-                            if (msg.what != 0) // .what may contain a string identifier saying what went wrong
-                                showErrorScreen(msg.what);
-                            else
-                                showErrorScreen(R.string.unknown_error);
-                        }
-                    }
-                });
+                enableContinueButton();
+                issue();
 
                 break;
 
