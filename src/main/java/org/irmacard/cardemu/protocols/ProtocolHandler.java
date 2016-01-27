@@ -71,8 +71,10 @@ public abstract class ProtocolHandler implements SessionDialogFragment.SessionDi
 	 * @param request The disclosure request
 	 */
 	public void askForVerificationPermission(final DisclosureProofRequest request) {
-		if (activity == null) // Can't show dialogs in this case
+		if (activity == null) { // Can't show dialogs in this case
 			onDiscloseOK(request);
+			return;
+		}
 
 		List<AttributeDisjunction> missing = CredentialManager.getUnsatisfiableDisjunctions(request.getContent());
 
@@ -90,8 +92,10 @@ public abstract class ProtocolHandler implements SessionDialogFragment.SessionDi
 	 * @param request The issuance request
 	 */
 	public void askForIssuancePermission(final IssuingRequest request) {
-		if (activity == null) // Can't show dialogs in this case
+		if (activity == null) { // Can't show dialogs in this case
 			onIssueOK(request);
+			return;
+		}
 
 		AttributeDisjunctionList requiredAttributes = request.getRequiredAttributes();
 		if (!requiredAttributes.isEmpty()) {

@@ -11,11 +11,15 @@ public abstract class Protocol implements SessionDialogFragment.SessionDialogLis
 	protected ProtocolHandler.Action action = ProtocolHandler.Action.UNKNOWN;
 	protected ProtocolHandler handler;
 
-	/**
-	 * Connect to the IRMA server at the specified URL
-	 * @param url The server to connect to
-	 */
-	abstract public void connect(String url);
+	protected Protocol(ProtocolHandler handler) {
+		this.handler = handler;
+		this.handler.setProtocol(this);
+	}
+
+	protected Protocol(Activity activity, ProtocolHandler handler) {
+		this(handler);
+		this.activity = activity;
+	}
 
 	/**
 	 * Perform a disclosure.
@@ -44,17 +48,21 @@ public abstract class Protocol implements SessionDialogFragment.SessionDialogLis
 	 */
 	public static void NewSession(String qrcontent, Activity activity, ProtocolHandler handler) {
 		// Decide on the protocol version and the URL to connect to
-		String url, protocolVersion;
+		ClientQr qr;
 		try {
-			ClientQr contents = GsonUtil.getGson().fromJson(qrcontent, ClientQr.class);
-			protocolVersion = contents.getVersion();
-			url = contents.getUrl();
+			qr = GsonUtil.getGson().fromJson(qrcontent, ClientQr.class);
 		} catch (Exception e) {
 			// If the contents of the QR code is not JSON, it is probably just a URL to an
 			// APDU-based IRMA server.
-			protocolVersion = "1.0";
-			url = qrcontent;
+			qr = new ClientQr("1.0", qrcontent);
 		}
+
+		NewSession(qr, activity, handler);
+	}
+
+	public static void NewSession(ClientQr qr, Activity activity, ProtocolHandler handler) {
+		String protocolVersion = qr.getVersion();
+		String url = qr.getUrl();
 
 		// Check URL validity
 		if (!Patterns.WEB_URL.matcher(url).matches()) {
@@ -66,20 +74,15 @@ public abstract class Protocol implements SessionDialogFragment.SessionDialogLis
 		Protocol protocol;
 		switch (protocolVersion) {
 			case "1.0":
-				protocol = new APDUProtocol();
+				protocol = new APDUProtocol(url, activity, handler);
 				break;
 			case "2.0":
-				protocol = new JsonProtocol();
+				protocol = new JsonProtocol(url, handler);
 				break;
 			default:
 				handler.onFailure(ProtocolHandler.Action.UNKNOWN, "Protocol not supported");
-				return;
+				break;
 		}
-
-		protocol.activity = activity;
-		protocol.handler = handler;
-		handler.setProtocol(protocol);
-		protocol.connect(url);
 	}
 
 	@Override

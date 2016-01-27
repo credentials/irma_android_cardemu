@@ -1,5 +1,6 @@
 package org.irmacard.cardemu.protocols;
 
+import android.app.Activity;
 import android.os.AsyncTask;
 import android.util.Log;
 import com.google.gson.reflect.TypeToken;
@@ -28,11 +29,18 @@ public class JsonProtocol extends Protocol {
 
 	private String server;
 
-	public void connect(String url) {
-		if (!url.endsWith("/"))
-			url = url + "/";
-		server = url;
+	public JsonProtocol(String server, ProtocolHandler handler) {
+		super(handler);
 
+		if (server.endsWith("/"))
+			this.server = server;
+		else
+			this.server = server + "/";
+
+		connect();
+	}
+
+	private void connect() {
 		if (Pattern.matches(".*/verification/[^/]+/$", server)) {
 			action = ProtocolHandler.Action.DISCLOSING;
 			startDisclosure();

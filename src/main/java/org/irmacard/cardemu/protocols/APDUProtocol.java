@@ -1,5 +1,6 @@
 package org.irmacard.cardemu.protocols;
 
+import android.app.Activity;
 import android.os.AsyncTask;
 import android.os.Handler;
 import android.os.Message;
@@ -59,13 +60,25 @@ public class APDUProtocol extends Protocol {
 	private int retry_counter = 0;
 	private int currentHandlers = 0;
 
-	public APDUProtocol() {
+
+	public APDUProtocol(String server, Activity activity, ProtocolHandler handler) {
+		super(activity, handler);
+		this.currentReaderURL = server;
+
+		try {
+			this.mainActivity = (MainActivity) activity;
+		} catch (ClassCastException e) { // Add a message to the exception
+			throw new ClassCastException("APDUProtocol can only be used by MainActivity");
+		}
+
 		verificationListener = new VerificationStartListener() {
 			@Override
 			public void verificationStarting(VerificationSetupData data) {
 				verificationList.add(data);
 			}
 		};
+
+		connect();
 	}
 
 	public VerificationStartListener getListener() {
@@ -97,23 +110,14 @@ public class APDUProtocol extends Protocol {
 
 	/**
 	 * Connect to a given url.
-	 * @param url The url to connect to
 	 */
-	@Override
-	public void connect(String url) {
+	private void connect() {
 		IRMACard card = CredentialManager.saveCard();
 		card.addVerificationListener(getListener());
 		setCard(card);
 
-		Log.i(TAG, "Start channel listening: " + url);
+		Log.i(TAG, "Start channel listening: " + currentReaderURL);
 
-		try {
-			mainActivity = (MainActivity) activity;
-		} catch (ClassCastException e) { // Add a message to the exception
-			throw new ClassCastException("APDUProtocol can only be used by MainActivity");
-		}
-
-		currentReaderURL = url;
 		Message msg = new Message();
 		msg.what = MESSAGE_STARTGET;
 		mainActivity.setState(MainActivity.STATE_CONNECTING_TO_SERVER);
