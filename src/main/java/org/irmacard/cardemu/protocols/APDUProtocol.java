@@ -16,6 +16,7 @@ import org.acra.ACRA;
 import org.apache.http.Header;
 import org.apache.http.entity.StringEntity;
 import org.irmacard.api.common.AttributeDisjunctionList;
+import org.irmacard.api.common.IssuingRequest;
 import org.irmacard.cardemu.*;
 import org.irmacard.cardemu.messages.*;
 import org.irmacard.credentials.idemix.smartcard.IRMACard;
@@ -98,6 +99,7 @@ public class APDUProtocol extends Protocol {
 	 * Connect to a given url.
 	 * @param url The url to connect to
 	 */
+	@Override
 	public void connect(String url) {
 		IRMACard card = CredentialManager.saveCard();
 		card.addVerificationListener(getListener());
@@ -137,9 +139,13 @@ public class APDUProtocol extends Protocol {
 		postMessage(rm);
 	}
 
+	@Override
 	public void disclose(final DisclosureProofRequest request) {
 		postMessage(disclosureproof);
 	}
+
+	@Override // Never used, everything happens via the handler below
+	protected void finishIssuance(IssuingRequest request) {}
 
 	Handler messageHandler = new Handler() {
 		@Override

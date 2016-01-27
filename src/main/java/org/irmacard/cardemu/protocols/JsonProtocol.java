@@ -87,11 +87,6 @@ public class JsonProtocol extends Protocol {
 	}
 
 	@Override
-	public void onIssueOK(IssuingRequest request) {
-		finishIssuance(request);
-	}
-
-	@Override
 	public void onIssueCancel() {
 		deleteSession();
 		super.onIssueCancel();
@@ -127,7 +122,8 @@ public class JsonProtocol extends Protocol {
 	 * (using the specified {@link HttpClient}). If the server returns corresponding CL signatures,
 	 * construct and save the new Idemix credentials.
 	 */
-	private void finishIssuance(IssuingRequest request) {
+	@Override
+	protected void finishIssuance(final IssuingRequest request) {
 		handler.onStatusUpdate(ProtocolHandler.Action.ISSUING, ProtocolHandler.Status.COMMUNICATING);
 		Log.i(TAG, "Posting issuing commitments");
 
@@ -182,6 +178,7 @@ public class JsonProtocol extends Protocol {
 	/**
 	 * Given a {@link DisclosureProofRequest} with selected attributes, perform the disclosure.
 	 */
+	@Override
 	public void disclose(final DisclosureProofRequest request) {
 		handler.onStatusUpdate(ProtocolHandler.Action.DISCLOSING, ProtocolHandler.Status.COMMUNICATING);
 		Log.i(TAG, "Sending disclosure proofs to " + server);

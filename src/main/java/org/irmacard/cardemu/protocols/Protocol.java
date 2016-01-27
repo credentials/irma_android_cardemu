@@ -25,6 +25,12 @@ public abstract class Protocol implements SessionDialogFragment.SessionDialogLis
 	abstract public void disclose(final DisclosureProofRequest request);
 
 	/**
+	 * Perform an issuing session.
+	 * @param request The request containing which attributes we will receive, and which we have to disclose
+	 */
+	abstract protected void finishIssuance(final IssuingRequest request);
+
+	/**
 	 * Cancel the current session.
 	 */
 	public void cancelSession() {
@@ -87,7 +93,9 @@ public abstract class Protocol implements SessionDialogFragment.SessionDialogLis
 	}
 
 	@Override
-	public void onIssueOK(IssuingRequest request) {}
+	public void onIssueOK(IssuingRequest request) {
+		finishIssuance(request);
+	}
 
 	@Override
 	public void onIssueCancel() {
