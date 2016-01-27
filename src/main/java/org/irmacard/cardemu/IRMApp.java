@@ -72,7 +72,6 @@ public class IRMApp extends Application {
     public void onCreate() {
         super.onCreate();
 
-        ACRA.init(this);
         try {
             // In the annotation above we can set the mode only to literal enums, as opposed to the BuildConfig
             // expression below. So we extract the annotation and fix it manually
