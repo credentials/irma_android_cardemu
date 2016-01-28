@@ -10,6 +10,7 @@ import org.irmacard.api.common.AttributeDisjunction;
 import org.irmacard.api.common.AttributeDisjunctionList;
 import org.irmacard.api.common.DisclosureProofRequest;
 import org.irmacard.api.common.IssuingRequest;
+import org.irmacard.api.common.exceptions.ApiErrorMessage;
 import org.irmacard.cardemu.CredentialManager;
 import org.irmacard.cardemu.disclosuredialog.DisclosureInformationActivity;
 import org.irmacard.cardemu.disclosuredialog.SessionDialogFragment;
@@ -58,7 +59,7 @@ public abstract class ProtocolHandler implements SessionDialogFragment.SessionDi
 	abstract public void onStatusUpdate(Action action, Status status);
 	abstract public void onSuccess(Action action);
 	abstract public void onCancelled(Action action);
-	abstract public void onFailure(Action action, String message);
+	abstract public void onFailure(Action action, String message, ApiErrorMessage error);
 
 	public void setProtocol(Protocol protocol) {
 		this.protocol = protocol;

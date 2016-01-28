@@ -40,6 +40,7 @@ import android.widget.*;
 import org.irmacard.android.util.credentials.CredentialPackage;
 import org.irmacard.android.util.credentialdetails.*;
 import org.irmacard.android.util.cardlog.*;
+import org.irmacard.api.common.exceptions.ApiErrorMessage;
 import org.irmacard.cardemu.protocols.Protocol;
 import org.irmacard.cardemu.protocols.ProtocolHandler;
 import org.irmacard.cardemu.selfenrol.PassportEnrollActivity;
@@ -130,7 +131,7 @@ public class MainActivity extends Activity {
 			finish(true);
 		}
 
-		@Override public void onFailure(Action action, String message) {
+		@Override public void onFailure(Action action, String message, ApiErrorMessage error) {
 			String feedback;
 			switch (action) {
 				case DISCLOSING:

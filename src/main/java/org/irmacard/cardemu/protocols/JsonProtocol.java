@@ -69,7 +69,7 @@ public class JsonProtocol extends Protocol {
 		// Since we got a HttpClientException, the server is either not reachable, or it returned
 		// some error message. In the first case DELETEing the session will probably also fail;
 		// in the second case, the server already knows to delete the session itself
-		fail(feedback, false);
+		fail(feedback, false, errorMessage);
 	}
 
 	/**
@@ -78,7 +78,11 @@ public class JsonProtocol extends Protocol {
 	 * @param deleteSession Whether or not we should DELETE the session
 	 */
 	private void fail(Exception e, boolean deleteSession) {
-		fail(e.getMessage(), deleteSession);
+		fail(e.getMessage(), deleteSession, null);
+	}
+
+	private void fail(String feedback, boolean deleteSession) {
+		fail(feedback, deleteSession, null);
 	}
 
 	/**
@@ -86,10 +90,10 @@ public class JsonProtocol extends Protocol {
 	 * @param feedback The feedback
 	 * @param deleteSession Whether or not we should DELETE the session
 	 */
-	private void fail(String feedback, boolean deleteSession) {
+	private void fail(String feedback, boolean deleteSession, ApiErrorMessage error) {
 		Log.w(TAG, feedback);
 
-		handler.onFailure(action, feedback);
+		handler.onFailure(action, feedback, error);
 		if (deleteSession)
 			deleteSession();
 	}

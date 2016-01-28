@@ -66,7 +66,7 @@ public abstract class Protocol implements SessionDialogFragment.SessionDialogLis
 
 		// Check URL validity
 		if (!Patterns.WEB_URL.matcher(url).matches()) {
-			handler.onFailure(ProtocolHandler.Action.UNKNOWN, "Protocol not supported");
+			handler.onFailure(ProtocolHandler.Action.UNKNOWN, "Protocol not supported", null);
 			return;
 		}
 
@@ -80,7 +80,7 @@ public abstract class Protocol implements SessionDialogFragment.SessionDialogLis
 				protocol = new JsonProtocol(url, handler);
 				break;
 			default:
-				handler.onFailure(ProtocolHandler.Action.UNKNOWN, "Protocol not supported");
+				handler.onFailure(ProtocolHandler.Action.UNKNOWN, "Protocol not supported", null);
 				break;
 		}
 	}
