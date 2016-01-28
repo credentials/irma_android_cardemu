@@ -1,50 +1,54 @@
 <?xml version="1.0" encoding="utf-8"?>
-<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
-              android:orientation="vertical"
-              android:layout_width="wrap_content"
-              android:layout_height="wrap_content"
-              android:padding="@dimen/detail_medium_vspace"
-              android:id="@+id/dialog_disclosure">
+<ScrollView  xmlns:android="http://schemas.android.com/apk/res/android"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content">
+    <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+                  android:orientation="vertical"
+                  android:layout_width="wrap_content"
+                  android:layout_height="wrap_content"
+                  android:padding="@dimen/detail_medium_vspace"
+                  android:id="@+id/dialog_disclosure">
 
-    <TextView
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:textSize="14sp"
-            android:textColor="#000"
-            android:text="An issuer wants to issue the following attributes to you."
-            android:id="@+id/issuance_question"
-            android:paddingBottom="@dimen/detail_small_vspace"/>
+        <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:textSize="14sp"
+                android:textColor="#000"
+                android:text="An issuer wants to issue the following attributes to you."
+                android:id="@+id/issuance_question"
+                android:paddingBottom="@dimen/detail_small_vspace"/>
 
-    <LinearLayout
-            android:orientation="vertical"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:id="@+id/issuance_container"
-            android:paddingBottom="@dimen/detail_small_vspace">
+        <LinearLayout
+                android:orientation="vertical"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:id="@+id/issuance_container"
+                android:paddingBottom="@dimen/detail_small_vspace">
+        </LinearLayout>
+
+        <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:textSize="14sp"
+                android:textColor="#000"
+                android:text="First part of disclosure question here"
+                android:id="@+id/disclosure_question_1"
+                android:paddingBottom="@dimen/detail_small_vspace"/>
+
+        <LinearLayout
+                android:orientation="vertical"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:id="@+id/attributes_container">
+        </LinearLayout>
+
+        <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:textSize="14sp"
+                android:textColor="#000"
+                android:text="@string/disclose_question_2"
+                android:id="@+id/disclosure_question_2"
+                android:paddingTop="@dimen/detail_small_vspace"/>
     </LinearLayout>
-
-    <TextView
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:textSize="14sp"
-            android:textColor="#000"
-            android:text="First part of disclosure question here"
-            android:id="@+id/disclosure_question_1"
-            android:paddingBottom="@dimen/detail_small_vspace"/>
-
-    <LinearLayout
-            android:orientation="vertical"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:id="@+id/attributes_container">
-    </LinearLayout>
-
-    <TextView
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:textSize="14sp"
-            android:textColor="#000"
-            android:text="@string/disclose_question_2"
-            android:id="@+id/disclosure_question_2"
-            android:paddingTop="@dimen/detail_small_vspace"/>
-</LinearLayout>
+</ScrollView>

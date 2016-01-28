@@ -531,6 +531,16 @@ public class CredentialManager {
 		return map;
 	}
 
+	public static List<AttributeDisjunction> getUnsatisfiableDisjunctions(List<AttributeDisjunction> disjunctions) {
+		List<AttributeDisjunction> missing = new ArrayList<>();
+		for (AttributeDisjunction disjunction : disjunctions) {
+			if (CredentialManager.getCandidates(disjunction).isEmpty()) {
+				missing.add(disjunction);
+			}
+		}
+		return missing;
+	}
+
 	/**
 	 * Check if we have the specified attribute.
 	 */

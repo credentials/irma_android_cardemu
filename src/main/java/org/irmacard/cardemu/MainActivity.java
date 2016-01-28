@@ -40,8 +40,10 @@ import android.widget.*;
 import org.irmacard.android.util.credentials.CredentialPackage;
 import org.irmacard.android.util.credentialdetails.*;
 import org.irmacard.android.util.cardlog.*;
+import org.irmacard.api.common.exceptions.ApiErrorMessage;
 import org.irmacard.cardemu.protocols.Protocol;
 import org.irmacard.cardemu.selfenrol.EnrollSelectActivity;
+import org.irmacard.cardemu.protocols.ProtocolHandler;
 import org.irmacard.cardemu.updates.AppUpdater;
 import org.irmacard.credentials.Attributes;
 import org.irmacard.credentials.info.CredentialDescription;
@@ -93,6 +95,63 @@ public class MainActivity extends Activity {
 
 	// Keep track of last verification url to ensure we handle it only once
 	private String lastSessionUrl = "()";
+
+	private boolean launchedFromBrowser;
+
+	private ProtocolHandler protocolHandler = new ProtocolHandler(this) {
+		@Override public void onStatusUpdate(Action action, Status status) {
+			switch (status) {
+				case COMMUNICATING:
+					setState(STATE_COMMUNICATING); break;
+				case CONNECTED:
+					setState(STATE_CONNECTED); break;
+				case DONE:
+					setState(STATE_IDLE); break;
+			}
+		}
+
+		@Override public void onSuccess(Action action) {
+			switch (action) {
+				case DISCLOSING:
+					setFeedback("Successfully disclosed attributes", "success"); break;
+				case ISSUING:
+					setFeedback("Issuing was successful", "success"); break;
+			}
+			finish(true);
+		}
+
+		@Override public void onCancelled(Action action) {
+			switch (action) {
+				case DISCLOSING:
+					setFeedback("Cancelled disclosure", "warning"); break;
+				case ISSUING:
+					setFeedback("Cancelled issuing", "warning"); break;
+			}
+			finish(true);
+		}
+
+		@Override public void onFailure(Action action, String message, ApiErrorMessage error) {
+			String feedback;
+			switch (action) {
+				case DISCLOSING:
+					feedback = "Disclosure failed: "; break;
+				case ISSUING:
+					feedback = "Issuing failed: "; break;
+				case UNKNOWN:
+				default:
+					feedback = "Failed: "; break;
+			}
+			feedback += message;
+			setFeedback(feedback, "failure");
+			finish(false);
+		}
+
+		private void finish(boolean returnToBrowser) {
+			setState(STATE_IDLE);
+			if (launchedFromBrowser && returnToBrowser)
+				onBackPressed();
+		}
+	};
 
 	@Override
 	protected void onCreate(Bundle savedInstanceState) {
@@ -169,7 +228,6 @@ public class MainActivity extends Activity {
 	private void setUIForState() {
 		int imageResource = 0;
 		int statusTextResource = 0;
-		int feedbackTextResource = 0;
 
 		switch (activityState) {
 			case STATE_IDLE:
@@ -183,7 +241,6 @@ public class MainActivity extends Activity {
 			case STATE_CONNECTED:
 				imageResource = R.drawable.irma_icon_place_card_520px;
 				statusTextResource = R.string.status_connected;
-				feedbackTextResource = R.string.feedback_waiting_for_card;
 				break;
 			case STATE_READY:
 				imageResource = R.drawable.irma_icon_card_found_520px;
@@ -204,9 +261,6 @@ public class MainActivity extends Activity {
 		((TextView) findViewById(R.id.status_text)).setText(statusTextResource);
 		if (!showingFeedback)
 			((ImageView) findViewById(R.id.statusimage)).setImageResource(imageResource);
-
-		if (feedbackTextResource != 0)
-			((TextView) findViewById(R.id.status_text)).setText(feedbackTextResource);
 	}
 
 	public void setFeedback(String message, String state) {
@@ -379,7 +433,8 @@ public class MainActivity extends Activity {
 		Log.i(TAG, "Received qr in intent: " + qr);
 		if(!qr.equals(lastSessionUrl)) {
 			lastSessionUrl = qr;
-			Protocol.NewSession(qr, this, true);
+			launchedFromBrowser = true;
+			Protocol.NewSession(qr, this, protocolHandler);
 		} else {
 			Log.i(TAG, "Already processed this qr");
 		}
@@ -421,7 +476,8 @@ public class MainActivity extends Activity {
 			if (scanResult != null) {
 				String contents = scanResult.getContents();
 				if (contents != null) {
-					Protocol.NewSession(contents, this, false);
+					launchedFromBrowser = false;
+					Protocol.NewSession(contents, this, protocolHandler);
 				}
 			}
 		}
