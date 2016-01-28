@@ -12,6 +12,7 @@ import android.os.Handler;
 import android.os.Message;
 import android.util.Log;
 
+import android.view.WindowManager;
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
 import com.google.gson.JsonSyntaxException;
@@ -78,6 +79,13 @@ public abstract class AbstractNFCEnrollActivity extends AbstractGUIEnrollActivit
 
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
+
+        Log.i(TAG, "onCreate() called");
+
+        // Disable screenshots in release builds
+        if (!BuildConfig.DEBUG) {
+            getWindow().setFlags(WindowManager.LayoutParams.FLAG_SECURE, WindowManager.LayoutParams.FLAG_SECURE);
+        }
 
         // NFC stuff
         nfcA = NfcAdapter.getDefaultAdapter(getApplicationContext());

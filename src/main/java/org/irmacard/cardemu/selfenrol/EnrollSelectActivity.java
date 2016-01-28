@@ -204,7 +204,7 @@ public class EnrollSelectActivity extends AbstractGUIEnrollActivity {
                                 .putString("enroll_bac_docnr", docnrEditText.getText().toString())
                                 .apply();
                     }
-                    Intent i = new Intent(this, PassportEnrollActivity.class);
+                    Intent i = new Intent(this, JsonPassportEnrollActivity.class);
                     startActivityForResult(i, PassportEnrollActivity.PassportEnrollActivityCode);
                 } else if (next_activity == DL_ACTIVITY){
                     //safe the mrz text field for later.

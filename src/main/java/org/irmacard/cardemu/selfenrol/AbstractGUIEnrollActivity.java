@@ -14,6 +14,7 @@ import android.widget.TextView;
 
 import net.sf.scuba.smartcards.CardService;
 
+import org.irmacard.api.common.exceptions.ApiError;
 import org.irmacard.cardemu.R;
 import org.irmacard.mno.common.EnrollmentStartMessage;
 
@@ -109,7 +110,12 @@ public abstract class AbstractGUIEnrollActivity extends Activity{
 
 
     protected void showErrorScreen(int errormsgId) {
-        showErrorScreen(getString(errormsgId));
+        ApiError[] errors = ApiError.values();
+        if (errormsgId < errors.length)
+                if (errors[errormsgId] != ApiError.EXCEPTION) // Contains detailed message, show it
+                    showErrorScreen("Server reported: " + errors[errormsgId].getDescription());
+            else
+                showErrorScreen(getString(R.string.error_enroll_serverdied));
     }
 
     protected void showErrorScreen(String errormsg) {

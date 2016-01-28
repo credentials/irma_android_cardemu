@@ -77,7 +77,7 @@ public class PassportEnrollActivity extends AbstractNFCEnrollActivity {
 	protected int tagReadAttempt = 0;
 
 	// State variables
-	private PassportDataMessage passportMsg = null;
+	protected PassportDataMessage passportMsg = null;
 
 	// Date stuff
 	protected SimpleDateFormat bacDateFormat = new SimpleDateFormat("yyMMdd", Locale.US);
@@ -385,7 +385,7 @@ public class PassportEnrollActivity extends AbstractNFCEnrollActivity {
 	 *
 	 * @param uiHandler The handler to message when done.
 	 */
-	private void enroll(final Handler uiHandler) {
+	protected void enroll(final Handler uiHandler) {
 		final String serverUrl = BuildConfig.enrollServer;
 
 		// Doing HTTP(S) stuff on the main thread is not allowed.
