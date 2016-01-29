@@ -13,31 +13,24 @@ import android.os.Message;
 import android.util.Log;
 
 import android.view.WindowManager;
-import com.google.gson.Gson;
-import com.google.gson.GsonBuilder;
 import com.google.gson.JsonSyntaxException;
 
 import net.sf.scuba.smartcards.CardService;
 import net.sf.scuba.smartcards.CardServiceException;
 import net.sf.scuba.smartcards.IsoDepCardService;
-import net.sf.scuba.smartcards.ProtocolCommand;
-import net.sf.scuba.smartcards.ProtocolResponse;
 
 import org.acra.ACRA;
+import org.irmacard.mno.common.util.GsonUtil;
 import org.irmacard.cardemu.BuildConfig;
 import org.irmacard.cardemu.httpclient.HttpClient;
-import org.irmacard.cardemu.messages.ProtocolCommandDeserializer;
-import org.irmacard.cardemu.messages.ProtocolResponseSerializer;
 import org.irmacard.credentials.idemix.smartcard.IRMACard;
 import org.irmacard.credentials.idemix.smartcard.SmartCardEmulatorService;
 import org.irmacard.cardemu.httpclient.HttpClientException;
-import org.irmacard.cardemu.ByteArrayToBase64TypeAdapter;
 import org.irmacard.cardemu.CardManager;
 import org.irmacard.cardemu.R;
 import org.irmacard.cardemu.SecureSSLSocketFactory;
 import org.irmacard.idemix.IdemixService;
 import org.irmacard.mno.common.EnrollmentStartMessage;
-import org.irmacard.mno.common.PassportDataMessage;
 
 
 /**
@@ -69,13 +62,6 @@ public abstract class AbstractNFCEnrollActivity extends AbstractGUIEnrollActivit
     // Enrolling variables
     protected HttpClient client = null;
     private EnrollmentStartMessage enrollSession = null;
-    protected final Gson gson = new GsonBuilder()
-            .registerTypeAdapter(ProtocolCommand.class, new ProtocolCommandDeserializer())
-            .registerTypeAdapter(ProtocolResponse.class, new ProtocolResponseSerializer())
-            .registerTypeHierarchyAdapter(byte[].class, new ByteArrayToBase64TypeAdapter())
-            .registerTypeAdapter(PassportDataMessage.class, new PassportDataMessageSerializer())
-            .create();
-
 
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -100,7 +86,8 @@ public abstract class AbstractNFCEnrollActivity extends AbstractGUIEnrollActivit
         mTechLists = new String[][] { new String[] { IsoDep.class.getName() } };
 
         settings = getSharedPreferences(SETTINGS, 0);
-        client = new HttpClient(gson, new SecureSSLSocketFactory(this, "ca"));
+
+        client = new HttpClient(GsonUtil.getGson(), new SecureSSLSocketFactory(this, "ca"));
 
         if (nfcA == null) {
             showErrorScreen(R.string.error_nfc_notsupported);

@@ -36,8 +36,11 @@ import org.acra.ACRAConfiguration;
 import org.acra.ReportField;
 import org.acra.annotation.ReportsCrashes;
 import org.irmacard.android.util.credentials.AndroidWalker;
+import org.irmacard.cardemu.messages.ReaderMessage;
+import org.irmacard.cardemu.messages.ReaderMessageDeserializer;
 import org.irmacard.credentials.idemix.info.IdemixKeyStore;
 import org.irmacard.credentials.info.DescriptionStore;
+import org.irmacard.mno.common.util.GsonUtil;
 
 @ReportsCrashes(
         formUri = BuildConfig.acraServer,
@@ -94,5 +97,7 @@ public class IRMApp extends Application {
         MetricsReporter.init(this, BuildConfig.metricServer, reportTimeInterval);
         CardManager.init(this);
         CredentialManager.init(getSharedPreferences("cardemu", 0));
+
+        GsonUtil.addTypeAdapter(ReaderMessage.class, new ReaderMessageDeserializer());
     }
 }

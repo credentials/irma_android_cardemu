@@ -42,7 +42,7 @@ import android.view.LayoutInflater;
 import android.view.View;
 import android.widget.*;
 import org.irmacard.api.common.*;
-import org.irmacard.api.common.util.GsonUtil;
+import org.irmacard.mno.common.util.GsonUtil;
 import org.irmacard.cardemu.R;
 import org.irmacard.credentials.info.CredentialDescription;
 import org.irmacard.credentials.info.InfoException;

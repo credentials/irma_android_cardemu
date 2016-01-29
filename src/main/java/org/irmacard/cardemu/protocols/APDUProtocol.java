@@ -5,8 +5,6 @@ import android.os.AsyncTask;
 import android.os.Handler;
 import android.os.Message;
 import android.util.Log;
-import com.google.gson.Gson;
-import com.google.gson.GsonBuilder;
 import com.google.gson.JsonElement;
 import com.google.gson.JsonParser;
 import com.google.gson.stream.JsonReader;
@@ -31,6 +29,7 @@ import org.irmacard.idemix.IdemixService;
 import org.irmacard.idemix.util.VerificationSetupData;
 import org.irmacard.api.common.AttributeDisjunction;
 import org.irmacard.api.common.DisclosureProofRequest;
+import org.irmacard.mno.common.util.GsonUtil;
 
 import java.io.StringReader;
 import java.io.UnsupportedEncodingException;
@@ -218,12 +217,6 @@ public class APDUProtocol extends Protocol {
 	};
 
 	private void handleChannelData(String data) {
-		Gson gson = new GsonBuilder().
-				registerTypeAdapter(ProtocolCommand.class, new ProtocolCommandDeserializer()).
-				registerTypeAdapter(ReaderMessage.class, new ReaderMessageDeserializer()).
-				create();
-
-
 		if (mainActivity.getState() == MainActivity.STATE_CONNECTING_TO_SERVER) {
 			// this is the message that containts the url to write to
 			JsonParser p = new JsonParser();
@@ -252,7 +245,7 @@ public class APDUProtocol extends Protocol {
 			Log.i(TAG, "Length (real): " + data);
 			JsonReader reader = new JsonReader(new StringReader(data));
 			reader.setLenient(true);
-			rm = gson.fromJson(reader, ReaderMessage.class);
+			rm = GsonUtil.getGson().fromJson(reader, ReaderMessage.class);
 		} catch (Exception e) {
 			ACRA.getErrorReporter().handleException(e);
 			return;
@@ -300,10 +293,7 @@ public class APDUProtocol extends Protocol {
 
 	public void postMessage(ReaderMessage rm) {
 		if (currentWriteURL != null) {
-			Gson gson = new GsonBuilder().
-					registerTypeAdapter(ProtocolResponse.class, new ProtocolResponseSerializer()).
-					create();
-			String data = gson.toJson(rm);
+			String data = GsonUtil.getGson().toJson(rm);
 			AsyncHttpClient client = new AsyncHttpClient();
 			try {
 				client.post(activity, currentWriteURL, new StringEntity(data), "application/json", new AsyncHttpResponseHandler() {

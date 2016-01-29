@@ -43,9 +43,7 @@ import android.os.AsyncTask;
 import android.os.Handler;
 import android.util.Log;
 import android.widget.Toast;
-import com.google.gson.Gson;
-import com.google.gson.GsonBuilder;
-import org.irmacard.cardemu.ByteArrayToBase64TypeAdapter;
+import org.irmacard.mno.common.util.GsonUtil;
 import org.irmacard.cardemu.httpclient.HttpClient;
 import org.irmacard.cardemu.httpclient.HttpClientException;
 import org.irmacard.cardemu.R;
@@ -116,10 +114,7 @@ public class AppUpdater {
 		// Since we use ByteArrayToBase64TypeAdapter, the SHA1 hash of the file in the .json must be in Base64. This
 		// can be generated for example by this line:
 		// openssl dgst -binary -sha1 file.apk | base64
-		Gson gson = new GsonBuilder()
-				.registerTypeHierarchyAdapter(byte[].class, new ByteArrayToBase64TypeAdapter())
-				.create();
-		this.httpClient = new HttpClient(gson);
+		this.httpClient = new HttpClient(GsonUtil.getGson());
 
 		updateVersionInfo(true);
 
