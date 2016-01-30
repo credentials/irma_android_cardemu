@@ -41,14 +41,7 @@ import android.text.TextWatcher;
 import android.text.method.LinkMovementMethod;
 import android.util.Log;
 import android.view.*;
-import android.widget.AdapterView;
-import android.widget.ArrayAdapter;
-import android.widget.Button;
-import android.widget.DatePicker;
-import android.widget.EditText;
-import android.widget.RelativeLayout;
-import android.widget.Spinner;
-import android.widget.TextView;
+import android.widget.*;
 
 import com.google.zxing.integration.android.IntentIntegrator;
 import com.google.zxing.integration.android.IntentResult;
@@ -93,7 +86,7 @@ public class EnrollSelectActivity extends AbstractGUIEnrollActivity {
         screen = SCREEN_START;
         updateProgressCounter();
 
-        String enrollServer = BuildConfig.enrollServer.substring(8); // Strip "https://"
+        String enrollServer = getEnrollmentServer().substring(8); // Strip "https://"
         enrollServer = enrollServer.substring(0, enrollServer.indexOf('/')); // Strip path from the url
         String helpHtml = String.format(getString(R.string.se_connect_mno), enrollServer);
 
@@ -123,6 +116,11 @@ public class EnrollSelectActivity extends AbstractGUIEnrollActivity {
     protected void advanceScreen(){
         switch (screen) {
             case SCREEN_START:
+                if (((CheckBox) findViewById(R.id.new_protocol_checkbox)).isChecked())
+                    setProtocolVersion(2);
+                else
+                    setProtocolVersion(1);
+
                 setContentView(R.layout.enroll_activity_bac);
                 screen = SCREEN_BAC;
                 updateProgressCounter(screen - 1);
@@ -204,7 +202,12 @@ public class EnrollSelectActivity extends AbstractGUIEnrollActivity {
                                 .putString("enroll_bac_docnr", docnrEditText.getText().toString())
                                 .apply();
                     }
-                    Intent i = new Intent(this, JsonPassportEnrollActivity.class);
+
+                    Intent i;
+                    if (getProtocolVersion() == 2)
+                        i = new Intent(this, JsonPassportEnrollActivity.class);
+                    else
+                        i = new Intent(this, PassportEnrollActivity.class);
                     startActivityForResult(i, PassportEnrollActivity.PassportEnrollActivityCode);
                 } else if (next_activity == DL_ACTIVITY){
                     //safe the mrz text field for later.

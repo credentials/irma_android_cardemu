@@ -8,26 +8,12 @@ import android.util.Log;
 import android.view.View;
 import android.widget.ProgressBar;
 import android.widget.TextView;
-
 import com.google.gson.JsonSyntaxException;
 import com.google.gson.reflect.TypeToken;
-
-import net.sf.scuba.smartcards.APDUWrapper;
-import net.sf.scuba.smartcards.CardFileInputStream;
-import net.sf.scuba.smartcards.CardService;
-import net.sf.scuba.smartcards.CardServiceException;
-import net.sf.scuba.smartcards.CommandAPDU;
-import net.sf.scuba.smartcards.ISO7816;
-import net.sf.scuba.smartcards.ProtocolCommands;
-import net.sf.scuba.smartcards.ProtocolResponses;
-import net.sf.scuba.smartcards.ResponseAPDU;
+import net.sf.scuba.smartcards.*;
 import net.sf.scuba.tlv.TLVInputStream;
-
 import org.acra.ACRA;
-import org.irmacard.cardemu.BuildConfig;
 import org.irmacard.cardemu.CardManager;
-import org.irmacard.cardemu.httpclient.HttpClient;
-import org.irmacard.cardemu.MetricsReporter;
 import org.irmacard.cardemu.R;
 import org.irmacard.cardemu.httpclient.HttpClientException;
 import org.irmacard.credentials.Attributes;
@@ -38,43 +24,28 @@ import org.irmacard.credentials.idemix.smartcard.SmartCardEmulatorService;
 import org.irmacard.credentials.info.InfoException;
 import org.irmacard.idemix.IdemixService;
 import org.irmacard.idemix.IdemixSmartcard;
-import org.irmacard.mno.common.BasicClientMessage;
-import org.irmacard.mno.common.DriverDemographicInfo;
-import org.irmacard.mno.common.EDLDataMessage;
-import org.irmacard.mno.common.EDL_DG1File;
-import org.irmacard.mno.common.EnrollmentStartMessage;
-import org.irmacard.mno.common.PassportDataMessage;
-import org.irmacard.mno.common.PassportVerificationResult;
-import org.irmacard.mno.common.PassportVerificationResultMessage;
-import org.irmacard.mno.common.RequestFinishIssuanceMessage;
-import org.irmacard.mno.common.RequestStartIssuanceMessage;
+import org.irmacard.mno.common.*;
 import org.jmrtd.PassportService;
 import org.jmrtd.SecureMessagingWrapper;
 import org.jmrtd.Util;
-import org.jmrtd.io.SplittableInputStream;
 import org.jmrtd.lds.MRZInfo;
-
-import java.io.ByteArrayInputStream;
-import java.io.IOException;
-import java.io.InputStream;
-import java.io.UnsupportedEncodingException;
-import java.lang.reflect.Type;
-import java.security.GeneralSecurityException;
-import java.security.MessageDigest;
-import java.security.NoSuchAlgorithmException;
-import java.security.SecureRandom;
-import java.security.Security;
-import java.text.SimpleDateFormat;
-import java.util.HashMap;
-import java.util.Locale;
-import java.util.Map;
-import java.util.Random;
 
 import javax.crypto.Cipher;
 import javax.crypto.Mac;
 import javax.crypto.NoSuchPaddingException;
 import javax.crypto.SecretKey;
 import javax.crypto.spec.IvParameterSpec;
+import java.io.ByteArrayInputStream;
+import java.io.IOException;
+import java.io.InputStream;
+import java.io.UnsupportedEncodingException;
+import java.lang.reflect.Type;
+import java.security.*;
+import java.text.SimpleDateFormat;
+import java.util.HashMap;
+import java.util.Locale;
+import java.util.Map;
+import java.util.Random;
 
 //import org.isodl.service.DrivingLicenseService;
 
@@ -729,7 +700,7 @@ public class DriversLicenseEnrollActivity extends AbstractNFCEnrollActivity {
      * @param uiHandler The handler to message when done.
      */
     private void enroll(final Handler uiHandler) {
-        final String serverUrl = BuildConfig.enrollServer;
+        final String serverUrl = getEnrollmentServer();
 
         // Doing HTTP(S) stuff on the main thread is not allowed.
         new AsyncTask<EDLDataMessage, Void, Message>() {

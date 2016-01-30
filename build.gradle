@@ -60,7 +60,7 @@ if (project.file('acra.gradle').exists()) {
 
 android {
     buildTypes.all { type ->
-        type.buildConfigField "String", "enrollServer", '"https://demo.irmacard.org/tomcat/irma_mno_server/api/v1"'
+        type.buildConfigField "String", "enrollServer", '"https://demo.irmacard.org/tomcat/irma_mno_server/api"'
     }
     buildTypes {
         release {

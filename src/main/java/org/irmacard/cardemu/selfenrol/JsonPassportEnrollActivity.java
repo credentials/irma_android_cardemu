@@ -3,10 +3,8 @@ package org.irmacard.cardemu.selfenrol;
 import android.os.Handler;
 import android.os.Message;
 import org.irmacard.api.common.ClientQr;
-import org.irmacard.api.common.exceptions.ApiError;
 import org.irmacard.api.common.exceptions.ApiErrorMessage;
 import org.irmacard.api.common.util.GsonUtil;
-import org.irmacard.cardemu.BuildConfig;
 import org.irmacard.cardemu.R;
 import org.irmacard.cardemu.httpclient.HttpClientException;
 import org.irmacard.cardemu.httpclient.HttpResultHandler;
@@ -62,7 +60,7 @@ public class JsonPassportEnrollActivity extends PassportEnrollActivity {
 
 	@Override
 	protected void enroll(final Handler uiHandler) {
-		final String serverUrl = BuildConfig.enrollServer;
+		final String serverUrl = getEnrollmentServer();
 		this.uiHandler = uiHandler;
 		this.msg = Message.obtain();
 

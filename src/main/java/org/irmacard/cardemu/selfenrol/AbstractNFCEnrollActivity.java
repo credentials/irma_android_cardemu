@@ -11,26 +11,23 @@ import android.os.Bundle;
 import android.os.Handler;
 import android.os.Message;
 import android.util.Log;
-
 import android.view.WindowManager;
 import com.google.gson.JsonSyntaxException;
-
 import net.sf.scuba.smartcards.CardService;
 import net.sf.scuba.smartcards.CardServiceException;
 import net.sf.scuba.smartcards.IsoDepCardService;
-
 import org.acra.ACRA;
-import org.irmacard.mno.common.util.GsonUtil;
 import org.irmacard.cardemu.BuildConfig;
-import org.irmacard.cardemu.httpclient.HttpClient;
-import org.irmacard.credentials.idemix.smartcard.IRMACard;
-import org.irmacard.credentials.idemix.smartcard.SmartCardEmulatorService;
-import org.irmacard.cardemu.httpclient.HttpClientException;
 import org.irmacard.cardemu.CardManager;
 import org.irmacard.cardemu.R;
 import org.irmacard.cardemu.SecureSSLSocketFactory;
+import org.irmacard.cardemu.httpclient.HttpClient;
+import org.irmacard.cardemu.httpclient.HttpClientException;
+import org.irmacard.credentials.idemix.smartcard.IRMACard;
+import org.irmacard.credentials.idemix.smartcard.SmartCardEmulatorService;
 import org.irmacard.idemix.IdemixService;
 import org.irmacard.mno.common.EnrollmentStartMessage;
+import org.irmacard.mno.common.util.GsonUtil;
 
 
 /**
@@ -195,12 +192,11 @@ public abstract class AbstractNFCEnrollActivity extends AbstractGUIEnrollActivit
         handleNfcEvent(cs, enrollSession);
     }
 
-
     /**
      * Fetch an enrollment session. When done, the specified handler will be called with the result in its .obj.
      */
     protected void getEnrollmentSession(final Handler uiHandler) {
-        final String serverUrl = BuildConfig.enrollServer;
+        final String serverUrl = getEnrollmentServer();
 
         new AsyncTask<Void, Void, EnrollmentStartResult>() {
             @Override

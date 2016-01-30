@@ -36,13 +36,18 @@ import android.os.Handler;
 import android.os.Message;
 import android.util.Log;
 import android.view.View;
-import android.widget.*;
+import android.widget.ProgressBar;
+import android.widget.TextView;
 import com.google.gson.JsonSyntaxException;
 import com.google.gson.reflect.TypeToken;
-import net.sf.scuba.smartcards.*;
+import net.sf.scuba.smartcards.CardService;
+import net.sf.scuba.smartcards.CardServiceException;
+import net.sf.scuba.smartcards.ProtocolCommands;
+import net.sf.scuba.smartcards.ProtocolResponses;
 import org.acra.ACRA;
-import org.irmacard.cardemu.*;
-import org.irmacard.cardemu.BuildConfig;
+import org.irmacard.cardemu.CardManager;
+import org.irmacard.cardemu.MetricsReporter;
+import org.irmacard.cardemu.R;
 import org.irmacard.cardemu.httpclient.HttpClientException;
 import org.irmacard.credentials.Attributes;
 import org.irmacard.credentials.CredentialsException;
@@ -64,7 +69,10 @@ import java.io.IOException;
 import java.lang.reflect.Type;
 import java.security.Security;
 import java.text.SimpleDateFormat;
-import java.util.*;
+import java.util.Date;
+import java.util.HashMap;
+import java.util.Locale;
+import java.util.Map;
 
 public class PassportEnrollActivity extends AbstractNFCEnrollActivity {
 	// Configuration
@@ -386,7 +394,7 @@ public class PassportEnrollActivity extends AbstractNFCEnrollActivity {
 	 * @param uiHandler The handler to message when done.
 	 */
 	protected void enroll(final Handler uiHandler) {
-		final String serverUrl = BuildConfig.enrollServer;
+		final String serverUrl = getEnrollmentServer();
 
 		// Doing HTTP(S) stuff on the main thread is not allowed.
 		new AsyncTask<PassportDataMessage, Void, Message>() {

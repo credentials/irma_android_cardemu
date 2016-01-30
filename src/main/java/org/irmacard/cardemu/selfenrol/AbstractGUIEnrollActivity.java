@@ -4,19 +4,15 @@ import android.app.Activity;
 import android.content.Intent;
 import android.content.SharedPreferences;
 import android.content.res.Resources;
-import android.nfc.NfcAdapter;
 import android.os.Bundle;
-import android.os.Handler;
 import android.util.Log;
 import android.view.View;
 import android.widget.Button;
 import android.widget.TextView;
-
-import net.sf.scuba.smartcards.CardService;
-
 import org.irmacard.api.common.exceptions.ApiError;
+import org.irmacard.cardemu.BuildConfig;
 import org.irmacard.cardemu.R;
-import org.irmacard.mno.common.EnrollmentStartMessage;
+import org.irmacard.cardemu.SecureSSLSocketFactory;
 
 /**
  * Abstract base class for enrolling, coontaining generic UI, NFC and networking logic. Things handled by this class
@@ -177,4 +173,13 @@ public abstract class AbstractGUIEnrollActivity extends Activity{
     }
 
     abstract protected void advanceScreen ();
+
+    private static int protocolVersion = 2;
+
+    public static int getProtocolVersion() { return protocolVersion; }
+    public static void setProtocolVersion(int version) { protocolVersion = version; }
+
+    protected static String getEnrollmentServer() {
+        return BuildConfig.enrollServer + "/v" + protocolVersion;
+    }
 }
