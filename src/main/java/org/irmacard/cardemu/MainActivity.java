@@ -537,6 +537,7 @@ public class MainActivity extends Activity {
 			case R.id.show_card_log:
 				Log.d(TAG, "show_card_log pressed");
 				ArrayList<LogEntry> logs = new ArrayList<>(CredentialManager.getLog());
+				logs = new ArrayList<>(logs.subList(0, Math.min(logs.size(), 250)));
 				Intent logIntent = new Intent(this, LogActivity.class);
 				logIntent.putExtra(LogFragment.ARG_LOG, logs);
 				startActivity(logIntent);
