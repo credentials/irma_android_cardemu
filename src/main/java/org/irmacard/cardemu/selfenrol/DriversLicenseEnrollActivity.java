@@ -28,14 +28,17 @@ import org.irmacard.mno.common.*;
 import org.jmrtd.PassportService;
 import org.jmrtd.SecureMessagingWrapper;
 import org.jmrtd.Util;
+import org.jmrtd.lds.DG14File;
+import org.jmrtd.lds.DG15File;
 import org.jmrtd.lds.MRZInfo;
+import org.jmrtd.lds.SODFile;
 
 import javax.crypto.Cipher;
 import javax.crypto.Mac;
 import javax.crypto.NoSuchPaddingException;
 import javax.crypto.SecretKey;
 import javax.crypto.spec.IvParameterSpec;
-import java.io.ByteArrayInputStream;
+
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.UnsupportedEncodingException;
@@ -217,20 +220,11 @@ public class DriversLicenseEnrollActivity extends AbstractNFCEnrollActivity {
     /***********************************************************************************************
      * FROM HERE MIGHT BE MOVED BACK TO JMRTD                                                         *
      **********************************************************************************************/
-    public synchronized void doBAP(PassportService ps) throws CardServiceException {
-        String mrz = settings.getString("mrz", "");
+    public synchronized void doBAP(PassportService ps, String mrz) throws CardServiceException {
         if (mrz != null && mrz.length()>0) {
-            //String to byte array
-            //redo computeKeySeedForBAC
-            Log.e(TAG, "de mrz is: "+ mrz);
-
-//TODO
             try {
                 String kdoc = mrz.substring(1, mrz.length() - 1);
-                Log.e(TAG, "de mrz waar we mee rekenenen is eigenlijk: "+ kdoc);
                 byte[] keySeed = computeKeySeedForBAP2(kdoc);
-                //byte[] keySeed = computeKeySeedForBAP(kdoc);
-                //byte[] keySeed = getBytes(mrz);
                 SecretKey kEnc = Util.deriveKey(keySeed, Util.ENC_MODE);
                 SecretKey kMac = Util.deriveKey(keySeed, Util.MAC_MODE);
                 Log.e(TAG, "kEnc = "+ toHexString(kEnc.getEncoded()));
@@ -480,7 +474,7 @@ public class DriversLicenseEnrollActivity extends AbstractNFCEnrollActivity {
      * Reads the datagroups 1, 14 and 15, and the SOD file and requests an active authentication from an e-passport
      * in a seperate thread.
      */
-    private void readDriversLicense(PassportService ps, EDLDataMessage eDLMessage) {
+    private void readDriversLicense(PassportService ps, final EDLDataMessage eDLMessage) {
         new AsyncTask<Object,Void,EDLDataMessage>(){
             ProgressBar progressBar = (ProgressBar) findViewById(R.id.se_progress_bar);
             boolean passportError = false;
@@ -505,22 +499,25 @@ public class DriversLicenseEnrollActivity extends AbstractNFCEnrollActivity {
                 // Do the BAC separately from generating the eDLMessage, so we can be specific in our error message if
                 // necessary. (Note: the IllegalStateException should not happen, but if it does for some unforseen
                 // reason there is no need to let it crash the app.)
+                String mrz = settings.getString("mrz", "");
                 try {
-                    //TODO
-                    doBAP(ps);
+                    doBAP(ps,mrz);
                     Log.i(TAG, "doing BAP");
                 } catch (CardServiceException | IllegalStateException e) {
                     bacError = true;
                     Log.e(TAG, "doing BAP failed");
                     return null;
                 }
-
-                Log.e(TAG,"TADA!!! BAP SUCCEEDED!!!");
-
+                //If we get here, the BAP succeeded. Which means the MRZ was correct, so we can trust the documentNumber
+                if (eDLMessage.getDocumentNr() == null){
+                    eDLMessage.setDocumentNr(mrz.substring(5,15));
+                }
                 Exception ex = null;
                 try {
                     Log.i(TAG, "PassportEnrollActivity: reading attempt " + tagReadAttempt);
                     generateEDLDataMessage(ps, eDLMessage);
+                    PassportVerificationResult result = eDLMessage.verify(eDLMessage.getChallenge());
+                    Log.e(TAG,result.toString());
                 } catch (IOException |CardServiceException e) {
                     Log.w(TAG, "PassportEnrollActivity: reading attempt " + tagReadAttempt + " failed, stack trace:");
                     Log.w(TAG, "          " + e.getMessage());
@@ -564,72 +561,26 @@ public class DriversLicenseEnrollActivity extends AbstractNFCEnrollActivity {
 
             }
 
-            private void parseDG1(InputStream in) {
-                try {
-                    int t = in.read();
-                    while ( t !=-1){
-                        if (t == 95 /*0x5F start of tag*/){
-                            readData(in);
-                        }
-                        t = in.read();
-                    }
 
-                } catch (IOException e1) {
-                    // TODO Auto-generated catch block
-                    e1.printStackTrace();
-                }
-            }
 
-            private void readData(InputStream in) throws IOException {
-                int t2 = in.read();
-                int length = in.read();
-                byte[] contents = new byte[length];
-                if (t2 != -1 || length !=-1){
-                    switch (t2) {
-                        case 01:
-                            in.skip(length);/*unsure what this field represents*/
-                            break;
-                        case 02://unclear why, but this field contains no length...
-                            break;
-                        case 03: //country of issuance
-                            in.skip(length);
-                            break;
-                        case 04://last name
-                            in.read(contents,0,length);
-                            driverInfo.setFamilyName(new String(contents));
-                            break;
-                        case 05: //first name
-                            in.read(contents,0,length);
-                            driverInfo.setGivenNames(new String(contents));
-                            break;
-                        case 06: //birth date
-                            in.read(contents,0,length);
-                            driverInfo.setDob(toHexString(contents));
-                            break;
-                        case 07: // birth place
-                            in.read(contents,0,length);
-                            driverInfo.setPlaceOfBirth(new String(contents));
-                            break;
-                        default:
-                            in.skip(length); //we don't care about the rest of the fields for now.
-                    }
-                }
-            }
+
 
             private int dataGroupTag = 0x61;
-            private static final short DEMOGRAPHIC_INFO_TAG = 0x5F1F;
-            private DriverDemographicInfo driverInfo = new DriverDemographicInfo();
-            protected void readObject(InputStream inputStream) throws IOException {
+            protected byte[] readDg1File(InputStream inputStream) throws IOException {
                 TLVInputStream tlvIn = inputStream instanceof TLVInputStream ? (TLVInputStream)inputStream : new TLVInputStream(inputStream);
                 int tag = tlvIn.readTag();
                 if (tag != dataGroupTag) {
                     throw new IllegalArgumentException("Was expecting tag " + Integer.toHexString(dataGroupTag) + ", found " + Integer.toHexString(tag));
                 }
                 int dataGroupLength = tlvIn.readLength();
-                byte [] contents = tlvIn.readValue();
-                Log.e(TAG,"reading contents: " + toHexString(contents));
-                parseDG1(new ByteArrayInputStream(contents));
-                //inputStream = new SplittableInputStream(inputStream, dataGroupLength);
+                Log.i(TAG,"datagroupLength = " + dataGroupLength);
+                byte[] contents = new byte[dataGroupLength+2];
+                contents[0] = (byte) dataGroupTag;
+                contents[1] = (byte) dataGroupLength;
+                byte[] value = tlvIn.readValue();
+                System.arraycopy(value,0,contents,2,value.length);
+                Log.e(TAG, "reading contents: " + toHexString(contents));
+                return contents;
             }
 
 
@@ -646,16 +597,39 @@ public class DriversLicenseEnrollActivity extends AbstractNFCEnrollActivity {
                 //Log.e(TAG, "received rapdu: "+ toHexString(rapdu.getBytes()));
                 //passportService.sendSelectApplet(passportService.getWrapper(),APPLET_AID);
                 try {
-                    if (eDLMessage.getDriverInfo() == null) {
-                       // eDLMessage.setDg1File(new DG1File(passportService.getInputStream(PassportService.EF_DG1)));
-                        CardFileInputStream in = passportService.getInputStream((short) 1);
-                        readObject(in);
-                        if (driverInfo.getFamilyName()!=null/*TODO it read somethin*/){
-                            eDLMessage.setDriverInfo(driverInfo);
+                    if (eDLMessage.getDg1File() == null) {
+                        CardFileInputStream in = passportService.getInputStream((short) 0x0001);
+                        eDLMessage.setDg1File(readDg1File(in));
+                        Log.i(TAG,"Reading DG1");
+                        publishProgress();
+                    } if (eDLMessage.getSodFile() == null) {
+                        eDLMessage.setSodFile(new SODFile(passportService.getInputStream((short) 0x001d)));
+                        Log.i(TAG, "reading SOD");
+                        publishProgress();
+                    } if (eDLMessage.getSodFile() != null) { // We need the SOD file to check if DG14 exists
+                        if (eDLMessage.getSodFile().getDataGroupHashes().get(14) != null) { // Checks if DG14 exists
+                            if (eDLMessage.getDg14File() == null) {
+                                eDLMessage.setDg14File(new DG14File(passportService.getInputStream((short) 0x000e)));
+                                Log.i(TAG, "reading DG14");
+                                publishProgress();
+                            }
+                        } else { // If DG14 does not exist, just advance the progress bar
+                            Log.i(TAG, "reading DG14 not necessary, skipping");
+                            publishProgress();
                         }
+                    }
+                    if (eDLMessage.getDg13File() == null) {
+                        eDLMessage.setDg13File(new DG15File(passportService.getInputStream((short) 0x000d)));
+                        Log.i(TAG, "reading DG15");
                         publishProgress();
                     }
-
+                    // The doAA() method does not use its first three arguments, it only passes the challenge
+                    // on to another functio within JMRTD.
+                    if (eDLMessage.getResponse() == null) {
+                        eDLMessage.setResponse(passportService.doAA(null, null, null, eDLMessage.getChallenge()));
+                        Log.i(TAG, "doing AA");
+                        publishProgress();
+                    }
                 } catch (NullPointerException e) {
                     // JMRTD sometimes throws a nullpointer exception if the passport communcation goes wrong
                     // (I've seen it happening if the passport is removed from the device halfway through)
