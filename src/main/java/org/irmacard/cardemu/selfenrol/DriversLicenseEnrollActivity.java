@@ -12,6 +12,8 @@ import com.google.gson.JsonSyntaxException;
 import com.google.gson.reflect.TypeToken;
 import net.sf.scuba.smartcards.*;
 import net.sf.scuba.tlv.TLVInputStream;
+import net.sf.scuba.tlv.TLVOutputStream;
+
 import org.acra.ACRA;
 import org.irmacard.cardemu.CardManager;
 import org.irmacard.cardemu.R;
@@ -39,6 +41,7 @@ import javax.crypto.NoSuchPaddingException;
 import javax.crypto.SecretKey;
 import javax.crypto.spec.IvParameterSpec;
 
+import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.UnsupportedEncodingException;
@@ -573,13 +576,13 @@ public class DriversLicenseEnrollActivity extends AbstractNFCEnrollActivity {
                     throw new IllegalArgumentException("Was expecting tag " + Integer.toHexString(dataGroupTag) + ", found " + Integer.toHexString(tag));
                 }
                 int dataGroupLength = tlvIn.readLength();
-                Log.i(TAG,"datagroupLength = " + dataGroupLength);
-                byte[] contents = new byte[dataGroupLength+2];
-                contents[0] = (byte) dataGroupTag;
-                contents[1] = (byte) dataGroupLength;
                 byte[] value = tlvIn.readValue();
-                System.arraycopy(value,0,contents,2,value.length);
-                Log.e(TAG, "reading contents: " + toHexString(contents));
+
+                ByteArrayOutputStream bOut = new ByteArrayOutputStream();
+                TLVOutputStream tlvOut = new TLVOutputStream(bOut);
+                tlvOut.writeTag(tag);
+                tlvOut.writeValue(value);
+                byte[] contents = bOut.toByteArray();
                 return contents;
             }
 
