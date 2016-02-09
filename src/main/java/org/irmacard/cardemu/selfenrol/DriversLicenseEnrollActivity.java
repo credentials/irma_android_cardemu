@@ -28,11 +28,9 @@ import org.irmacard.idemix.IdemixService;
 import org.irmacard.idemix.IdemixSmartcard;
 import org.irmacard.mno.common.*;
 import org.jmrtd.PassportService;
-import org.jmrtd.SecureMessagingWrapper;
 import org.jmrtd.Util;
 import org.jmrtd.lds.DG14File;
 import org.jmrtd.lds.DG15File;
-import org.jmrtd.lds.MRZInfo;
 import org.jmrtd.lds.SODFile;
 
 import javax.crypto.Cipher;
@@ -47,13 +45,9 @@ import java.io.InputStream;
 import java.io.UnsupportedEncodingException;
 import java.lang.reflect.Type;
 import java.security.*;
-import java.text.SimpleDateFormat;
 import java.util.HashMap;
-import java.util.Locale;
 import java.util.Map;
 import java.util.Random;
-
-//import org.isodl.service.DrivingLicenseService;
 
 public class DriversLicenseEnrollActivity extends AbstractNFCEnrollActivity {
     // Configuration
@@ -65,26 +59,11 @@ public class DriversLicenseEnrollActivity extends AbstractNFCEnrollActivity {
     private static final int SCREEN_PASSPORT = 3;
     private static final int SCREEN_ISSUE = 4;
 
-    protected int tagReadAttempt = 0;
+    protected Random random;
 
     // State variables
     private EDLDataMessage eDLMsg = null;
-
-    // Date stuff
-    protected SimpleDateFormat bacDateFormat = new SimpleDateFormat("yyMMdd", Locale.US);
-
-    /** The applet we select when we start a session. */
-    protected static final byte[] APPLET_AID = { (byte) 0xA0, (byte) 0x00, (byte) 0x00, (byte) 0x02, (byte) 0x48, (byte) 0x02, (byte) 0x00};
-
-    /** Copied from JMRTD.. to be removed when functional */
-    private transient Cipher cipher;
-    private transient Mac mac;
-    private static final IvParameterSpec ZERO_IV_PARAM_SPEC = new IvParameterSpec(new byte[] { 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00 });
-    protected Random random;
-
-
-    protected SecureMessagingWrapper wrapper;
-
+    protected int tagReadAttempt = 0;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -92,15 +71,6 @@ public class DriversLicenseEnrollActivity extends AbstractNFCEnrollActivity {
 
         /* TODO remove this when ported back to JMRTD*/
         random = new SecureRandom();
-        try {
-            cipher = Cipher.getInstance("DESede/CBC/NoPadding");
-            mac = Mac.getInstance("ISO9797Alg3Mac", new org.spongycastle.jce.provider.BouncyCastleProvider());
-        } catch (NoSuchAlgorithmException e) {
-            Log.e(TAG, e.getStackTrace().toString());
-        } catch (NoSuchPaddingException e) {
-            Log.e(TAG, e.getStackTrace().toString());
-        }
-        /* until here */
 
         setNfcScreen(SCREEN_PASSPORT);
 
@@ -154,9 +124,7 @@ public class DriversLicenseEnrollActivity extends AbstractNFCEnrollActivity {
 
         try {
             service.open();
-           // DrivingLicenseService eDLService = new DrivingLicenseService(service)
             PassportService passportService = new PassportService(service);
-            //passportService.sendSelectApplet(null,APPLET_AID);
 
             if (eDLMsg == null) {
                 eDLMsg = new EDLDataMessage(message.getSessionToken(), imsi, message.getNonce());
@@ -220,23 +188,19 @@ public class DriversLicenseEnrollActivity extends AbstractNFCEnrollActivity {
 
     }
 
-    /***********************************************************************************************
-     * FROM HERE MIGHT BE MOVED BACK TO JMRTD                                                         *
-     **********************************************************************************************/
+
     public synchronized void doBAP(PassportService ps, String mrz) throws CardServiceException {
         if (mrz != null && mrz.length()>0) {
             try {
                 String kdoc = mrz.substring(1, mrz.length() - 1);
-                byte[] keySeed = computeKeySeedForBAP2(kdoc);
+                byte[] keySeed = computeKeySeedForBAP(kdoc);
                 SecretKey kEnc = Util.deriveKey(keySeed, Util.ENC_MODE);
                 SecretKey kMac = Util.deriveKey(keySeed, Util.MAC_MODE);
-                Log.e(TAG, "kEnc = "+ toHexString(kEnc.getEncoded()));
-                Log.e(TAG, "kMac = "+ toHexString(kMac.getEncoded()));
                 try {
-                    //doBAC(ps, kEnc, kMac);
+                    //the eDL BAC is actually the same as the BAC for passports
                     ps.doBAC(kEnc,kMac);
                 } catch (CardServiceException cse) {
-                    Log.e(TAG,"BAC failed");
+                    Log.e(TAG,"BAP failed");
                     Log.e(TAG, cse.getMessage().toString());
                     throw cse;
                 }
@@ -245,164 +209,16 @@ public class DriversLicenseEnrollActivity extends AbstractNFCEnrollActivity {
                 throw new CardServiceException(gse.toString());
             }
         } else {
+            Log.e(TAG,"no valid MRZ found");
             //TODO error no valid mrz string
 
         }
     }
 
-
-/* included and changed to test BAP algo, should be removed and possibly ported back to JMRTD*/
-    public synchronized void doBAC(PassportService ps, SecretKey kEnc, SecretKey kMac) throws CardServiceException, GeneralSecurityException {
-        byte[] rndICC = ps.sendGetChallenge();
-        Log.e(TAG, "gotten challenge: " + toHexString(rndICC));
-        byte[] rndIFD = new byte[8];
-        random.nextBytes(rndIFD);
-        byte[] kIFD = new byte[16];
-        random.nextBytes(kIFD);
-        byte[] response = sendMutualAuth(rndIFD, rndICC, kIFD, kEnc, kMac, ps);
-        Log.e(TAG,"sent the mutualAuth, gotten response: " + toHexString(response));
-        byte[] kICC = new byte[16];
-        System.arraycopy(response, 16, kICC, 0, 16);
-        byte[] keySeed = new byte[16];
-        for (int i = 0; i < 16; i++) {
-            keySeed[i] = (byte) ((kIFD[i] & 0xFF) ^ (kICC[i] & 0xFF));
-        }
-        SecretKey ksEnc = Util.deriveKey(keySeed, Util.ENC_MODE);
-        SecretKey ksMac = Util.deriveKey(keySeed, Util.MAC_MODE);
-        long ssc = Util.computeSendSequenceCounter(rndICC, rndIFD);
-        //wrapper = new DESedeSecureMessagingWrapper(ksEnc, ksMac, ssc);
-        //wrapper = new VeiligeMessagingWrapper(ksEnc,ksMac,ssc);
-    }
-
-    /**
-     * Sends an <code>EXTERNAL AUTHENTICATE</code> command to the passport.
-     * This is part of BAC.
-     * The resulting byte array has length 32 and contains <code>rndICC</code>
-     * (first 8 bytes), <code>rndIFD</code> (next 8 bytes), their key material "
-     * <code>kICC</code>" (last 16 bytes).
-     *
-     * @param rndIFD our challenge
-     * @param rndICC their challenge
-     * @param kIFD our key material
-     * @param kEnc the static encryption key
-     * @param kMac the static mac key
-     *
-     * @return a byte array of length 32 containing the response that was sent
-     *         by the passport, decrypted (using <code>kEnc</code>) and verified
-     *         (using <code>kMac</code>)
-     *
-     * @throws CardServiceException on tranceive error
-     */
-    public synchronized byte[] sendMutualAuth(byte[] rndIFD, byte[] rndICC, byte[] kIFD, SecretKey kEnc, SecretKey kMac, PassportService ps) throws CardServiceException {
-        Log.e(TAG, "started mutual auth with:");
-        Log.e(TAG, "RND.IFD = " + toHexString(rndIFD));
-        Log.e(TAG, "RND.ICC = " + toHexString(rndICC));
-        Log.e(TAG, "K.IFD = " + toHexString(kIFD));
-
-        try {
-            if (rndIFD == null || rndIFD.length != 8) { throw new IllegalArgumentException("rndIFD wrong length"); }
-            if (rndICC == null || rndICC.length != 8) { rndICC = new byte[8]; Log.e(TAG,"serious problem");}
-            if (kIFD == null || kIFD.length != 16) { throw new IllegalArgumentException("kIFD wrong length"); }
-            if (kEnc == null) { throw new IllegalArgumentException("kEnc == null"); }
-            if (kMac == null) { throw new IllegalArgumentException("kMac == null"); }
-
-            cipher.init(Cipher.ENCRYPT_MODE, kEnc, ZERO_IV_PARAM_SPEC);
-            Log.e(TAG, "initiatlized cipher");
-			/*
-			 * cipher.update(rndIFD); cipher.update(rndICC); cipher.update(kIFD); //
-			 * This doesn't work, apparently we need to create plaintext array. //
-			 * Probably has something to do with ZERO_IV_PARAM_SPEC.
-			 */
-            byte[] plaintext = new byte[32];
-            System.arraycopy(rndIFD, 0, plaintext, 0, 8);
-            System.arraycopy(rndICC, 0, plaintext, 8, 8);
-            System.arraycopy(kIFD, 0, plaintext, 16, 16);
-            byte[] ciphertext = cipher.doFinal(plaintext);
-            if (ciphertext.length != 32) {
-                throw new IllegalStateException("Cryptogram wrong length " + ciphertext.length);
-            }
-            Log.e(TAG, "Computed response");
-            mac.init(kMac);
-            Log.e(TAG, "initialized MAC");
-            byte[] paddedinput = Util.padWithMRZ(ciphertext);
-            Log.e(TAG,"ciphertext: " + toHexString(ciphertext));
-            Log.e(TAG,"padded ciphertext: " + toHexString(paddedinput));
-            byte[] mactext = mac.doFinal(paddedinput);
-            if (mactext.length != 8) {
-                Log.e(TAG, "apparantly MAC is of wrong length");
-                throw new IllegalStateException("MAC wrong length");
-            }
-
-            byte p1 = (byte) 0x00;
-            byte p2 = (byte) 0x00;
-
-            byte[] data = new byte[32 + 8];
-            System.arraycopy(ciphertext, 0, data, 0, 32);
-            System.arraycopy(mactext, 0, data, 32, 8);
-            Log.e(TAG,"cmd_data = " + toHexString(data));
-            int le = 40; /* 40 means max ne is 40 (0x28). */
-            CommandAPDU capdu = new CommandAPDU(ISO7816.CLA_ISO7816, ISO7816.INS_EXTERNAL_AUTHENTICATE, p1, p2, data, le);
-            Log.e(TAG,"about to send command APDU: " + toHexString(capdu.getBytes()));
-            ResponseAPDU rapdu = ps.transmit(capdu);
-
-            byte[] rapduBytes = rapdu.getBytes();
-            short sw = (short)rapdu.getSW();
-            Log.e(TAG,"received response " + toHexString(rapduBytes));
-            if (rapduBytes == null) {
-                throw new CardServiceException("Mutual authentication failed", sw);
-            }
-
-			/* Some MRTDs apparently don't support 40 here, try again with 0. See R2-p1_v2_sIII_0035 (and other issues). */
-            if (sw != ISO7816.SW_NO_ERROR) {
-                Log.e(TAG,"we get here???" + sw);
-                le = 0; /* 0 means ne is max 256 (0xFF). */
-                capdu = new CommandAPDU(ISO7816.CLA_ISO7816, ISO7816.INS_EXTERNAL_AUTHENTICATE, p1, p2, data, le);
-                Log.e(TAG,"about to send command APDU: " + toHexString(capdu.getBytes()));
-                rapdu = ps.transmit(capdu);
-                rapduBytes = rapdu.getBytes();
-                Log.e(TAG,"received response " + toHexString(rapduBytes));
-                sw = (short)rapdu.getSW();
-            }
-
-            if (rapduBytes.length != 42) {
-                throw new CardServiceException("Mutual authentication failed: expected length: 40 + 2, actual length: " + rapduBytes.length, sw);
-            }
-
-			/*
-			 * byte[] eICC = new byte[32]; System.arraycopy(rapdu, 0, eICC, 0, 32);
-			 *
-			 * byte[] mICC = new byte[8]; System.arraycopy(rapdu, 32, mICC, 0, 8);
-			 */
-
-			/* Decrypt the response. */
-            cipher.init(Cipher.DECRYPT_MODE, kEnc, ZERO_IV_PARAM_SPEC);
-            byte[] result = cipher.doFinal(rapduBytes, 0, rapduBytes.length - 8 - 2);
-            if (result.length != 32) {
-                throw new IllegalStateException("Cryptogram wrong length " + result.length);
-            }
-            return result;
-        } catch (GeneralSecurityException gse) {
-            throw new CardServiceException(gse.toString());
-        }
-    }
-
-
     private static byte[] computeKeySeedForBAP(String kdoc) throws GeneralSecurityException {
         if (kdoc == null || kdoc.length() < 6) {
             throw new IllegalArgumentException("Wrong document key for drivers license, found " + kdoc);
         }
-
-        byte[] keySeed = computeKeySeed(kdoc, "SHA-1", true);
-
-        return keySeed;
-    }
-
-    private static byte[] computeKeySeedForBAP2(String kdoc) throws GeneralSecurityException {
-        if (kdoc == null || kdoc.length() < 6) {
-            throw new IllegalArgumentException("Wrong document key for drivers license, found " + kdoc);
-        }
-
-        //byte[] keySeed = computeKeySeed(kdoc, "SHA-1", true);
         MessageDigest shaDigest = MessageDigest.getInstance("SHA-1");
         shaDigest.update(getBytes(kdoc));
         byte[] hash = shaDigest.digest();
@@ -411,28 +227,6 @@ public class DriversLicenseEnrollActivity extends AbstractNFCEnrollActivity {
         byte[] keySeed = new byte[16];
         System.arraycopy(hash, 0, keySeed, 0, 16);
         return keySeed;
-    }
-
-    public static byte[] computeKeySeed(String kdoc, String digestAlg, boolean doTruncate) throws GeneralSecurityException {
-
-		/* Check digits... */
-        byte[] documentNumberCheckDigit = { (byte) MRZInfo.checkDigit(kdoc) };
-
-        MessageDigest shaDigest = MessageDigest.getInstance(digestAlg);
-
-        shaDigest.update(getBytes(kdoc));
-        shaDigest.update(documentNumberCheckDigit);
-
-        byte[] hash = shaDigest.digest();
-
-        if (doTruncate) {
-			/* FIXME: truncate to 16 byte only for BAC with 3DES. Also for PACE and/or AES? -- MO */
-            byte[] keySeed = new byte[16];
-            System.arraycopy(hash, 0, keySeed, 0, 16);
-            return keySeed;
-        } else {
-            return hash;
-        }
     }
 
     //helper function from JMRTD Util. Unchanged.
@@ -446,32 +240,7 @@ public class DriversLicenseEnrollActivity extends AbstractNFCEnrollActivity {
         }
         return bytes;
     }
-    /***********************************************************************************************
-     * UNTIL HERE SHOULD BE MOVED TO JMRTD                                                         *
-     **********************************************************************************************/
 
-    /*
-    * debug code for hex string from SCUBA
-    * can pribably be removed after we have working code
-    * */
-    public static String byteToHexString(byte b) {
-        int n = b & 0x000000FF;
-        String result = (n < 0x00000010 ? "0" : "") + Integer.toHexString(n);
-        return result.toUpperCase();
-    }
-    public static String bytesToHexString(byte[] text, int offset, int length, int numRow) {
-        if(text == null) return "NULL";
-        StringBuffer result = new StringBuffer();
-        for (int i = 0; i < length; i++) {
-            if(i != 0 && i % numRow == 0) result.append("\n");
-            result.append(byteToHexString(text[offset + i]));
-        }
-        return result.toString();
-    }
-    public static String toHexString(byte[] text) {
-        return bytesToHexString(text,0,text.length, 1000);
-    }
-    /* end debug code*/
 
     /**
      * Reads the datagroups 1, 14 and 15, and the SOD file and requests an active authentication from an e-passport
@@ -504,8 +273,8 @@ public class DriversLicenseEnrollActivity extends AbstractNFCEnrollActivity {
                 // reason there is no need to let it crash the app.)
                 String mrz = settings.getString("mrz", "");
                 try {
-                    doBAP(ps,mrz);
-                    Log.i(TAG, "doing BAP");
+                    doBAP(ps, mrz);
+                    Log.i(TAG, "BAP Succeeded");
                 } catch (CardServiceException | IllegalStateException e) {
                     bacError = true;
                     Log.e(TAG, "doing BAP failed");
@@ -519,8 +288,6 @@ public class DriversLicenseEnrollActivity extends AbstractNFCEnrollActivity {
                 try {
                     Log.i(TAG, "PassportEnrollActivity: reading attempt " + tagReadAttempt);
                     generateEDLDataMessage(ps, eDLMessage);
-                    PassportVerificationResult result = eDLMessage.verify(eDLMessage.getChallenge());
-                    Log.e(TAG,result.toString());
                 } catch (IOException |CardServiceException e) {
                     Log.w(TAG, "PassportEnrollActivity: reading attempt " + tagReadAttempt + " failed, stack trace:");
                     Log.w(TAG, "          " + e.getMessage());
@@ -532,11 +299,11 @@ public class DriversLicenseEnrollActivity extends AbstractNFCEnrollActivity {
                     // Build a fancy report saying which fields we did and which we did not manage to get
                     Log.e(TAG, "PassportEnrollActivity: too many attempts failed, aborting");
                     ACRA.getErrorReporter().reportBuilder()
-                    //        .customData("sod", String.valueOf(eDLMessage.getSodFile() == null))
-                    //        .customData("dg1File", String.valueOf(eDLMessage.getDg1File() == null))
-                    //        .customData("dg14File", String.valueOf(eDLMessage.getDg14File() == null))
-                    //        .customData("dg15File", String.valueOf(eDLMessage.getDg15File() == null))
-                    //        .customData("response", String.valueOf(eDLMessage.getResponse() == null))
+                            .customData("sod", String.valueOf(eDLMessage.getSodFile() == null))
+                            .customData("dg1File", String.valueOf(eDLMessage.getDg1File() == null))
+                            .customData("dg14File", String.valueOf(eDLMessage.getDg14File() == null))
+                            .customData("dg13File", String.valueOf(eDLMessage.getDg13File() == null))
+                            .customData("response", String.valueOf(eDLMessage.getResponse() == null))
                             .exception(ex)
                             .send();
                 }
@@ -564,12 +331,8 @@ public class DriversLicenseEnrollActivity extends AbstractNFCEnrollActivity {
 
             }
 
-
-
-
-
-            private int dataGroupTag = 0x61;
             protected byte[] readDg1File(InputStream inputStream) throws IOException {
+                int dataGroupTag = 0x61;
                 TLVInputStream tlvIn = inputStream instanceof TLVInputStream ? (TLVInputStream)inputStream : new TLVInputStream(inputStream);
                 int tag = tlvIn.readTag();
                 if (tag != dataGroupTag) {
@@ -595,10 +358,6 @@ public class DriversLicenseEnrollActivity extends AbstractNFCEnrollActivity {
                     throws CardServiceException, IOException {
                 publishProgress();
 
-                //CommandAPDU capdu = new CommandAPDU(ISO7816.CLA_ISO7816,ISO7816.INS_SELECT_FILE, (byte) 0x02, (byte) 0x0C, new byte[]{(byte)0x00,(byte)0x01});
-                //ResponseAPDU rapdu = transmitWrappedAPDU(passportService,capdu);
-                //Log.e(TAG, "received rapdu: "+ toHexString(rapdu.getBytes()));
-                //passportService.sendSelectApplet(passportService.getWrapper(),APPLET_AID);
                 try {
                     if (eDLMessage.getDg1File() == null) {
                         CardFileInputStream in = passportService.getInputStream((short) 0x0001);
@@ -623,7 +382,7 @@ public class DriversLicenseEnrollActivity extends AbstractNFCEnrollActivity {
                     }
                     if (eDLMessage.getDg13File() == null) {
                         eDLMessage.setDg13File(new DG15File(passportService.getInputStream((short) 0x000d)));
-                        Log.i(TAG, "reading DG15");
+                        Log.i(TAG, "reading DG13");
                         publishProgress();
                     }
                     // The doAA() method does not use its first three arguments, it only passes the challenge
