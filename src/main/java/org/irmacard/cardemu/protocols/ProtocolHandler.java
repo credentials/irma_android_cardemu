@@ -11,6 +11,7 @@ import org.irmacard.api.common.AttributeDisjunctionList;
 import org.irmacard.api.common.DisclosureProofRequest;
 import org.irmacard.api.common.IssuingRequest;
 import org.irmacard.api.common.exceptions.ApiErrorMessage;
+import org.irmacard.api.common.util.GsonUtil;
 import org.irmacard.cardemu.CredentialManager;
 import org.irmacard.cardemu.disclosuredialog.DisclosureInformationActivity;
 import org.irmacard.cardemu.disclosuredialog.SessionDialogFragment;
@@ -150,7 +151,7 @@ public abstract class ProtocolHandler implements SessionDialogFragment.SessionDi
 					public void onClick(View v) {
 						onCancelled(action);
 						Intent intent = new Intent(activity, DisclosureInformationActivity.class);
-						intent.putExtra("request", request);
+						intent.putExtra("disjunctions", GsonUtil.getGson().toJson(request.getContent()));
 						activity.startActivity(intent);
 					}
 				});
