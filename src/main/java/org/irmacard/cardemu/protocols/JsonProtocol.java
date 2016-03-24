@@ -1,12 +1,16 @@
 package org.irmacard.cardemu.protocols;
 
-import android.app.Activity;
 import android.os.AsyncTask;
 import android.util.Log;
 import com.google.gson.reflect.TypeToken;
 import org.acra.ACRA;
+import org.irmacard.android.util.credentials.StoreManager;
+import org.irmacard.api.common.DisclosureProofRequest;
+import org.irmacard.api.common.DisclosureProofResult;
+import org.irmacard.api.common.IssuingRequest;
 import org.irmacard.api.common.exceptions.ApiErrorMessage;
-import org.irmacard.cardemu.*;
+import org.irmacard.api.common.util.GsonUtil;
+import org.irmacard.cardemu.CredentialManager;
 import org.irmacard.cardemu.httpclient.HttpClient;
 import org.irmacard.cardemu.httpclient.HttpClientException;
 import org.irmacard.cardemu.httpclient.HttpResultHandler;
@@ -14,12 +18,9 @@ import org.irmacard.credentials.CredentialsException;
 import org.irmacard.credentials.idemix.messages.IssueCommitmentMessage;
 import org.irmacard.credentials.idemix.messages.IssueSignatureMessage;
 import org.irmacard.credentials.idemix.proofs.ProofList;
-import org.irmacard.api.common.IssuingRequest;
-import org.irmacard.api.common.DisclosureProofRequest;
-import org.irmacard.api.common.DisclosureProofResult;
-import org.irmacard.api.common.util.GsonUtil;
 import org.irmacard.credentials.info.InfoException;
 
+import java.io.IOException;
 import java.lang.reflect.Type;
 import java.util.ArrayList;
 import java.util.regex.Pattern;
@@ -119,12 +120,25 @@ public class JsonProtocol extends Protocol {
 		handler.onStatusUpdate(ProtocolHandler.Action.ISSUING, ProtocolHandler.Status.COMMUNICATING);
 		final String server = this.server;
 		final HttpClient client = new HttpClient(GsonUtil.getGson());
-		
+
+		// Get the issuance request
 		client.get(IssuingRequest.class, server, new JsonResultHandler<IssuingRequest>() {
-			@Override public void onSuccess(IssuingRequest result) {
-				Log.i(TAG, result.toString());
-				handler.onStatusUpdate(ProtocolHandler.Action.ISSUING, ProtocolHandler.Status.CONNECTED);
-				handler.askForIssuancePermission(result);
+			@Override public void onSuccess(final IssuingRequest request) {
+				Log.i(TAG, request.toString());
+
+				// If necessary, update the stores; afterwards, ask the user for permission to continue
+				StoreManager.download(request, new StoreManager.DownloadHandler() {
+					@Override public void onSuccess() {
+						handler.onStatusUpdate(ProtocolHandler.Action.ISSUING, ProtocolHandler.Status.CONNECTED);
+						handler.askForIssuancePermission(request);
+					}
+					@Override public void onError(Exception e) {
+						if (e instanceof InfoException)
+							fail("Unknown scheme manager", true);
+						if (e instanceof IOException)
+							fail("Could not download credential or issuer information", true);
+					}
+				});
 			}
 		});
 	}
@@ -175,14 +189,27 @@ public class JsonProtocol extends Protocol {
 
 		HttpClient client = new HttpClient(GsonUtil.getGson());
 
+		// Get the disclosure request
 		client.get(DisclosureProofRequest.class, server, new JsonResultHandler<DisclosureProofRequest>() {
-			@Override public void onSuccess(DisclosureProofRequest result) {
-				if (result.getContent().size() == 0 || result.getNonce() == null || result.getContext() == null) {
+			@Override public void onSuccess(final DisclosureProofRequest request) {
+				if (request.getContent().size() == 0 || request.getNonce() == null || request.getContext() == null) {
 					fail("Got malformed disclosure request", true);
 					return;
 				}
-				handler.onStatusUpdate(ProtocolHandler.Action.DISCLOSING, ProtocolHandler.Status.CONNECTED);
-				handler.askForVerificationPermission(result);
+
+				// If necessary, update the stores; afterwards, ask the user for permission to continue
+				StoreManager.download(request, new StoreManager.DownloadHandler() {
+					@Override public void onSuccess() {
+						handler.onStatusUpdate(ProtocolHandler.Action.DISCLOSING, ProtocolHandler.Status.CONNECTED);
+						handler.askForVerificationPermission(request);
+					}
+					@Override public void onError(Exception e) {
+						if (e instanceof InfoException)
+							fail("Unknown scheme manager", true);
+						if (e instanceof IOException)
+							fail("Could not download credential or issuer information", true);
+					}
+				});
 			}
 		});
 	}

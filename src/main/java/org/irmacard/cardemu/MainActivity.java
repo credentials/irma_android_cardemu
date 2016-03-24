@@ -40,6 +40,7 @@ import android.widget.*;
 import org.irmacard.android.util.credentials.CredentialPackage;
 import org.irmacard.android.util.credentialdetails.*;
 import org.irmacard.android.util.cardlog.*;
+import org.irmacard.android.util.credentials.StoreManager;
 import org.irmacard.api.common.exceptions.ApiErrorMessage;
 import org.irmacard.cardemu.protocols.Protocol;
 import org.irmacard.cardemu.selfenrol.EnrollSelectActivity;
@@ -357,10 +358,28 @@ public class MainActivity extends Activity {
 		dialog.show();
 	}
 
+
+
 	protected void updateCredentialList() {
+		updateCredentialList(true);
+	}
+
+	protected void updateCredentialList(boolean tryDownloading) {
 		// Can only be run when not connected to a server
 		if (activityState != STATE_IDLE) {
 			return;
+		}
+
+		if (tryDownloading) {
+			CredentialManager.updateStores(new StoreManager.DownloadHandler() {
+				@Override public void onSuccess() {
+					updateCredentialList(false);
+				}
+				@Override public void onError(Exception e) {
+					setFeedback("Downloading credential info failed", "warning");
+					updateCredentialList(false);
+				}
+			});
 		}
 
 		HashMap<CredentialDescription, Attributes> credentials = CredentialManager.getAllAttributes();

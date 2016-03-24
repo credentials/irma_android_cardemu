@@ -36,6 +36,7 @@ import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
 import com.google.gson.reflect.TypeToken;
 import net.sf.scuba.smartcards.CardServiceException;
+import org.irmacard.android.util.credentials.StoreManager;
 import org.irmacard.api.common.*;
 import org.irmacard.credentials.Attributes;
 import org.irmacard.credentials.CredentialsException;
@@ -43,6 +44,7 @@ import org.irmacard.credentials.idemix.CredentialBuilder;
 import org.irmacard.credentials.idemix.IdemixCredential;
 import org.irmacard.credentials.idemix.IdemixCredentials;
 import org.irmacard.credentials.idemix.IdemixSystemParameters;
+import org.irmacard.credentials.idemix.info.IdemixKeyStore;
 import org.irmacard.credentials.idemix.messages.IssueCommitmentMessage;
 import org.irmacard.credentials.idemix.messages.IssueSignatureMessage;
 import org.irmacard.credentials.idemix.proofs.ProofList;
@@ -80,6 +82,7 @@ public class CredentialManager {
 	private static Gson gson;
 	private static SharedPreferences settings;
 	private static DescriptionStore descriptionStore;
+	private static IdemixKeyStore keyStore;
 
 	private static final String TAG = "CredentialManager";
 	private static final String CREDENTIAL_STORAGE = "credentials";
@@ -92,6 +95,7 @@ public class CredentialManager {
 		settings = s;
 		try {
 			descriptionStore = DescriptionStore.getInstance();
+			keyStore = IdemixKeyStore.getInstance();
 		} catch (InfoException e) { // Can't recover from this, crash now
 			throw new RuntimeException("Could not read DescriptionStore", e);
 		}
@@ -412,6 +416,33 @@ public class CredentialManager {
 		}
 
 		return logs;
+	}
+
+	/**
+	 * If the {@link DescriptionStore} or {@link IdemixKeyStore} do not contain all issuers, credential types,
+	 * or public keys from our credentials, use their download methods to download the missing info.
+	 * @param handler Callbacks to call when done. If nothing was downloaded, this is not used.
+	 * @return True if anything was downloaded so that the callback was used; false otherwise
+	 */
+	public static boolean updateStores(StoreManager.DownloadHandler handler) {
+		HashSet<String> issuers = new HashSet<>();
+		HashSet<String> creds = new HashSet<>();
+
+		for (String credential : credentials.keySet()) {
+			String[] parts = credential.split("\\.");
+			String issuer = parts[0];
+
+			if (descriptionStore.getIssuerDescription(issuer) == null || keyStore.containsPublicKey(issuer))
+				issuers.add(issuer);
+			if (descriptionStore.getCredentialDescription(credential) == null)
+				creds.add(credential);
+		}
+
+		if (issuers.size() == 0 && creds.size() == 0)
+			return false;
+
+		StoreManager.download(issuers, creds, handler);
+		return true;
 	}
 
 	/**
