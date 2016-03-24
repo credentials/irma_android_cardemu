@@ -35,11 +35,15 @@ import org.acra.ACRA;
 import org.acra.ACRAConfiguration;
 import org.acra.ReportField;
 import org.acra.annotation.ReportsCrashes;
-import org.irmacard.android.util.credentials.AndroidWalker;
+import org.apache.http.client.HttpClient;
+import org.apache.http.impl.client.DefaultHttpClient;
+import org.irmacard.android.util.credentials.AndroidFileReader;
+import org.irmacard.android.util.credentials.StoreManager;
 import org.irmacard.cardemu.messages.ReaderMessage;
 import org.irmacard.cardemu.messages.ReaderMessageDeserializer;
 import org.irmacard.credentials.idemix.info.IdemixKeyStore;
-import org.irmacard.credentials.info.DescriptionStore;
+import org.irmacard.credentials.idemix.info.IdemixKeyStoreDeserializer;
+import org.irmacard.credentials.info.*;
 import org.irmacard.mno.common.util.GsonUtil;
 
 @ReportsCrashes(
@@ -89,10 +93,19 @@ public class IRMApp extends Application {
             e.printStackTrace();
         }
 
-        // Setup the DescriptionStore
-        AndroidWalker aw = new AndroidWalker(getResources().getAssets());
-        DescriptionStore.setTreeWalker(aw);
-        IdemixKeyStore.setTreeWalker(aw);
+        // Setup the DescriptionStore and IdemixKeyStore
+        FileReader reader = new AndroidFileReader(this);
+        HttpClient client = new DefaultHttpClient();
+        try {
+            StoreManager serializer = new StoreManager(this);
+            DescriptionStore.initialize(new DescriptionStoreDeserializer(reader), serializer, client);
+            IdemixKeyStore.initialize(new IdemixKeyStoreDeserializer(reader), serializer, client);
+
+            for (SchemeManager manager : BuildConfig.schemeManagers)
+                DescriptionStore.getInstance().addSchemeManager(manager);
+        } catch (InfoException e) { // Can't do anything in this case
+            throw new RuntimeException(e);
+        }
 
         MetricsReporter.init(this, BuildConfig.metricServer, reportTimeInterval);
         CardManager.init(this);

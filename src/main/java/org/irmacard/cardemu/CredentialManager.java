@@ -36,6 +36,7 @@ import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
 import com.google.gson.reflect.TypeToken;
 import net.sf.scuba.smartcards.CardServiceException;
+import org.irmacard.android.util.credentials.StoreManager;
 import org.irmacard.api.common.*;
 import org.irmacard.credentials.Attributes;
 import org.irmacard.credentials.CredentialsException;
@@ -43,6 +44,7 @@ import org.irmacard.credentials.idemix.CredentialBuilder;
 import org.irmacard.credentials.idemix.IdemixCredential;
 import org.irmacard.credentials.idemix.IdemixCredentials;
 import org.irmacard.credentials.idemix.IdemixSystemParameters;
+import org.irmacard.credentials.idemix.info.IdemixKeyStore;
 import org.irmacard.credentials.idemix.messages.IssueCommitmentMessage;
 import org.irmacard.credentials.idemix.messages.IssueSignatureMessage;
 import org.irmacard.credentials.idemix.proofs.ProofList;
@@ -68,18 +70,20 @@ import java.util.*;
  * Handles issuing, disclosing, and deletion of credentials; keeps track of log entries; and handles (de)
  * serialization of credentials and log entries from/to storage.
  */
-@SuppressWarnings("unused")
 public class CredentialManager {
-	private static HashMap<Short, IRMAIdemixCredential> credentials = new HashMap<>();
+	private static HashMap<String, IRMAIdemixCredential> credentials = new HashMap<>();
 	private static List<LogEntry> logs = new LinkedList<>();
 	private static BigInteger secretKey;
 
 	// Type tokens for Gson (de)serialization
-	private static Type credentialsType = new TypeToken<HashMap<Short, IRMAIdemixCredential>>() {}.getType();
+	private static Type credentialsType = new TypeToken<HashMap<String, IRMAIdemixCredential>>() {}.getType();
 	private static Type logsType = new TypeToken<List<LogEntry>>() {}.getType();
 
 	private static Gson gson;
 	private static SharedPreferences settings;
+	private static DescriptionStore descriptionStore;
+	private static IdemixKeyStore keyStore;
+
 	private static final String TAG = "CredentialManager";
 	private static final String CREDENTIAL_STORAGE = "credentials";
 	private static final String LOG_STORAGE = "logs";
@@ -89,6 +93,12 @@ public class CredentialManager {
 
 	public static void init(SharedPreferences s) {
 		settings = s;
+		try {
+			descriptionStore = DescriptionStore.getInstance();
+			keyStore = IdemixKeyStore.getInstance();
+		} catch (InfoException e) { // Can't recover from this, crash now
+			throw new RuntimeException("Could not read DescriptionStore", e);
+		}
 	}
 
 	/**
@@ -117,11 +127,14 @@ public class CredentialManager {
 	/**
 	 * Extract and insert credentials and logs from the specified IRMACard
 	 */
-	@SuppressWarnings("unchecked")
 	public static void loadFromCard(IRMACard card) {
 		Log.i(TAG, "Loading credentials from card");
 
-		credentials.putAll(card.getCredentials());
+		for (Map.Entry<Short, IRMAIdemixCredential> entry : card.getCredentials().entrySet()) {
+			CredentialDescription cd = descriptionStore.getCredentialDescription(entry.getKey());
+			if (cd != null)
+				credentials.put(cd.getIdentifier(), entry.getValue());
+		}
 
 		try {
 			IdemixService is = new IdemixService(new SmartCardEmulatorService(card));
@@ -139,7 +152,15 @@ public class CredentialManager {
 	 */
 	public static IRMACard saveCard() {
 		IRMACard card = new IRMACard();
-		card.setCredentials(credentials);
+
+		HashMap<Short, IRMAIdemixCredential> creds = new HashMap<>(credentials.size());
+		for (Map.Entry<String, IRMAIdemixCredential> entry : credentials.entrySet()) {
+			CredentialDescription cd = descriptionStore.getCredentialDescription(entry.getKey());
+			if (cd != null)
+				creds.put(cd.getId(), entry.getValue());
+		}
+
+		card.setCredentials(creds);
 		if (credentials.size() > 0) {
 			BigInteger sk = credentials.values().iterator().next().getCredential().getAttribute(0);
 			card.setMasterSecret(sk);
@@ -222,23 +243,22 @@ public class CredentialManager {
 	}
 
 	/**
-	 * Given an Idemix credential, return its attributes.
-	 *
-	 * @throws InfoException if we received null, or if the credential type was not found in the DescriptionStore
+	 * Given a credential identifier, return the corresponding credential if we have it.
+	 * @return The credential, or null if we do not have it
+	 * @throws CredentialsException if this credential identifier was not found in the DescriptionStore
 	 */
-	private static Attributes getAttributes(IdemixCredential credential) throws InfoException {
+	public static Attributes getAttributes(String identifier) throws CredentialsException {
+		CredentialDescription cd = getCredentialDescription(identifier);
+
+		IRMAIdemixCredential credential = credentials.get(identifier);
+		if (credential == null)
+			return null;
+
 		Attributes attributes = new Attributes();
-
-		short id = Attributes.extractCredentialId(credential.getAttribute(1));
-		CredentialDescription cd = DescriptionStore.getInstance().getCredentialDescription(id);
-
-		if (cd == null)
-			throw new InfoException("Credential type not found in DescriptionStore");
-
-		attributes.add(Attributes.META_DATA_FIELD, credential.getAttribute(1).toByteArray());
+		attributes.add(Attributes.META_DATA_FIELD, credential.getCredential().getAttribute(1).toByteArray());
 		for (int i = 0; i < cd.getAttributeNames().size(); i++) {
 			String name = cd.getAttributeNames().get(i);
-			BigInteger value = credential.getAttribute(i + 2); // + 2: skip secret key and metadata
+			BigInteger value = credential.getCredential().getAttribute(i + 2); // + 2: skip secret key and metadata
 			attributes.add(name, value.toByteArray());
 		}
 
@@ -246,54 +266,15 @@ public class CredentialManager {
 	}
 
 	/**
-	 * Given an issuer and credential name, return the corresponding credential if we have it.
-	 * @return The credential, or null if we do not have it
-	 * @throws InfoException if this combination of issuer/credentialname was not found in the DescriptionStore
-	 */
-	public static Attributes getAttributes(String issuer, String credentialName) throws InfoException {
-		if (issuer == null || credentialName == null)
-			return null;
-
-		CredentialDescription cd = DescriptionStore.getInstance().getCredentialDescriptionByName(issuer, credentialName);
-		if (cd == null)
-			throw new InfoException("Issuer or credential not found in DescriptionStore");
-
-		IRMAIdemixCredential credential = credentials.get(cd.getId());
-		if (credential == null)
-			return null;
-
-		return getAttributes(credential.getCredential());
-	}
-
-	/**
-	 * Given a credential ID, return the corresponding credential if we have it
-	 * @return The credential, or null if we do not have it
-	 * @throws InfoException if no credential with this id was found in the DescriptionStore
-	 */
-	public static Attributes getAttributes(short id) throws InfoException {
-		CredentialDescription cd = DescriptionStore.getInstance().getCredentialDescription(id);
-		if (cd == null)
-			throw new InfoException("Credential type not found in DescriptionStore");
-
-		IRMAIdemixCredential credential = credentials.get(cd.getId());
-		if (credential == null)
-			return null;
-
-		return getAttributes(credential.getCredential());
-	}
-
-	/**
 	 * Get a map containing all credential descriptions and attributes we currently have
 	 */
 	public static HashMap<CredentialDescription, Attributes> getAllAttributes() {
 		HashMap<CredentialDescription, Attributes> map = new HashMap<>();
-		CredentialDescription cd;
 
-		for (short id : credentials.keySet()) {
+		for (String id : credentials.keySet()) {
 			try {
-				cd = DescriptionStore.getInstance().getCredentialDescription(id);
-				map.put(cd, getAttributes(credentials.get(id).getCredential()));
-			} catch (InfoException e) {
+				map.put(getCredentialDescription(id), getAttributes(id));
+			} catch (CredentialsException e) {
 				e.printStackTrace();
 			}
 		}
@@ -305,7 +286,7 @@ public class CredentialManager {
 		if (cd == null)
 			return;
 
-		IRMAIdemixCredential cred = credentials.remove(cd.getId());
+		IRMAIdemixCredential cred = credentials.remove(cd.getIdentifier());
 
 		if (cred != null) {
 			logs.add(0, new RemoveLogEntry(Calendar.getInstance().getTime(), cd));
@@ -322,41 +303,19 @@ public class CredentialManager {
 	}
 
 	/**
-	 * Delete the credential with this id if we have it
-	 */
-	public static void delete(short id) {
-		delete(id, true);
-	}
-
-	private static void delete(short id, boolean shouldSave) {
-		try {
-			CredentialDescription cd = DescriptionStore.getInstance().getCredentialDescription(id);
-			delete(cd, shouldSave);
-		} catch (InfoException e) {
-			e.printStackTrace();
-		}
-	}
-
-	/**
 	 * Delete all credentials.
 	 */
 	public static void deleteAll() {
-		for (short id : credentials.keySet()) {
-			try {
-				CredentialDescription cd = DescriptionStore.getInstance().getCredentialDescription(id);
-				logs.add(0, new RemoveLogEntry(Calendar.getInstance().getTime(), cd));
-			} catch (InfoException e) {
-				e.printStackTrace();
-			}
+		for (String id : credentials.keySet()) {
+			CredentialDescription cd = descriptionStore.getCredentialDescription(id);
+			if (cd == null)
+				continue;
+			logs.add(0, new RemoveLogEntry(Calendar.getInstance().getTime(), cd));
 		}
 
 		credentials = new HashMap<>();
 
 		save();
-	}
-
-	public static boolean isEmpty() {
-		return credentials.isEmpty();
 	}
 
 	public static List<LogEntry> getLog() {
@@ -384,9 +343,9 @@ public class CredentialManager {
 		if (!attributes.haveSelected())
 			throw new CredentialsException("Select an attribute in each disjunction first");
 
-		Map<Short, List<Integer>> toDisclose = groupAttributesById(attributes);
+		Map<String, List<Integer>> toDisclose = groupAttributesById(attributes);
 
-		for (short id : toDisclose.keySet()) {
+		for (String id : toDisclose.keySet()) {
 			List<Integer> attrs = toDisclose.get(id);
 			IdemixCredential credential = credentials.get(id).getCredential();
 			builder.addProofD(credential, attrs);
@@ -401,18 +360,15 @@ public class CredentialManager {
 	 * Helper function that, given a list of {@link AttributeDisjunction} that each have a selected member (as in,
 	 * {@link AttributeDisjunction#getSelected()} returns non-null), groups all selected attributes by credential ID.
 	 */
-	private static Map<Short, List<Integer>> groupAttributesById(List<AttributeDisjunction> content)
+	private static Map<String, List<Integer>> groupAttributesById(List<AttributeDisjunction> content)
 	throws CredentialsException {
-		Map<Short, List<Integer>> toDisclose = new HashMap<>();
+		Map<String, List<Integer>> toDisclose = new HashMap<>();
 
 		// Group the chosen attribute identifiers by their credential ID in the toDisclose map
 		for (AttributeDisjunction disjunction : content) {
 			AttributeIdentifier identifier = disjunction.getSelected();
-
-			String issuer = identifier.getIssuerName();
-			String credentialName = identifier.getCredentialName();
-			CredentialDescription cd = getCredentialDescription(issuer, credentialName);
-			short id = cd.getId();
+			String id = identifier.getCredentialIdentifier();
+			CredentialDescription cd = getCredentialDescription(id);
 
 			List<Integer> attributes;
 			if (toDisclose.get(id) == null) {
@@ -438,62 +394,68 @@ public class CredentialManager {
 	/**
 	 * Log that we disclosed the specified attributes.
 	 */
-	private static List<LogEntry> generateLogEntries(Map<Short, List<Integer>> toDisclose)
-	throws CredentialsException {
+	private static List<LogEntry> generateLogEntries(Map<String, List<Integer>> toDisclose) {
 		List<LogEntry> logs = new ArrayList<>(toDisclose.size());
 
-		for (short id : toDisclose.keySet()) {
+		for (String id : toDisclose.keySet()) {
 			List<Integer> attributes = toDisclose.get(id);
 
-			try {
-				CredentialDescription cd = DescriptionStore.getInstance().getCredentialDescription(id);
-				HashMap<String, Boolean> booleans = new HashMap<>(cd.getAttributeNames().size());
+			CredentialDescription cd = descriptionStore.getCredentialDescription(id);
+			if (cd == null)
+				continue;
+			HashMap<String, Boolean> booleans = new HashMap<>(cd.getAttributeNames().size());
 
-				for (int i = 0; i < cd.getAttributeNames().size(); ++i) {
-					String attrName = cd.getAttributeNames().get(i);
-					booleans.put(attrName, attributes.contains(i + 2));
-				}
-
-				// The third argument should be a VerificationDescription, and we don't have one here.
-				// Fortunately it seems to be optional, at least for the log screen...
-				logs.add(new VerifyLogEntry(Calendar.getInstance().getTime(), cd, null, booleans));
-			} catch (InfoException e) {
-				throw new CredentialsException(e);
+			for (int i = 0; i < cd.getAttributeNames().size(); ++i) {
+				String attrName = cd.getAttributeNames().get(i);
+				booleans.put(attrName, attributes.contains(i + 2));
 			}
+
+			// The third argument should be a VerificationDescription, and we don't have one here.
+			// Fortunately it seems to be optional, at least for the log screen...
+			logs.add(new VerifyLogEntry(Calendar.getInstance().getTime(), cd, null, booleans));
 		}
 
 		return logs;
 	}
 
 	/**
+	 * If the {@link DescriptionStore} or {@link IdemixKeyStore} do not contain all issuers, credential types,
+	 * or public keys from our credentials, use their download methods to download the missing info.
+	 * @param handler Callbacks to call when done. If nothing was downloaded, this is not used.
+	 * @return True if anything was downloaded so that the callback was used; false otherwise
+	 */
+	public static boolean updateStores(StoreManager.DownloadHandler handler) {
+		HashSet<String> issuers = new HashSet<>();
+		HashSet<String> creds = new HashSet<>();
+
+		for (String credential : credentials.keySet()) {
+			String[] parts = credential.split("\\.");
+			String issuer = parts[0];
+
+			if (descriptionStore.getIssuerDescription(issuer) == null || keyStore.containsPublicKey(issuer))
+				issuers.add(issuer);
+			if (descriptionStore.getCredentialDescription(credential) == null)
+				creds.add(credential);
+		}
+
+		if (issuers.size() == 0 && creds.size() == 0)
+			return false;
+
+		StoreManager.download(issuers, creds, handler);
+		return true;
+	}
+
+	/**
 	 * Helper function that either returns a non-null CredentialDescription or throws an exception
 	 */
-	private static CredentialDescription getCredentialDescription(String issuer, String credentialName)
+	private static CredentialDescription getCredentialDescription(String identifier)
 	throws CredentialsException {
 		// Find the corresponding CredentialDescription
-		CredentialDescription cd;
-		try {
-			cd = DescriptionStore.getInstance().getCredentialDescriptionByName(issuer, credentialName);
-		} catch (InfoException e) { // Should not happen
-			e.printStackTrace();
-			throw new CredentialsException("Could not read DescriptionStore", e);
-		}
+		CredentialDescription cd = descriptionStore.getCredentialDescription(identifier);
 		if (cd == null)
 			throw new CredentialsException("Unknown issuer or credential");
 
 		return cd;
-	}
-
-	/**
-	 * Given a disclosure request, see if we have satisfy it - i.e., if we have at least one attribute for each
-	 * disjunction.
-	 */
-	public static boolean canSatisfy(DisclosureProofRequest request) {
-		for (AttributeDisjunction disjunction : request.getContent())
-			if (getCandidates(disjunction).isEmpty())
-				return false;
-
-		return true;
 	}
 
 	/**
@@ -505,17 +467,18 @@ public class CredentialManager {
 		LinkedHashMap<AttributeIdentifier, String> map = new LinkedHashMap<>();
 
 		for (AttributeIdentifier attribute : disjunction) {
-			Attributes foundAttrs = null;
-			CredentialDescription cd = null;
+			Attributes foundAttrs;
+			CredentialDescription cd;
 			try {
-				foundAttrs = getAttributes(attribute.getIssuerName(), attribute.getCredentialName());
-				cd = getCredentialDescription(attribute.getIssuerName(), attribute.getCredentialName());
-			} catch (InfoException|CredentialsException e) {
+				foundAttrs = getAttributes(attribute.getCredentialIdentifier());
+				cd = getCredentialDescription(attribute.getCredentialIdentifier());
+			} catch (CredentialsException e) {
 				e.printStackTrace();
+				continue; // Can't disclose unknown attributes
 			}
 
 			if (foundAttrs != null) {
-				if (attribute.isCredential() && cd != null) {
+				if (attribute.isCredential()) {
 					map.put(attribute, cd.getIssuerID() + " - " + cd.getShortName());
 				}
 				if (!attribute.isCredential() && foundAttrs.get(attribute.getAttributeName()) != null) {
@@ -546,14 +509,9 @@ public class CredentialManager {
 	 */
 	public static boolean contains(AttributeIdentifier identifier) {
 		try {
-			Attributes attrs = getAttributes(identifier.getIssuerName(), identifier.getCredentialName());
-			if (attrs == null)
-				return false;
-			if (identifier.isCredential())
-				return true;
-			else
-				return attrs.get(identifier.getAttributeName()) != null;
-		} catch (InfoException e) {
+			Attributes attrs = getAttributes(identifier.getCredentialIdentifier());
+			return attrs != null && (identifier.isCredential() || attrs.get(identifier.getAttributeName()) != null);
+		} catch (CredentialsException e) {
 			return false;
 		}
 	}
@@ -630,9 +588,11 @@ public class CredentialManager {
 			irmaCred.setCredential(cred);
 
 			short id = Attributes.extractCredentialId(cred.getAttribute(1));
-			credentials.put(id, irmaCred);
+			CredentialDescription cd = descriptionStore.getCredentialDescription(id);
+			if (cd == null)
+				throw new InfoException("Unknown credential");
 
-			CredentialDescription cd = DescriptionStore.getInstance().getCredentialDescription(id);
+			credentials.put(cd.getIdentifier(), irmaCred);
 			logs.add(0, new IssueLogEntry(Calendar.getInstance().getTime(), cd));
 		}
 

@@ -43,6 +43,17 @@ android {
     }
 }
 
+if (project.file('schememanagers.gradle').exists()) {
+    apply from: 'schememanagers.gradle'
+} else {
+    android {
+        buildTypes.all { type ->
+            type.buildConfigField "org.irmacard.credentials.info.SchemeManager[]",
+                    "schemeManagers", '{ }'
+        }
+    }
+}
+
 if (project.file('acra.gradle').exists()) {
     apply from: 'acra.gradle'
 } else {
@@ -112,9 +123,8 @@ dependencies {
     compile 'com.embarkmobile:zxing-android-integration:2.0.0@aar'
     compile 'com.google.zxing:core:3.0.1'
 
-    compile "org.irmacard.android:irma_android_library:0.10.4"
+    compile "org.irmacard.android:irma_android_library:0.11.0"
     compile 'org.irmacard.metrics:irma_metrics_common:0.1.1'
-    compile 'org.irmacard.api:irma_api_common:0.2.0'
     compile('org.irmacard.mno:irma_mno_common:0.1.4')  {
         transitive = false // Prevent it from including Scuba
     }
