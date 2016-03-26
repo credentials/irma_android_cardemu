@@ -52,9 +52,7 @@ import org.irmacard.credentials.idemix.proofs.ProofListBuilder;
 import org.irmacard.credentials.idemix.smartcard.IRMACard;
 import org.irmacard.credentials.idemix.smartcard.IRMAIdemixCredential;
 import org.irmacard.credentials.idemix.smartcard.SmartCardEmulatorService;
-import org.irmacard.credentials.info.CredentialDescription;
-import org.irmacard.credentials.info.DescriptionStore;
-import org.irmacard.credentials.info.InfoException;
+import org.irmacard.credentials.info.*;
 import org.irmacard.credentials.util.log.IssueLogEntry;
 import org.irmacard.credentials.util.log.LogEntry;
 import org.irmacard.credentials.util.log.RemoveLogEntry;
@@ -71,12 +69,12 @@ import java.util.*;
  * serialization of credentials and log entries from/to storage.
  */
 public class CredentialManager {
-	private static HashMap<String, IRMAIdemixCredential> credentials = new HashMap<>();
+	private static HashMap<CredentialIdentifier, IRMAIdemixCredential> credentials = new HashMap<>();
 	private static List<LogEntry> logs = new LinkedList<>();
 	private static BigInteger secretKey;
 
 	// Type tokens for Gson (de)serialization
-	private static Type credentialsType = new TypeToken<HashMap<String, IRMAIdemixCredential>>() {}.getType();
+	private static Type credentialsType = new TypeToken<HashMap<CredentialIdentifier, IRMAIdemixCredential>>() {}.getType();
 	private static Type logsType = new TypeToken<List<LogEntry>>() {}.getType();
 
 	private static Gson gson;
@@ -154,7 +152,7 @@ public class CredentialManager {
 		IRMACard card = new IRMACard();
 
 		HashMap<Short, IRMAIdemixCredential> creds = new HashMap<>(credentials.size());
-		for (Map.Entry<String, IRMAIdemixCredential> entry : credentials.entrySet()) {
+		for (Map.Entry<CredentialIdentifier, IRMAIdemixCredential> entry : credentials.entrySet()) {
 			CredentialDescription cd = descriptionStore.getCredentialDescription(entry.getKey());
 			if (cd != null)
 				creds.put(cd.getId(), entry.getValue());
@@ -247,7 +245,7 @@ public class CredentialManager {
 	 * @return The credential, or null if we do not have it
 	 * @throws CredentialsException if this credential identifier was not found in the DescriptionStore
 	 */
-	public static Attributes getAttributes(String identifier) throws CredentialsException {
+	public static Attributes getAttributes(CredentialIdentifier identifier) throws CredentialsException {
 		CredentialDescription cd = getCredentialDescription(identifier);
 
 		IRMAIdemixCredential credential = credentials.get(identifier);
@@ -271,7 +269,7 @@ public class CredentialManager {
 	public static HashMap<CredentialDescription, Attributes> getAllAttributes() {
 		HashMap<CredentialDescription, Attributes> map = new HashMap<>();
 
-		for (String id : credentials.keySet()) {
+		for (CredentialIdentifier id : credentials.keySet()) {
 			try {
 				map.put(getCredentialDescription(id), getAttributes(id));
 			} catch (CredentialsException e) {
@@ -306,7 +304,7 @@ public class CredentialManager {
 	 * Delete all credentials.
 	 */
 	public static void deleteAll() {
-		for (String id : credentials.keySet()) {
+		for (CredentialIdentifier id : credentials.keySet()) {
 			CredentialDescription cd = descriptionStore.getCredentialDescription(id);
 			if (cd == null)
 				continue;
@@ -343,9 +341,9 @@ public class CredentialManager {
 		if (!attributes.haveSelected())
 			throw new CredentialsException("Select an attribute in each disjunction first");
 
-		Map<String, List<Integer>> toDisclose = groupAttributesById(attributes);
+		Map<CredentialIdentifier, List<Integer>> toDisclose = groupAttributesById(attributes);
 
-		for (String id : toDisclose.keySet()) {
+		for (CredentialIdentifier id : toDisclose.keySet()) {
 			List<Integer> attrs = toDisclose.get(id);
 			IdemixCredential credential = credentials.get(id).getCredential();
 			builder.addProofD(credential, attrs);
@@ -360,14 +358,14 @@ public class CredentialManager {
 	 * Helper function that, given a list of {@link AttributeDisjunction} that each have a selected member (as in,
 	 * {@link AttributeDisjunction#getSelected()} returns non-null), groups all selected attributes by credential ID.
 	 */
-	private static Map<String, List<Integer>> groupAttributesById(List<AttributeDisjunction> content)
+	private static Map<CredentialIdentifier, List<Integer>> groupAttributesById(List<AttributeDisjunction> content)
 	throws CredentialsException {
-		Map<String, List<Integer>> toDisclose = new HashMap<>();
+		Map<CredentialIdentifier, List<Integer>> toDisclose = new HashMap<>();
 
 		// Group the chosen attribute identifiers by their credential ID in the toDisclose map
 		for (AttributeDisjunction disjunction : content) {
 			AttributeIdentifier identifier = disjunction.getSelected();
-			String id = identifier.getCredentialIdentifier();
+			CredentialIdentifier id = identifier.getCredentialIdentifier();
 			CredentialDescription cd = getCredentialDescription(id);
 
 			List<Integer> attributes;
@@ -394,10 +392,10 @@ public class CredentialManager {
 	/**
 	 * Log that we disclosed the specified attributes.
 	 */
-	private static List<LogEntry> generateLogEntries(Map<String, List<Integer>> toDisclose) {
+	private static List<LogEntry> generateLogEntries(Map<CredentialIdentifier, List<Integer>> toDisclose) {
 		List<LogEntry> logs = new ArrayList<>(toDisclose.size());
 
-		for (String id : toDisclose.keySet()) {
+		for (CredentialIdentifier id : toDisclose.keySet()) {
 			List<Integer> attributes = toDisclose.get(id);
 
 			CredentialDescription cd = descriptionStore.getCredentialDescription(id);
@@ -425,12 +423,11 @@ public class CredentialManager {
 	 * @return True if anything was downloaded so that the callback was used; false otherwise
 	 */
 	public static boolean updateStores(StoreManager.DownloadHandler handler) {
-		HashSet<String> issuers = new HashSet<>();
-		HashSet<String> creds = new HashSet<>();
+		HashSet<IssuerIdentifier> issuers = new HashSet<>();
+		HashSet<CredentialIdentifier> creds = new HashSet<>();
 
-		for (String credential : credentials.keySet()) {
-			String[] parts = credential.split("\\.");
-			String issuer = parts[0];
+		for (CredentialIdentifier credential : credentials.keySet()) {
+			IssuerIdentifier issuer = credential.getIssuerIdentifier();
 
 			if (descriptionStore.getIssuerDescription(issuer) == null || keyStore.containsPublicKey(issuer))
 				issuers.add(issuer);
@@ -448,7 +445,7 @@ public class CredentialManager {
 	/**
 	 * Helper function that either returns a non-null CredentialDescription or throws an exception
 	 */
-	private static CredentialDescription getCredentialDescription(String identifier)
+	private static CredentialDescription getCredentialDescription(CredentialIdentifier identifier)
 	throws CredentialsException {
 		// Find the corresponding CredentialDescription
 		CredentialDescription cd = descriptionStore.getCredentialDescription(identifier);

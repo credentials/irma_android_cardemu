@@ -41,8 +41,8 @@ import android.widget.TextView;
 import org.irmacard.cardemu.CredentialManager;
 import org.irmacard.cardemu.R;
 import org.irmacard.api.common.AttributeDisjunction;
-import org.irmacard.api.common.AttributeIdentifier;
 import org.irmacard.api.common.DisclosureProofRequest;
+import org.irmacard.credentials.info.AttributeIdentifier;
 
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
