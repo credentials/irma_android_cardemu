@@ -23,6 +23,7 @@ import org.irmacard.credentials.CredentialsException;
 import org.irmacard.credentials.idemix.IdemixCredentials;
 import org.irmacard.credentials.idemix.descriptions.IdemixVerificationDescription;
 import org.irmacard.credentials.idemix.smartcard.SmartCardEmulatorService;
+import org.irmacard.credentials.info.CredentialIdentifier;
 import org.irmacard.credentials.info.InfoException;
 import org.irmacard.idemix.IdemixService;
 import org.irmacard.idemix.IdemixSmartcard;
@@ -460,12 +461,12 @@ public class DriversLicenseEnrollActivity extends AbstractNFCEnrollActivity {
 
                     // Get a list of credential that the client can issue
                     BasicClientMessage bcm = new BasicClientMessage(eDLMsg.getSessionToken());
-                    Type t = new TypeToken<HashMap<String, Map<String, String>>>() {}.getType();
-                    HashMap<String, Map<String, String>> credentialList =
+                    Type t = new TypeToken<HashMap<CredentialIdentifier, Map<String, String>>>() {}.getType();
+                    HashMap<CredentialIdentifier, Map<String, String>> credentialList =
                             client.doPost(t, serverUrl + "/issue/credential-list", bcm);
 
                     // Get them all!
-                    for (String credentialType : credentialList.keySet()) {
+                    for (CredentialIdentifier credentialType : credentialList.keySet()) {
                         issue(credentialType, eDLMsg);
                     }
                 } catch (CardServiceException // Issuing the credential to the card failed
@@ -488,7 +489,7 @@ public class DriversLicenseEnrollActivity extends AbstractNFCEnrollActivity {
                 return msg;
             }
 
-            private void issue(String credentialType, BasicClientMessage session)
+            private void issue(CredentialIdentifier credentialType, BasicClientMessage session)
                     throws HttpClientException, CardServiceException, InfoException, CredentialsException {
                 // Get the first batch of commands for issuing
                 RequestStartIssuanceMessage startMsg = new RequestStartIssuanceMessage(
@@ -515,7 +516,7 @@ public class DriversLicenseEnrollActivity extends AbstractNFCEnrollActivity {
                 // Check if it worked
                 IdemixCredentials ic = new IdemixCredentials(is);
                 IdemixVerificationDescription ivd = new IdemixVerificationDescription(
-                        "MijnOverheid", credentialType + "All");
+                        credentialType.getIssuerIdentifier(), credentialType.getCredentialName() + "All");
                 Attributes attributes = ic.verify(ivd);
 
                 if (attributes != null)
