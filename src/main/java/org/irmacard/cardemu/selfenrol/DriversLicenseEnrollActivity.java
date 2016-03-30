@@ -365,8 +365,6 @@ public class DriversLicenseEnrollActivity extends AbstractNFCEnrollActivity {
                         CardFileInputStream in = passportService.getInputStream((short) 0x0001);
                         eDLMessage.setDg1File(readDg1File(in));
                         Log.i(TAG, "Reading DG1");
-                        //TODO: this is a debugging check! to be renoved
-                        Log.e(TAG,"[" + bytesToHex(eDLMessage.getDg1File()) + "]");
                         publishProgress();
                     } if (eDLMessage.getSodFile() == null) {
                         eDLMessage.setSodFile(new SODFile(passportService.getInputStream((short) 0x001d)));
@@ -401,17 +399,6 @@ public class DriversLicenseEnrollActivity extends AbstractNFCEnrollActivity {
                     // (I've seen it happening if the passport is removed from the device halfway through)
                     throw new IOException("NullPointerException during passport communication", e);
                 }
-            }
-
-            final protected char[] hexArray = "0123456789ABCDEF".toCharArray();
-            public String bytesToHex(byte[] bytes) {
-                char[] hexChars = new char[bytes.length * 2];
-                for ( int j = 0; j < bytes.length; j++ ) {
-                    int v = bytes[j] & 0xFF;
-                    hexChars[j * 2] = hexArray[v >>> 4];
-                    hexChars[j * 2 + 1] = hexArray[v & 0x0F];
-                }
-                return new String(hexChars);
             }
 
             @Override
