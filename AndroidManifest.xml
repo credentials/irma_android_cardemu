@@ -36,8 +36,6 @@
                 android:resource="@xml/nfc_tech_filter" />
         </activity>
 
-        <activity android:name=".selfenrol.JsonPassportEnrollActivity" />
-
         <activity
                 android:name=".disclosuredialog.DisclosureInformationActivity"
                 android:label="Disclosure Information" />

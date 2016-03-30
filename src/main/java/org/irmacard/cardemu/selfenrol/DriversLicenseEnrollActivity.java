@@ -60,18 +60,19 @@ public class DriversLicenseEnrollActivity extends AbstractNFCEnrollActivity {
     private static final int SCREEN_PASSPORT = 3;
     private static final int SCREEN_ISSUE = 4;
 
-    protected Random random;
 
     // State variables
-    private EDLDataMessage eDLMsg = null;
+    //private EDLDataMessage eDLMsg = null;
     protected int tagReadAttempt = 0;
+
+    @Override
+    protected String getURLPath() {
+        return "/dl";
+    }
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
-
-        /* TODO remove this when ported back to JMRTD*/
-        random = new SecureRandom();
 
         setNfcScreen(SCREEN_PASSPORT);
 
@@ -109,7 +110,7 @@ public class DriversLicenseEnrollActivity extends AbstractNFCEnrollActivity {
         new Handler().postDelayed(new Runnable() {
             @Override
             public void run() {
-                if (screen == SCREEN_PASSPORT && (eDLMsg == null || !eDLMsg.isComplete())) {
+                if (screen == SCREEN_PASSPORT && (documentMsg == null || !documentMsg.isComplete())) {
                     showErrorScreen(getString(R.string.error_enroll_passporterror));
                 }
             }
@@ -127,10 +128,10 @@ public class DriversLicenseEnrollActivity extends AbstractNFCEnrollActivity {
             service.open();
             PassportService passportService = new PassportService(service);
 
-            if (eDLMsg == null) {
-                eDLMsg = new EDLDataMessage(message.getSessionToken(), imsi, message.getNonce());
+            if (documentMsg == null) {
+                documentMsg = new EDLDataMessage(message.getSessionToken(), imsi, message.getNonce());
             }
-            readDriversLicense(passportService, eDLMsg);
+            readDriversLicense(passportService, documentMsg);
         } catch (CardServiceException e) {
             // TODO under what circumstances does this happen? Maybe handle it more intelligently?
             ACRA.getErrorReporter().handleException(e);
@@ -247,7 +248,7 @@ public class DriversLicenseEnrollActivity extends AbstractNFCEnrollActivity {
      * Reads the datagroups 1, 14 and 15, and the SOD file and requests an active authentication from an e-passport
      * in a seperate thread.
      */
-    private void readDriversLicense(PassportService ps, final EDLDataMessage eDLMessage) {
+    private void readDriversLicense(PassportService ps, DocumentDataMessage eDLMessage) {
         new AsyncTask<Object,Void,EDLDataMessage>(){
             ProgressBar progressBar = (ProgressBar) findViewById(R.id.se_progress_bar);
             boolean passportError = false;
@@ -363,7 +364,9 @@ public class DriversLicenseEnrollActivity extends AbstractNFCEnrollActivity {
                     if (eDLMessage.getDg1File() == null) {
                         CardFileInputStream in = passportService.getInputStream((short) 0x0001);
                         eDLMessage.setDg1File(readDg1File(in));
-                        Log.i(TAG,"Reading DG1");
+                        Log.i(TAG, "Reading DG1");
+                        //TODO: this is a debugging check! to be renoved
+                        Log.e(TAG,"[" + bytesToHex(eDLMessage.getDg1File()) + "]");
                         publishProgress();
                     } if (eDLMessage.getSodFile() == null) {
                         eDLMessage.setSodFile(new SODFile(passportService.getInputStream((short) 0x001d)));
@@ -400,10 +403,21 @@ public class DriversLicenseEnrollActivity extends AbstractNFCEnrollActivity {
                 }
             }
 
+            final protected char[] hexArray = "0123456789ABCDEF".toCharArray();
+            public String bytesToHex(byte[] bytes) {
+                char[] hexChars = new char[bytes.length * 2];
+                for ( int j = 0; j < bytes.length; j++ ) {
+                    int v = bytes[j] & 0xFF;
+                    hexChars[j * 2] = hexArray[v >>> 4];
+                    hexChars[j * 2 + 1] = hexArray[v & 0x0F];
+                }
+                return new String(hexChars);
+            }
+
             @Override
             protected void onPostExecute(EDLDataMessage eDLMessage) {
                 // First set the result, since it may be partially okay
-                eDLMsg = eDLMessage;
+                documentMsg = eDLMessage;
 
                 Boolean done = eDLMessage != null && eDLMessage.isComplete();
 
@@ -428,115 +442,4 @@ public class DriversLicenseEnrollActivity extends AbstractNFCEnrollActivity {
         }.execute(ps,eDLMessage);
     }
 
-    /**
-     * Do the enrolling and send a message to uiHandler when done. If something
-     * went wrong, the .obj of the message sent to uiHandler will be an exception;
-     * if everything went OK the .obj will be null.
-     * TODO return our result properly using a class like EnrollmentStartResult above
-     *
-     * @param uiHandler The handler to message when done.
-     */
-    private void enroll(final Handler uiHandler) {
-        final String serverUrl = getEnrollmentServer();
-
-        // Doing HTTP(S) stuff on the main thread is not allowed.
-        new AsyncTask<EDLDataMessage, Void, Message>() {
-            @Override
-            protected Message doInBackground(EDLDataMessage... params) {
-                Message msg = Message.obtain();
-                try {
-                    // Get a eDLMsg token
-                    EDLDataMessage eDLMsg = params[0];
-
-                    // Send eDL response and let server check it
-                    PassportVerificationResultMessage result = client.doPost(
-                            PassportVerificationResultMessage.class,
-                            serverUrl + "/verify-passport",
-                            eDLMsg
-                    );
-
-                    if (result.getResult() != PassportVerificationResult.SUCCESS) {
-                        throw new CardServiceException("Server rejected passport proof");
-                    }
-
-                    // Get a list of credential that the client can issue
-                    BasicClientMessage bcm = new BasicClientMessage(eDLMsg.getSessionToken());
-                    Type t = new TypeToken<HashMap<CredentialIdentifier, Map<String, String>>>() {}.getType();
-                    HashMap<CredentialIdentifier, Map<String, String>> credentialList =
-                            client.doPost(t, serverUrl + "/issue/credential-list", bcm);
-
-                    // Get them all!
-                    for (CredentialIdentifier credentialType : credentialList.keySet()) {
-                        issue(credentialType, eDLMsg);
-                    }
-                } catch (CardServiceException // Issuing the credential to the card failed
-                        |InfoException // VerificationDescription not found in configurarion
-                        |CredentialsException e) { // Verification went wrong
-                    ACRA.getErrorReporter().handleException(e);
-                    //e.printStackTrace();
-                    msg.obj = e;
-                    msg.what = R.string.error_enroll_issuing_failed;
-                } catch (HttpClientException e) {
-                    msg.obj = e;
-                    if (e.cause instanceof JsonSyntaxException) {
-                        ACRA.getErrorReporter().handleException(e);
-                        msg.what = R.string.error_enroll_invalidresponse;
-                    }
-                    else {
-                        msg.what = R.string.error_enroll_cantconnect;
-                    }
-                }
-                return msg;
-            }
-
-            private void issue(CredentialIdentifier credentialType, BasicClientMessage session)
-                    throws HttpClientException, CardServiceException, InfoException, CredentialsException {
-                // Get the first batch of commands for issuing
-                RequestStartIssuanceMessage startMsg = new RequestStartIssuanceMessage(
-                        session.getSessionToken(),
-                        is.execute(IdemixSmartcard.selectApplicationCommand).getData()
-                );
-                ProtocolCommands issueCommands = client.doPost(ProtocolCommands.class,
-                        serverUrl + "/issue/" + credentialType + "/start", startMsg);
-
-                // Execute the retrieved commands
-                is.sendCardPin("000000".getBytes());
-                is.sendCredentialPin("0000".getBytes());
-                ProtocolResponses responses = is.execute(issueCommands);
-
-                // Get the second batch of commands for issuing
-                RequestFinishIssuanceMessage finishMsg
-                        = new RequestFinishIssuanceMessage(session.getSessionToken(), responses);
-                issueCommands = client.doPost(ProtocolCommands.class,
-                        serverUrl + "/issue/" + credentialType + "/finish", finishMsg);
-
-                // Execute the retrieved commands
-                is.execute(issueCommands);
-
-                // Check if it worked
-                IdemixCredentials ic = new IdemixCredentials(is);
-                IdemixVerificationDescription ivd = new IdemixVerificationDescription(
-                        credentialType.getIssuerIdentifier(), credentialType.getCredentialName() + "All");
-                Attributes attributes = ic.verify(ivd);
-
-                if (attributes != null)
-                    Log.d(TAG, "Enrollment issuing succes!");
-                else
-                    Log.d(TAG, "Enrollment issuing failed.");
-            }
-
-            @Override
-            protected void onPostExecute(Message msg) {
-                uiHandler.sendMessage(msg);
-            }
-        }.execute(eDLMsg);
-    }
-
-    @Override
-    public void finish() {
-        super.finish();
-
-        //remove "old" eDLdatamessage object
-        eDLMsg = null;
-    }
 }

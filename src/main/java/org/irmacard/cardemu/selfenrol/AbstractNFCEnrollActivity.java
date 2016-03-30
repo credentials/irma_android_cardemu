@@ -17,16 +17,24 @@ import net.sf.scuba.smartcards.CardService;
 import net.sf.scuba.smartcards.CardServiceException;
 import net.sf.scuba.smartcards.IsoDepCardService;
 import org.acra.ACRA;
+import org.irmacard.api.common.ClientQr;
+import org.irmacard.api.common.exceptions.ApiErrorMessage;
 import org.irmacard.cardemu.BuildConfig;
 import org.irmacard.cardemu.CardManager;
 import org.irmacard.cardemu.R;
 import org.irmacard.cardemu.SecureSSLSocketFactory;
 import org.irmacard.cardemu.httpclient.HttpClient;
 import org.irmacard.cardemu.httpclient.HttpClientException;
+import org.irmacard.cardemu.httpclient.HttpResultHandler;
+import org.irmacard.cardemu.protocols.Protocol;
+import org.irmacard.cardemu.protocols.ProtocolHandler;
 import org.irmacard.credentials.idemix.smartcard.IRMACard;
 import org.irmacard.credentials.idemix.smartcard.SmartCardEmulatorService;
 import org.irmacard.idemix.IdemixService;
+import org.irmacard.mno.common.DocumentDataMessage;
 import org.irmacard.mno.common.EnrollmentStartMessage;
+import org.irmacard.mno.common.PassportVerificationResult;
+import org.irmacard.mno.common.PassportVerificationResultMessage;
 import org.irmacard.mno.common.util.GsonUtil;
 
 
@@ -43,8 +51,11 @@ import org.irmacard.mno.common.util.GsonUtil;
  */
 public abstract class AbstractNFCEnrollActivity extends AbstractGUIEnrollActivity{
     private static final String TAG = "cardemu.AbsGUIEnrollAct";
+
+    //state variables
     protected IRMACard card = null;
     protected IdemixService is = null;
+    protected DocumentDataMessage documentMsg;
 
     // NFC stuff
     private NfcAdapter nfcA;
@@ -59,6 +70,10 @@ public abstract class AbstractNFCEnrollActivity extends AbstractGUIEnrollActivit
     // Enrolling variables
     protected HttpClient client = null;
     private EnrollmentStartMessage enrollSession = null;
+    private Handler uiHandler;
+    private Message msg;
+
+    protected abstract String getURLPath();
 
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -105,6 +120,74 @@ public abstract class AbstractNFCEnrollActivity extends AbstractGUIEnrollActivit
 
     }
 
+    private ProtocolHandler protocolHandler = new ProtocolHandler(this) {
+        @Override public void onStatusUpdate(Action action, Status status) {} // Not interested
+        @Override public void onCancelled(Action action) {
+            finish();
+        }
+        @Override public void onSuccess(Action action) {
+            done();
+        }
+        @Override public void onFailure(Action action, String message, ApiErrorMessage error) {
+            if (error != null)
+                fail(error);
+            else
+                fail(R.string.error_enroll_issuing_failed);
+        }
+    };
+
+    private void fail(int resource, Exception e) {
+        if (e != null)
+            msg.obj = e;
+        else
+            msg.obj = new Exception();
+        msg.what = resource;
+        uiHandler.sendMessage(msg);
+    }
+
+    private void fail(int resource) {
+        fail(resource, null);
+    }
+
+    private void fail(ApiErrorMessage msg) {
+        fail(msg.getError().ordinal(), null); // TODO improve
+    }
+
+    private void fail(Exception e) {
+        fail(R.string.error_enroll_cantconnect, e); // TODO improve
+    }
+
+    private void done() {
+        uiHandler.sendMessage(msg);
+    }
+
+
+    protected void enroll(final Handler uiHandler) {
+        final String serverUrl = getEnrollmentServer();
+        this.uiHandler = uiHandler;
+        this.msg = Message.obtain();
+
+        // Send our passport message to the enroll server; if it accepts, perform an issuing
+        // session with the issuing API server that the enroll server returns
+        client.post(PassportVerificationResultMessage.class, serverUrl + getURLPath() + "/verify-document",
+                documentMsg, new JsonResultHandler<PassportVerificationResultMessage>() {
+                    @Override public void onSuccess(PassportVerificationResultMessage result) {
+                        if (result.getResult() != PassportVerificationResult.SUCCESS) {
+                            fail(R.string.error_enroll_passportrejected);
+                            return;
+                        }
+
+                        ClientQr qr = result.getIssueQr();
+                        if (qr == null || qr.getVersion() == null || qr.getVersion().length() == 0
+                                || qr.getUrl() == null || qr.getUrl().length() == 0) {
+                            fail(R.string.error_enroll_invalidresponse);
+                            return;
+                        }
+
+                        Protocol.NewSession(result.getIssueQr(), null, protocolHandler);
+                    }
+                });
+    }
 
     @Override
     public void onNewIntent(Intent intent) {
@@ -202,7 +285,7 @@ public abstract class AbstractNFCEnrollActivity extends AbstractGUIEnrollActivit
             @Override
             protected EnrollmentStartResult doInBackground(Void... params) {
                 try {
-                    EnrollmentStartMessage msg = client.doGet(EnrollmentStartMessage.class, serverUrl + "/start");
+                    EnrollmentStartMessage msg = client.doGet(EnrollmentStartMessage.class, serverUrl + getURLPath() + "/start");
                     return new EnrollmentStartResult(msg);
                 } catch (HttpClientException e) {
                     if (e.cause instanceof JsonSyntaxException) {
@@ -225,6 +308,19 @@ public abstract class AbstractNFCEnrollActivity extends AbstractGUIEnrollActivit
         }.execute();
     }
 
+    private abstract class JsonResultHandler<T> implements HttpResultHandler<T> {
+        @Override
+        public void onError(HttpClientException exception) {
+            try {
+                ApiErrorMessage msg = org.irmacard.api.common.util.GsonUtil.getGson().fromJson(exception.getMessage(), ApiErrorMessage.class);
+                fail(msg);
+            } catch (Exception e) {
+                fail(exception);
+            }
+        }
+    }
+
+
     @Override
     public void finish() {
         // Prepare data intent
@@ -235,6 +331,7 @@ public abstract class AbstractNFCEnrollActivity extends AbstractGUIEnrollActivit
         Log.d(TAG,"Storing card");
         CardManager.storeCard();
         setResult(RESULT_OK, data);
+        documentMsg = null;
         super.finish();
     }
 

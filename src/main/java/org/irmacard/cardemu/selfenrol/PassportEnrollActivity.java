@@ -86,10 +86,15 @@ public class PassportEnrollActivity extends AbstractNFCEnrollActivity {
 	protected int tagReadAttempt = 0;
 
 	// State variables
-	protected PassportDataMessage passportMsg = null;
+	//protected PassportDataMessage passportMsg = null;
 
 	// Date stuff
 	protected SimpleDateFormat bacDateFormat = new SimpleDateFormat("yyMMdd", Locale.US);
+
+	@Override
+	protected String getURLPath() {
+		return "/passport";
+	}
 
 	@Override
 	protected void onCreate(Bundle savedInstanceState) {
@@ -131,7 +136,7 @@ public class PassportEnrollActivity extends AbstractNFCEnrollActivity {
         new Handler().postDelayed(new Runnable() {
             @Override
             public void run() {
-                if (screen == SCREEN_PASSPORT && (passportMsg == null || !passportMsg.isComplete())) {
+                if (screen == SCREEN_PASSPORT && (documentMsg == null || !documentMsg.isComplete())) {
                     showErrorScreen(getString(R.string.error_enroll_passporterror));
                 }
             }
@@ -151,10 +156,10 @@ public class PassportEnrollActivity extends AbstractNFCEnrollActivity {
 			PassportService passportService = new PassportService(service);
 			passportService.sendSelectApplet(false);
 
-			if (passportMsg == null) {
-				passportMsg = new PassportDataMessage(message.getSessionToken(), imsi, message.getNonce());
+			if (documentMsg == null) {
+				documentMsg = new PassportDataMessage(message.getSessionToken(), imsi, message.getNonce());
 			}
-			readPassport(passportService, passportMsg);
+			readPassport(passportService, documentMsg);
 		} catch (CardServiceException e) {
 			// TODO under what circumstances does this happen? Maybe handle it more intelligently?
 			ACRA.getErrorReporter().handleException(e);
@@ -168,7 +173,7 @@ public class PassportEnrollActivity extends AbstractNFCEnrollActivity {
 	 * Reads the datagroups 1, 14 and 15, and the SOD file and requests an active authentication from an e-passport
 	 * in a seperate thread.
 	 */
-	private void readPassport(PassportService ps, PassportDataMessage pdm) {
+	private void readPassport(PassportService ps, DocumentDataMessage pdm) {
 		new AsyncTask<Object,Void,PassportDataMessage>(){
 			ProgressBar progressBar = (ProgressBar) findViewById(R.id.se_progress_bar);
 			boolean passportError = false;
@@ -289,7 +294,7 @@ public class PassportEnrollActivity extends AbstractNFCEnrollActivity {
 			@Override
 			protected void onPostExecute(PassportDataMessage pdm) {
 				// First set the result, since it may be partially okay
-				passportMsg = pdm;
+				documentMsg = pdm;
 
 				Boolean done = pdm != null && pdm.isComplete();
 
@@ -384,117 +389,4 @@ public class PassportEnrollActivity extends AbstractNFCEnrollActivity {
 		return new BACKey(docnr, dobString, doeString);
 	}
 
-
-
-	/**
-	 * Do the enrolling and send a message to uiHandler when done. If something
-	 * went wrong, the .obj of the message sent to uiHandler will be an exception;
-	 * if everything went OK the .obj will be null.
-	 * TODO return our result properly using a class like EnrollmentStartResult above
-	 *
-	 * @param uiHandler The handler to message when done.
-	 */
-	protected void enroll(final Handler uiHandler) {
-		final String serverUrl = getEnrollmentServer();
-
-		// Doing HTTP(S) stuff on the main thread is not allowed.
-		new AsyncTask<PassportDataMessage, Void, Message>() {
-			@Override
-			protected Message doInBackground(PassportDataMessage... params) {
-				Message msg = Message.obtain();
-				try {
-					// Get a passportMsg token
-					PassportDataMessage passportMsg = params[0];
-
-					// Send passport response and let server check it
-					PassportVerificationResultMessage result = client.doPost(
-							PassportVerificationResultMessage.class,
-							serverUrl + "/verify-passport",
-							passportMsg
-					);
-
-					if (result.getResult() != PassportVerificationResult.SUCCESS) {
-						throw new CardServiceException("Server rejected passport proof");
-					}
-
-					// Get a list of credential that the client can issue
-					BasicClientMessage bcm = new BasicClientMessage(passportMsg.getSessionToken());
-					Type t = new TypeToken<HashMap<CredentialIdentifier, Map<String, String>>>() {}.getType();
-					HashMap<CredentialIdentifier, Map<String, String>> credentialList =
-							client.doPost(t, serverUrl + "/issue/credential-list", bcm);
-
-					// Get them all!
-					for (CredentialIdentifier credentialType : credentialList.keySet()) {
-						issue(credentialType, passportMsg);
-					}
-				} catch (CardServiceException // Issuing the credential to the card failed
-						|InfoException // VerificationDescription not found in configurarion
-						|CredentialsException e) { // Verification went wrong
-					ACRA.getErrorReporter().handleException(e);
-					//e.printStackTrace();
-					msg.obj = e;
-					msg.what = R.string.error_enroll_issuing_failed;
-				} catch (HttpClientException e) {
-					msg.obj = e;
-					if (e.cause instanceof JsonSyntaxException) {
-						ACRA.getErrorReporter().handleException(e);
-						msg.what = R.string.error_enroll_invalidresponse;
-					}
-					else {
-						msg.what = R.string.error_enroll_cantconnect;
-					}
-				}
-				return msg;
-			}
-
-			private void issue(CredentialIdentifier credentialType, BasicClientMessage session)
-					throws HttpClientException, CardServiceException, InfoException, CredentialsException {
-				// Get the first batch of commands for issuing
-				RequestStartIssuanceMessage startMsg = new RequestStartIssuanceMessage(
-						session.getSessionToken(),
-						is.execute(IdemixSmartcard.selectApplicationCommand).getData()
-				);
-				ProtocolCommands issueCommands = client.doPost(ProtocolCommands.class,
-						serverUrl + "/issue/" + credentialType + "/start", startMsg);
-
-				// Execute the retrieved commands
-				is.sendCardPin("000000".getBytes());
-				is.sendCredentialPin("0000".getBytes());
-				ProtocolResponses responses = is.execute(issueCommands);
-
-				// Get the second batch of commands for issuing
-				RequestFinishIssuanceMessage finishMsg
-						= new RequestFinishIssuanceMessage(session.getSessionToken(), responses);
-				issueCommands = client.doPost(ProtocolCommands.class,
-						serverUrl + "/issue/" + credentialType + "/finish", finishMsg);
-
-				// Execute the retrieved commands
-				is.execute(issueCommands);
-
-				// Check if it worked
-				IdemixCredentials ic = new IdemixCredentials(is);
-				IdemixVerificationDescription ivd = new IdemixVerificationDescription(
-						credentialType.getIssuerIdentifier(), credentialType.getCredentialName() + "All");
-				Attributes attributes = ic.verify(ivd);
-
-				if (attributes != null)
-					Log.d(TAG, "Enrollment issuing succes!");
-				else
-					Log.d(TAG, "Enrollment issuing failed.");
-			}
-
-			@Override
-			protected void onPostExecute(Message msg) {
-				uiHandler.sendMessage(msg);
-			}
-		}.execute(passportMsg);
-	}
-
-	@Override
-	public void finish() {
-		super.finish();
-
-		//remove "old" passportdatamessage object
-		passportMsg = null;
-	}
 }

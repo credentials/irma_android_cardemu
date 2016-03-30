@@ -205,7 +205,7 @@ public class EnrollSelectActivity extends AbstractGUIEnrollActivity {
 
                     Intent i;
                     if (getProtocolVersion() == 2)
-                        i = new Intent(this, JsonPassportEnrollActivity.class);
+                        i = new Intent(this, PassportEnrollActivity.class);
                     else
                         i = new Intent(this, PassportEnrollActivity.class);
                     startActivityForResult(i, PassportEnrollActivity.PassportEnrollActivityCode);
