@@ -110,7 +110,7 @@ public class DriversLicenseEnrollActivity extends AbstractNFCEnrollActivity {
             PassportService passportService = new PassportService(service);
 
             if (documentMsg == null) {
-                documentMsg = new EDLDataMessage(message.getSessionToken(), imsi, message.getNonce());
+                documentMsg = new EDLDataMessage(message.getSessionToken(), message.getNonce());
             }
             readDriversLicense(passportService, documentMsg);
         } catch (CardServiceException e) {

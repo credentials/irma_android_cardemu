@@ -37,17 +37,6 @@
             android:layout_alignParentLeft="true"
             android:layout_alignParentStart="true"
                 />
-        <TextView
-            android:id="@+id/IMSI"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:gravity="center"
-            android:textAppearance="?android:attr/textAppearanceLarge"
-            android:textColor="@color/irmadarkblue"
-            android:textSize="16sp"
-            android:layout_below="@+id/se_feedback_text"
-            android:layout_marginTop="55dp"
-            android:text="IMSI: 123456789012345"/>
         <Button
             style="@style/Irma.Button"
             android:id="@+id/se_button_continue"

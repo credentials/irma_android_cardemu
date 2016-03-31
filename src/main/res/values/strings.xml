@@ -32,7 +32,7 @@
     &nbsp;&nbsp;1.&nbsp;&nbsp;Entering some data from your passport; <br/>
     &nbsp;&nbsp;2.&nbsp;&nbsp;Reading data from your passport; <br/>
     &nbsp;&nbsp;3.&nbsp;&nbsp;Issuing the credential. <br/><br/>
-    During the final process, your name, date and place of birth, and your IMSI will be transmitted to the enrollment server (%1$s).
+    During the final process, your name, date and place of birth will be transmitted to the enrollment server (%1$s).
     <br/><br/>
     Proceed?
     ]]></string>

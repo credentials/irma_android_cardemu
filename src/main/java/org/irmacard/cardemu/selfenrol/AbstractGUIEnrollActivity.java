@@ -36,7 +36,6 @@ public abstract class AbstractGUIEnrollActivity extends Activity{
     protected static final int SCREEN_ERROR = -1;
 
     //state variables
-    protected static String imsi;
     protected int screen;
 
     // Settings

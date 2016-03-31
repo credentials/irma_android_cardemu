@@ -96,17 +96,6 @@ public class EnrollSelectActivity extends AbstractGUIEnrollActivity {
             helpTextView.setMovementMethod(LinkMovementMethod.getInstance());
             helpTextView.setLinksClickable(true);
         }
-
-        Context context = getApplicationContext();
-        TelephonyManager telephonyManager = (TelephonyManager) context.getSystemService(Context.TELEPHONY_SERVICE);
-        imsi = telephonyManager.getSubscriberId();
-
-        if (imsi == null)
-            imsi = "FAKE_IMSI_" +  Settings.Secure.getString(
-                    context.getContentResolver(), Settings.Secure.ANDROID_ID);
-        TextView imsiTextView = ((TextView) findViewById(R.id.IMSI));
-        if (imsiTextView != null)
-            imsiTextView.setText("IMSI: " + imsi);
     }
 
 

@@ -141,7 +141,7 @@ public class PassportEnrollActivity extends AbstractNFCEnrollActivity {
 			passportService.sendSelectApplet(false);
 
 			if (documentMsg == null) {
-				documentMsg = new PassportDataMessage(message.getSessionToken(), imsi, message.getNonce());
+				documentMsg = new PassportDataMessage(message.getSessionToken(), "", message.getNonce());
 			}
 			readPassport(passportService, documentMsg);
 		} catch (CardServiceException e) {
