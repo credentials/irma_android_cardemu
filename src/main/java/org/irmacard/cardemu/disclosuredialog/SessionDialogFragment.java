@@ -223,7 +223,7 @@ public class SessionDialogFragment extends DialogFragment {
 		}
 
 		AlertDialog.Builder builder = new AlertDialog.Builder(getActivity())
-				.setTitle("Disclose attributes?")
+				.setTitle((issuing ? "Receive" : "Disclose") + " attributes?")
 				.setView(view)
 				.setPositiveButton("Yes", new DialogInterface.OnClickListener() {
 					@Override
