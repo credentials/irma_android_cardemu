@@ -71,7 +71,7 @@ if (project.file('acra.gradle').exists()) {
 
 android {
     buildTypes.all { type ->
-        type.buildConfigField "String", "enrollServer", '"http://145.116.146.55:8080/irma_mno_server/api"'
+        type.buildConfigField "String", "enrollServer", '""https://demo.irmacard.org/tomcat/irma_mno_server/api"'
     }
     buildTypes {
         release {
@@ -123,7 +123,7 @@ dependencies {
     compile 'com.embarkmobile:zxing-android-integration:2.0.0@aar'
     compile 'com.google.zxing:core:3.0.1'
 
-    compile "org.irmacard.android:irma_android_library:0.11.0"
+    compile "org.irmacard.android:irma_android_library:0.11.1"
     compile 'org.irmacard.metrics:irma_metrics_common:0.1.1'
     compile('org.irmacard.mno:irma_mno_common:0.1.5')  {
         transitive = false // Prevent it from including Scuba

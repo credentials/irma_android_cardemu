@@ -8,47 +8,28 @@ import android.util.Log;
 import android.view.View;
 import android.widget.ProgressBar;
 import android.widget.TextView;
-import com.google.gson.JsonSyntaxException;
-import com.google.gson.reflect.TypeToken;
 import net.sf.scuba.smartcards.*;
 import net.sf.scuba.tlv.TLVInputStream;
 import net.sf.scuba.tlv.TLVOutputStream;
-
 import org.acra.ACRA;
-import org.irmacard.cardemu.CardManager;
 import org.irmacard.cardemu.R;
-import org.irmacard.cardemu.httpclient.HttpClientException;
-import org.irmacard.credentials.Attributes;
-import org.irmacard.credentials.CredentialsException;
-import org.irmacard.credentials.idemix.IdemixCredentials;
-import org.irmacard.credentials.idemix.descriptions.IdemixVerificationDescription;
-import org.irmacard.credentials.idemix.smartcard.SmartCardEmulatorService;
-import org.irmacard.credentials.info.CredentialIdentifier;
-import org.irmacard.credentials.info.InfoException;
-import org.irmacard.idemix.IdemixService;
-import org.irmacard.idemix.IdemixSmartcard;
-import org.irmacard.mno.common.*;
+import org.irmacard.mno.common.DocumentDataMessage;
+import org.irmacard.mno.common.EDLDataMessage;
+import org.irmacard.mno.common.EnrollmentStartMessage;
 import org.jmrtd.PassportService;
 import org.jmrtd.Util;
 import org.jmrtd.lds.DG14File;
 import org.jmrtd.lds.DG15File;
 import org.jmrtd.lds.SODFile;
 
-import javax.crypto.Cipher;
-import javax.crypto.Mac;
-import javax.crypto.NoSuchPaddingException;
 import javax.crypto.SecretKey;
-import javax.crypto.spec.IvParameterSpec;
-
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.UnsupportedEncodingException;
-import java.lang.reflect.Type;
-import java.security.*;
-import java.util.HashMap;
-import java.util.Map;
-import java.util.Random;
+import java.security.GeneralSecurityException;
+import java.security.MessageDigest;
+import java.security.Security;
 
 public class DriversLicenseEnrollActivity extends AbstractNFCEnrollActivity {
     // Configuration
@@ -149,24 +130,14 @@ public class DriversLicenseEnrollActivity extends AbstractNFCEnrollActivity {
                 screen = SCREEN_ISSUE;
                 updateProgressCounter();
 
-                // Save the card before messing with it so we can roll back if
-                // something goes wrong
-                CardManager.storeCard();
-
                 // Do it!
                 enroll(new Handler() {
                     @Override
                     public void handleMessage(Message msg) {
-                        if (msg.obj == null) {
-                            // Success, save our new credentials
-                            CardManager.storeCard();
+                        if (msg.obj == null) { // Success
                             enableContinueButton();
                             findViewById(R.id.se_done_text).setVisibility(View.VISIBLE);
                         } else {
-                            // Rollback the card
-                            card = CardManager.loadCard();
-                            is = new IdemixService(new SmartCardEmulatorService(card));
-
                             if (msg.what != 0) // .what may contain a string identifier saying what went wrong
                                 showErrorScreen(msg.what);
                             else

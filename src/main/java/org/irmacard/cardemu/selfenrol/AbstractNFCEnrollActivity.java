@@ -14,13 +14,12 @@ import android.util.Log;
 import android.view.WindowManager;
 import com.google.gson.JsonSyntaxException;
 import net.sf.scuba.smartcards.CardService;
-import net.sf.scuba.smartcards.CardServiceException;
 import net.sf.scuba.smartcards.IsoDepCardService;
 import org.acra.ACRA;
 import org.irmacard.api.common.ClientQr;
 import org.irmacard.api.common.exceptions.ApiErrorMessage;
 import org.irmacard.cardemu.BuildConfig;
-import org.irmacard.cardemu.CardManager;
+import org.irmacard.cardemu.CredentialManager;
 import org.irmacard.cardemu.R;
 import org.irmacard.cardemu.SecureSSLSocketFactory;
 import org.irmacard.cardemu.httpclient.HttpClient;
@@ -28,9 +27,6 @@ import org.irmacard.cardemu.httpclient.HttpClientException;
 import org.irmacard.cardemu.httpclient.HttpResultHandler;
 import org.irmacard.cardemu.protocols.Protocol;
 import org.irmacard.cardemu.protocols.ProtocolHandler;
-import org.irmacard.credentials.idemix.smartcard.IRMACard;
-import org.irmacard.credentials.idemix.smartcard.SmartCardEmulatorService;
-import org.irmacard.idemix.IdemixService;
 import org.irmacard.mno.common.DocumentDataMessage;
 import org.irmacard.mno.common.EnrollmentStartMessage;
 import org.irmacard.mno.common.PassportVerificationResult;
@@ -53,8 +49,6 @@ public abstract class AbstractNFCEnrollActivity extends AbstractGUIEnrollActivit
     private static final String TAG = "cardemu.AbsGUIEnrollAct";
 
     //state variables
-    protected IRMACard card = null;
-    protected IdemixService is = null;
     protected DocumentDataMessage documentMsg;
 
     // NFC stuff
@@ -108,16 +102,6 @@ public abstract class AbstractNFCEnrollActivity extends AbstractGUIEnrollActivit
         if (!nfcA.isEnabled()) {
             showErrorScreen(R.string.error_nfc_disabled);
         }
-
-        // Load the card and open the IdemixService
-        card = CardManager.loadCard();
-        is = new IdemixService(new SmartCardEmulatorService(card));
-        try {
-            is.open ();
-        } catch (CardServiceException e) {
-            e.printStackTrace();
-        }
-
     }
 
     private ProtocolHandler protocolHandler = new ProtocolHandler(this) {
@@ -184,7 +168,7 @@ public abstract class AbstractNFCEnrollActivity extends AbstractGUIEnrollActivit
                             return;
                         }
 
-                        Protocol.NewSession(result.getIssueQr(), null, protocolHandler);
+                        Protocol.NewSession(result.getIssueQr(), protocolHandler);
                     }
                 });
     }
@@ -324,12 +308,8 @@ public abstract class AbstractNFCEnrollActivity extends AbstractGUIEnrollActivit
     @Override
     public void finish() {
         // Prepare data intent
-        if (is != null) {
-            is.close();
-        }
         Intent data = new Intent();
         Log.d(TAG,"Storing card");
-        CardManager.storeCard();
         setResult(RESULT_OK, data);
         documentMsg = null;
         super.finish();

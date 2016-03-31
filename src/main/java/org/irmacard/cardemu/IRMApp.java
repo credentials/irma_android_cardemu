@@ -39,12 +39,11 @@ import org.apache.http.client.HttpClient;
 import org.apache.http.impl.client.DefaultHttpClient;
 import org.irmacard.android.util.credentials.AndroidFileReader;
 import org.irmacard.android.util.credentials.StoreManager;
-import org.irmacard.cardemu.messages.ReaderMessage;
-import org.irmacard.cardemu.messages.ReaderMessageDeserializer;
+import org.irmacard.api.common.util.GsonUtil;
 import org.irmacard.credentials.idemix.info.IdemixKeyStore;
 import org.irmacard.credentials.idemix.info.IdemixKeyStoreDeserializer;
 import org.irmacard.credentials.info.*;
-import org.irmacard.mno.common.util.GsonUtil;
+import org.irmacard.credentials.util.log.LogEntry;
 
 @ReportsCrashes(
         formUri = BuildConfig.acraServer,
@@ -107,10 +106,9 @@ public class IRMApp extends Application {
             throw new RuntimeException(e);
         }
 
-        MetricsReporter.init(this, BuildConfig.metricServer, reportTimeInterval);
-        CardManager.init(this);
-        CredentialManager.init(getSharedPreferences("cardemu", 0));
+        GsonUtil.addTypeAdapter(LogEntry.class, new LogEntrySerializer());
 
-        GsonUtil.addTypeAdapter(ReaderMessage.class, new ReaderMessageDeserializer());
+        MetricsReporter.init(this, BuildConfig.metricServer, reportTimeInterval);
+        CredentialManager.init(getSharedPreferences("cardemu", 0));
     }
 }

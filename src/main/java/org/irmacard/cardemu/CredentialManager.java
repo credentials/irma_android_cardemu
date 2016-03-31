@@ -35,29 +35,24 @@ import android.util.Log;
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
 import com.google.gson.reflect.TypeToken;
-import net.sf.scuba.smartcards.CardServiceException;
 import org.irmacard.android.util.credentials.StoreManager;
 import org.irmacard.api.common.*;
+import org.irmacard.api.common.util.GsonUtil;
 import org.irmacard.credentials.Attributes;
 import org.irmacard.credentials.CredentialsException;
 import org.irmacard.credentials.idemix.CredentialBuilder;
 import org.irmacard.credentials.idemix.IdemixCredential;
-import org.irmacard.credentials.idemix.IdemixCredentials;
 import org.irmacard.credentials.idemix.IdemixSystemParameters;
 import org.irmacard.credentials.idemix.info.IdemixKeyStore;
 import org.irmacard.credentials.idemix.messages.IssueCommitmentMessage;
 import org.irmacard.credentials.idemix.messages.IssueSignatureMessage;
 import org.irmacard.credentials.idemix.proofs.ProofList;
 import org.irmacard.credentials.idemix.proofs.ProofListBuilder;
-import org.irmacard.credentials.idemix.smartcard.IRMACard;
-import org.irmacard.credentials.idemix.smartcard.IRMAIdemixCredential;
-import org.irmacard.credentials.idemix.smartcard.SmartCardEmulatorService;
 import org.irmacard.credentials.info.*;
 import org.irmacard.credentials.util.log.IssueLogEntry;
 import org.irmacard.credentials.util.log.LogEntry;
 import org.irmacard.credentials.util.log.RemoveLogEntry;
 import org.irmacard.credentials.util.log.VerifyLogEntry;
-import org.irmacard.idemix.IdemixService;
 
 import java.lang.reflect.Type;
 import java.math.BigInteger;
@@ -69,12 +64,12 @@ import java.util.*;
  * serialization of credentials and log entries from/to storage.
  */
 public class CredentialManager {
-	private static HashMap<CredentialIdentifier, IRMAIdemixCredential> credentials = new HashMap<>();
+	private static HashMap<CredentialIdentifier, IdemixCredential> credentials = new HashMap<>();
 	private static List<LogEntry> logs = new LinkedList<>();
 	private static BigInteger secretKey;
 
 	// Type tokens for Gson (de)serialization
-	private static Type credentialsType = new TypeToken<HashMap<CredentialIdentifier, IRMAIdemixCredential>>() {}.getType();
+	private static Type credentialsType = new TypeToken<HashMap<CredentialIdentifier, IdemixCredential>>() {}.getType();
 	private static Type logsType = new TypeToken<List<LogEntry>>() {}.getType();
 
 	private static Gson gson;
@@ -97,6 +92,7 @@ public class CredentialManager {
 		} catch (InfoException e) { // Can't recover from this, crash now
 			throw new RuntimeException("Could not read DescriptionStore", e);
 		}
+		load();
 	}
 
 	/**
@@ -108,85 +104,12 @@ public class CredentialManager {
 	}
 
 	/**
-	 * Clear existing credentials and logs, and load them from the default card.
-	 */
-	public static void loadDefaultCard() {
-		clear();
-		loadFromCard(CardManager.loadDefaultCard());
-	}
-
-	/**
-	 * Extract and insert credentials and logs from an IRMACard instance retrieved from storage
-	 */
-	public static void loadFromCard() {
-		loadFromCard(CardManager.getCard());
-	}
-
-	/**
-	 * Extract and insert credentials and logs from the specified IRMACard
-	 */
-	public static void loadFromCard(IRMACard card) {
-		Log.i(TAG, "Loading credentials from card");
-
-		for (Map.Entry<Short, IRMAIdemixCredential> entry : card.getCredentials().entrySet()) {
-			CredentialDescription cd = descriptionStore.getCredentialDescription(entry.getKey());
-			if (cd != null)
-				credentials.put(cd.getIdentifier(), entry.getValue());
-		}
-
-		try {
-			IdemixService is = new IdemixService(new SmartCardEmulatorService(card));
-			is.open();
-			is.sendCardPin("000000".getBytes());
-			logs.addAll(0, new IdemixCredentials(is).getLog());
-		} catch (CardServiceException | InfoException e) {
-			e.printStackTrace();
-		}
-	}
-
-	/**
-	 * Create a new IRMACard containing all credentials, insert it into the CardManager, and serialize it to storage
-	 * @return the new IRMACard
-	 */
-	public static IRMACard saveCard() {
-		IRMACard card = new IRMACard();
-
-		HashMap<Short, IRMAIdemixCredential> creds = new HashMap<>(credentials.size());
-		for (Map.Entry<CredentialIdentifier, IRMAIdemixCredential> entry : credentials.entrySet()) {
-			CredentialDescription cd = descriptionStore.getCredentialDescription(entry.getKey());
-			if (cd != null)
-				creds.put(cd.getId(), entry.getValue());
-		}
-
-		card.setCredentials(creds);
-		if (credentials.size() > 0) {
-			BigInteger sk = credentials.values().iterator().next().getCredential().getAttribute(0);
-			card.setMasterSecret(sk);
-		}
-
-		CardManager.setCard(card);
-		return card;
-	}
-
-	private static Gson getGson() {
-		if (gson == null) {
-			gson = new GsonBuilder()
-					.registerTypeAdapter(LogEntry.class, new LogEntrySerializer())
-					.create();
-		}
-
-		return gson;
-	}
-
-	/**
 	 * Saves the credentials and logs to storage.
 	 */
 	public static void save() {
 		Log.i(TAG, "Saving credentials");
 
-		saveCard();
-
-		Gson gson = getGson();
+		Gson gson = GsonUtil.getGson();
 		String credentialsJson = gson.toJson(credentials, credentialsType);
 		String logsJson = gson.toJson(logs, logsType);
 
@@ -202,7 +125,7 @@ public class CredentialManager {
 	public static void load() {
 		Log.i(TAG, "Loading credentials");
 
-		Gson gson = getGson();
+		Gson gson = GsonUtil.getGson();
 		String credentialsJson = settings.getString(CREDENTIAL_STORAGE, "");
 		String logsJson = settings.getString(LOG_STORAGE, "");
 
@@ -227,17 +150,6 @@ public class CredentialManager {
 		if (logs == null) {
 			logs = new LinkedList<>();
 		}
-
-		// Upgrade path from the old protocol-branch to the new protocol-branch:
-		// Normally, we only temporarily save the credentials from this.credentials into a new,
-		// temporary IRMACard. So if we do not yet have any credentials while the IRMACard from
-		// storage does, it must mean we're called for the very first time, so that the user's
-		// credentials are still in the CardManager. So, we fetch them.
-		IRMACard card = CardManager.loadCard();
-		if (credentials.size() == 0 && card.getCredentials().size() > 0) {
-			loadFromCard();
-			save();
-		}
 	}
 
 	/**
@@ -248,15 +160,15 @@ public class CredentialManager {
 	public static Attributes getAttributes(CredentialIdentifier identifier) throws CredentialsException {
 		CredentialDescription cd = getCredentialDescription(identifier);
 
-		IRMAIdemixCredential credential = credentials.get(identifier);
+		IdemixCredential credential = credentials.get(identifier);
 		if (credential == null)
 			return null;
 
 		Attributes attributes = new Attributes();
-		attributes.add(Attributes.META_DATA_FIELD, credential.getCredential().getAttribute(1).toByteArray());
+		attributes.add(Attributes.META_DATA_FIELD, credential.getAttribute(1).toByteArray());
 		for (int i = 0; i < cd.getAttributeNames().size(); i++) {
 			String name = cd.getAttributeNames().get(i);
-			BigInteger value = credential.getCredential().getAttribute(i + 2); // + 2: skip secret key and metadata
+			BigInteger value = credential.getAttribute(i + 2); // + 2: skip secret key and metadata
 			attributes.add(name, value.toByteArray());
 		}
 
@@ -284,7 +196,7 @@ public class CredentialManager {
 		if (cd == null)
 			return;
 
-		IRMAIdemixCredential cred = credentials.remove(cd.getIdentifier());
+		IdemixCredential cred = credentials.remove(cd.getIdentifier());
 
 		if (cred != null) {
 			logs.add(0, new RemoveLogEntry(Calendar.getInstance().getTime(), cd));
@@ -345,7 +257,7 @@ public class CredentialManager {
 
 		for (CredentialIdentifier id : toDisclose.keySet()) {
 			List<Integer> attrs = toDisclose.get(id);
-			IdemixCredential credential = credentials.get(id).getCredential();
+			IdemixCredential credential = credentials.get(id);
 			builder.addProofD(credential, attrs);
 		}
 
@@ -408,9 +320,7 @@ public class CredentialManager {
 				booleans.put(attrName, attributes.contains(i + 2));
 			}
 
-			// The third argument should be a VerificationDescription, and we don't have one here.
-			// Fortunately it seems to be optional, at least for the log screen...
-			logs.add(new VerifyLogEntry(Calendar.getInstance().getTime(), cd, null, booleans));
+			logs.add(new VerifyLogEntry(Calendar.getInstance().getTime(), cd, booleans));
 		}
 
 		return logs;
@@ -522,7 +432,7 @@ public class CredentialManager {
 			if (credentials == null || credentials.size() == 0)
 				secretKey = new BigInteger(new IdemixSystemParameters().l_m, new SecureRandom());
 			else
-				secretKey = credentials.values().iterator().next().getCredential().getAttribute(0);
+				secretKey = credentials.values().iterator().next().getAttribute(0);
 		}
 
 		return secretKey;
@@ -579,17 +489,14 @@ public class CredentialManager {
 			throw new CredentialsException("Received unexpected amount of signatures");
 
 		for (int i = 0; i < sigs.size(); ++i) {
-			// TODO what about the IdemixFlags contained in IRMAIdemixCredential?
-			IRMAIdemixCredential irmaCred = new IRMAIdemixCredential(null);
 			IdemixCredential cred = credentialBuilders.get(i).constructCredential(sigs.get(i));
-			irmaCred.setCredential(cred);
 
 			short id = Attributes.extractCredentialId(cred.getAttribute(1));
 			CredentialDescription cd = descriptionStore.getCredentialDescription(id);
 			if (cd == null)
 				throw new InfoException("Unknown credential");
 
-			credentials.put(cd.getIdentifier(), irmaCred);
+			credentials.put(cd.getIdentifier(), cred);
 			logs.add(0, new IssueLogEntry(Calendar.getInstance().getTime(), cd));
 		}
 

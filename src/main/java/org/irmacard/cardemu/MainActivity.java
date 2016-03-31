@@ -171,8 +171,6 @@ public class MainActivity extends Activity {
 		// touch events that were meant for its container. Don't know why setting its value here works.
 		((TextView) findViewById(R.id.feedback_text)).setTextIsSelectable(false);
 
-		CredentialManager.load();
-
 		// Display cool list
 		ExpandableListView credentialList = (ExpandableListView) findViewById(R.id.listView);
 		credentialListAdapter = new ExpandableCredentialsAdapter(this);
@@ -453,7 +451,7 @@ public class MainActivity extends Activity {
 		if(!qr.equals(lastSessionUrl)) {
 			lastSessionUrl = qr;
 			launchedFromBrowser = true;
-			Protocol.NewSession(qr, this, protocolHandler);
+			Protocol.NewSession(qr, protocolHandler);
 		} else {
 			Log.i(TAG, "Already processed this qr");
 		}
@@ -475,8 +473,6 @@ public class MainActivity extends Activity {
 	protected void onActivityResult(int requestCode, int resultCode, Intent data) {
 		super.onActivityResult(requestCode, resultCode, data);
 		if (requestCode == EnrollSelectActivity.EnrollSelectActivityCode && resultCode == RESULT_OK) {
-			CredentialManager.loadFromCard();
-			CredentialManager.save();
 			updateCredentialList();
 		}
 		else if (requestCode == DETAIL_REQUEST && resultCode == CredentialDetailActivity.RESULT_DELETE) {
@@ -496,7 +492,7 @@ public class MainActivity extends Activity {
 				String contents = scanResult.getContents();
 				if (contents != null) {
 					launchedFromBrowser = false;
-					Protocol.NewSession(contents, this, protocolHandler);
+					Protocol.NewSession(contents, protocolHandler);
 				}
 			}
 		}
@@ -534,7 +530,7 @@ public class MainActivity extends Activity {
 	@Override
 	public boolean onPrepareOptionsMenu(Menu menu) {
 		MenuItem item = menu.findItem(R.id.menu_reset);
-		item.setVisible(CardManager.hasDefaultCard());
+		item.setVisible(false); // TODO restore this functionality
 		return super.onPrepareOptionsMenu(menu);
 	}
 
@@ -545,9 +541,7 @@ public class MainActivity extends Activity {
 		switch (item.getItemId()) {
 			case R.id.menu_reset:
 				Log.d(TAG, "menu_reset pressed");
-				CredentialManager.loadDefaultCard();
-				CredentialManager.save();
-				updateCredentialList();
+				// TODO
 				return true;
 			case R.id.enroll:
 				Log.d(TAG, "enroll menu item pressed");

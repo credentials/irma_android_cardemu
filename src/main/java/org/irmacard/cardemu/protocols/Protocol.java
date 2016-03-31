@@ -2,23 +2,19 @@ package org.irmacard.cardemu.protocols;
 
 import android.app.Activity;
 import android.util.Patterns;
-import org.irmacard.api.common.*;
-import org.irmacard.cardemu.disclosuredialog.SessionDialogFragment;
+import org.irmacard.api.common.ClientQr;
+import org.irmacard.api.common.DisclosureProofRequest;
+import org.irmacard.api.common.IssuingRequest;
 import org.irmacard.api.common.util.GsonUtil;
+import org.irmacard.cardemu.disclosuredialog.SessionDialogFragment;
 
 public abstract class Protocol implements SessionDialogFragment.SessionDialogListener {
-	protected Activity activity;
 	protected ProtocolHandler.Action action = ProtocolHandler.Action.UNKNOWN;
 	protected ProtocolHandler handler;
 
 	protected Protocol(ProtocolHandler handler) {
 		this.handler = handler;
 		this.handler.setProtocol(this);
-	}
-
-	protected Protocol(Activity activity, ProtocolHandler handler) {
-		this(handler);
-		this.activity = activity;
 	}
 
 	/**
@@ -46,7 +42,7 @@ public abstract class Protocol implements SessionDialogFragment.SessionDialogLis
 	 * @param qrcontent Contents of the QR code, containing the server to connect to and protocol version number
 	 * @param activity The activity to report progress to
 	 */
-	public static void NewSession(String qrcontent, Activity activity, ProtocolHandler handler) {
+	public static void NewSession(String qrcontent, ProtocolHandler handler) {
 		// Decide on the protocol version and the URL to connect to
 		ClientQr qr;
 		try {
@@ -57,10 +53,10 @@ public abstract class Protocol implements SessionDialogFragment.SessionDialogLis
 			qr = new ClientQr("1.0", qrcontent);
 		}
 
-		NewSession(qr, activity, handler);
+		NewSession(qr, handler);
 	}
 
-	public static void NewSession(ClientQr qr, Activity activity, ProtocolHandler handler) {
+	public static void NewSession(ClientQr qr, ProtocolHandler handler) {
 		String protocolVersion = qr.getVersion();
 		String url = qr.getUrl();
 
@@ -73,13 +69,10 @@ public abstract class Protocol implements SessionDialogFragment.SessionDialogLis
 		// We have a valid URL: let's go!
 		Protocol protocol;
 		switch (protocolVersion) {
-			case "1.0":
-				protocol = new APDUProtocol(url, activity, handler);
-				break;
 			case "2.0":
 				protocol = new JsonProtocol(url, handler);
 				break;
-			default:
+			default: // TODO show warning message in case "1.0"
 				handler.onFailure(ProtocolHandler.Action.UNKNOWN, "Protocol not supported", null);
 				break;
 		}

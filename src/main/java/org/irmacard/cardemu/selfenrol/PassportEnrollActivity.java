@@ -38,27 +38,14 @@ import android.util.Log;
 import android.view.View;
 import android.widget.ProgressBar;
 import android.widget.TextView;
-import com.google.gson.JsonSyntaxException;
-import com.google.gson.reflect.TypeToken;
 import net.sf.scuba.smartcards.CardService;
 import net.sf.scuba.smartcards.CardServiceException;
-import net.sf.scuba.smartcards.ProtocolCommands;
-import net.sf.scuba.smartcards.ProtocolResponses;
 import org.acra.ACRA;
-import org.irmacard.cardemu.CardManager;
 import org.irmacard.cardemu.MetricsReporter;
 import org.irmacard.cardemu.R;
-import org.irmacard.cardemu.httpclient.HttpClientException;
-import org.irmacard.credentials.Attributes;
-import org.irmacard.credentials.CredentialsException;
-import org.irmacard.credentials.idemix.IdemixCredentials;
-import org.irmacard.credentials.idemix.descriptions.IdemixVerificationDescription;
-import org.irmacard.credentials.idemix.smartcard.SmartCardEmulatorService;
-import org.irmacard.credentials.info.CredentialIdentifier;
-import org.irmacard.credentials.info.InfoException;
-import org.irmacard.idemix.IdemixService;
-import org.irmacard.idemix.IdemixSmartcard;
-import org.irmacard.mno.common.*;
+import org.irmacard.mno.common.DocumentDataMessage;
+import org.irmacard.mno.common.EnrollmentStartMessage;
+import org.irmacard.mno.common.PassportDataMessage;
 import org.jmrtd.BACKey;
 import org.jmrtd.PassportService;
 import org.jmrtd.lds.DG14File;
@@ -67,13 +54,10 @@ import org.jmrtd.lds.DG1File;
 import org.jmrtd.lds.SODFile;
 
 import java.io.IOException;
-import java.lang.reflect.Type;
 import java.security.Security;
 import java.text.SimpleDateFormat;
 import java.util.Date;
-import java.util.HashMap;
 import java.util.Locale;
-import java.util.Map;
 
 public class PassportEnrollActivity extends AbstractNFCEnrollActivity {
 	// Configuration
@@ -335,24 +319,14 @@ public class PassportEnrollActivity extends AbstractNFCEnrollActivity {
 				screen = SCREEN_ISSUE;
 				updateProgressCounter();
 
-				// Save the card before messing with it so we can roll back if
-				// something goes wrong
-				CardManager.storeCard();
-
 				// Do it!
 				enroll(new Handler() {
 					@Override
 					public void handleMessage(Message msg) {
-						if (msg.obj == null) {
-							// Success, save our new credentials
-							CardManager.storeCard();
+						if (msg.obj == null) { // Success
 							enableContinueButton();
 							findViewById(R.id.se_done_text).setVisibility(View.VISIBLE);
 						} else {
-							// Rollback the card
-							card = CardManager.loadCard();
-							is = new IdemixService(new SmartCardEmulatorService(card));
-
 							if (msg.what != 0) // .what may contain a string identifier saying what went wrong
 								showErrorScreen(msg.what);
 							else
