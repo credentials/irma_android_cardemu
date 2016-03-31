@@ -76,11 +76,9 @@ android {
     buildTypes {
         release {
             buildConfigField "String", "metricServer", '"https://demo.irmacard.org/tomcat/irma_metrics_server/api/v1"'
-            buildConfigField "String", "updateServer", '"https://credentials.github.io/appupdates"'
         }
         debug {
             buildConfigField "String", "metricServer", '""'
-            buildConfigField "String", "updateServer", '""'
         }
     }
 }

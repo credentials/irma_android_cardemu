@@ -31,35 +31,36 @@
 package org.irmacard.cardemu;
 
 
-import java.util.*;
-
-import android.content.SharedPreferences;
-import android.view.*;
-import android.widget.*;
-
-import org.irmacard.android.util.credentials.CredentialPackage;
-import org.irmacard.android.util.credentialdetails.*;
-import org.irmacard.android.util.cardlog.*;
-import org.irmacard.android.util.credentials.StoreManager;
-import org.irmacard.api.common.exceptions.ApiErrorMessage;
-import org.irmacard.cardemu.protocols.Protocol;
-import org.irmacard.cardemu.selfenrol.EnrollSelectActivity;
-import org.irmacard.cardemu.protocols.ProtocolHandler;
-import org.irmacard.cardemu.updates.AppUpdater;
-import org.irmacard.credentials.Attributes;
-import org.irmacard.credentials.info.CredentialDescription;
-import org.irmacard.credentials.util.log.LogEntry;
-
 import android.app.Activity;
 import android.app.AlertDialog;
 import android.content.DialogInterface;
 import android.content.Intent;
+import android.content.SharedPreferences;
 import android.os.Bundle;
 import android.os.CountDownTimer;
 import android.util.Log;
-
+import android.view.Menu;
+import android.view.MenuItem;
+import android.view.View;
+import android.view.WindowManager;
+import android.widget.*;
 import com.google.zxing.integration.android.IntentIntegrator;
 import com.google.zxing.integration.android.IntentResult;
+import org.irmacard.android.util.cardlog.LogActivity;
+import org.irmacard.android.util.cardlog.LogFragment;
+import org.irmacard.android.util.credentialdetails.CredentialDetailActivity;
+import org.irmacard.android.util.credentialdetails.CredentialDetailFragment;
+import org.irmacard.android.util.credentials.CredentialPackage;
+import org.irmacard.android.util.credentials.StoreManager;
+import org.irmacard.api.common.exceptions.ApiErrorMessage;
+import org.irmacard.cardemu.protocols.Protocol;
+import org.irmacard.cardemu.protocols.ProtocolHandler;
+import org.irmacard.cardemu.selfenrol.EnrollSelectActivity;
+import org.irmacard.credentials.Attributes;
+import org.irmacard.credentials.info.CredentialDescription;
+import org.irmacard.credentials.util.log.LogEntry;
+
+import java.util.*;
 
 public class MainActivity extends Activity {
 	private static final int DETAIL_REQUEST = 101;
@@ -89,8 +90,6 @@ public class MainActivity extends Activity {
 
 	// Time after which old Intents are ignored (in milliseconds)
 	private static final long INTENT_EXPIRY_TIME = 5000;
-
-	private AppUpdater updater;
 
 	private long qrScanStartTime;
 
@@ -199,8 +198,6 @@ public class MainActivity extends Activity {
 
 		setState(STATE_IDLE);
 		clearFeedback();
-
-		updater = new AppUpdater(this, BuildConfig.updateServer);
 
 		settings = getSharedPreferences(SETTINGS, 0);
 	}
@@ -427,7 +424,6 @@ public class MainActivity extends Activity {
 		Log.i(TAG, "onResume() called");
 		lastSessionUrl = settings.getString("lastSessionUrl", "");
 		processIntent();
-		updater.updateVersionInfo(false);
 	}
 
 	private void processIntent() {
@@ -549,9 +545,6 @@ public class MainActivity extends Activity {
 					deleteAllCredentials();
 					updateCredentialList();
 				}
-				return true;
-			case R.id.check_for_updates:
-				updater.updateVersionInfo(true, true);
 				return true;
 			default:
 				return super.onOptionsItemSelected(item);
