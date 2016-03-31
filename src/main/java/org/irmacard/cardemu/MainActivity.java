@@ -528,21 +528,10 @@ public class MainActivity extends Activity {
 	}
 
 	@Override
-	public boolean onPrepareOptionsMenu(Menu menu) {
-		MenuItem item = menu.findItem(R.id.menu_reset);
-		item.setVisible(false); // TODO restore this functionality
-		return super.onPrepareOptionsMenu(menu);
-	}
-
-	@Override
 	public boolean onOptionsItemSelected(MenuItem item) {
 		Log.d(TAG, "menu press registered");
 		// Handle item selection
 		switch (item.getItemId()) {
-			case R.id.menu_reset:
-				Log.d(TAG, "menu_reset pressed");
-				// TODO
-				return true;
 			case R.id.enroll:
 				Log.d(TAG, "enroll menu item pressed");
 				onEnrollButtonTouch(null);
