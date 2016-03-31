@@ -116,11 +116,6 @@ public class EnrollSelectActivity extends AbstractGUIEnrollActivity {
     protected void advanceScreen(){
         switch (screen) {
             case SCREEN_START:
-                if (((CheckBox) findViewById(R.id.new_protocol_checkbox)).isChecked())
-                    setProtocolVersion(2);
-                else
-                    setProtocolVersion(1);
-
                 setContentView(R.layout.enroll_activity_bac);
                 screen = SCREEN_BAC;
                 updateProgressCounter(screen - 1);
@@ -203,11 +198,7 @@ public class EnrollSelectActivity extends AbstractGUIEnrollActivity {
                                 .apply();
                     }
 
-                    Intent i;
-                    if (getProtocolVersion() == 2)
-                        i = new Intent(this, PassportEnrollActivity.class);
-                    else
-                        i = new Intent(this, PassportEnrollActivity.class);
+                    Intent i = new Intent(this, PassportEnrollActivity.class);
                     startActivityForResult(i, PassportEnrollActivity.PassportEnrollActivityCode);
                 } else if (next_activity == DL_ACTIVITY){
                     //safe the mrz text field for later.

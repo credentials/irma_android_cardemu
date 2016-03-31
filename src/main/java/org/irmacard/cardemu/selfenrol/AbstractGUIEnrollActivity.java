@@ -28,6 +28,8 @@ public abstract class AbstractGUIEnrollActivity extends Activity{
 
     private static final String TAG = "cardemu.AbsGUIEnrollAct";
 
+    private static int protocolVersion = 2;
+
     protected static final String SETTINGS = "cardemu";
     protected static final int SCREEN_START = 1;
     protected static final int SCREEN_BAC = 2;
@@ -173,11 +175,6 @@ public abstract class AbstractGUIEnrollActivity extends Activity{
     }
 
     abstract protected void advanceScreen ();
-
-    private static int protocolVersion = 2;
-
-    public static int getProtocolVersion() { return protocolVersion; }
-    public static void setProtocolVersion(int version) { protocolVersion = version; }
 
     protected static String getEnrollmentServer() {
         return BuildConfig.enrollServer + "/v" + protocolVersion;

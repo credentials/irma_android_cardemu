@@ -58,16 +58,6 @@
             android:layout_alignParentRight="true"
             android:layout_alignParentEnd="true" />
 
-        <CheckBox
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:text="New protocol"
-            android:id="@+id/new_protocol_checkbox"
-            android:checked="true"
-            android:layout_alignBottom="@+id/se_button_continue"
-            android:layout_alignParentLeft="true"
-            android:layout_alignParentStart="true"/>
-
 
     </RelativeLayout>
 
