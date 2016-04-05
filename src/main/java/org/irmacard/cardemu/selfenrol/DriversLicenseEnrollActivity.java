@@ -8,6 +8,10 @@ import android.util.Log;
 import android.view.View;
 import android.widget.ProgressBar;
 import android.widget.TextView;
+
+import com.google.gson.Gson;
+import com.google.gson.GsonBuilder;
+
 import net.sf.scuba.smartcards.*;
 import net.sf.scuba.tlv.TLVInputStream;
 import net.sf.scuba.tlv.TLVOutputStream;
@@ -16,6 +20,7 @@ import org.irmacard.cardemu.R;
 import org.irmacard.mno.common.DocumentDataMessage;
 import org.irmacard.mno.common.EDLDataMessage;
 import org.irmacard.mno.common.EnrollmentStartMessage;
+import org.irmacard.mno.common.util.GsonUtil;
 import org.jmrtd.PassportService;
 import org.jmrtd.Util;
 import org.jmrtd.lds.DG14File;
@@ -92,7 +97,7 @@ public class DriversLicenseEnrollActivity extends AbstractNFCEnrollActivity {
             @Override
             public void run() {
                 if (screen == SCREEN_PASSPORT && (documentMsg == null || !documentMsg.isComplete())) {
-                    showErrorScreen(getString(R.string.error_enroll_passporterror));
+                    showErrorScreen(getString(R.string.error_enroll_edlerror));
                 }
             }
         }, MAX_TAG_READ_TIME);

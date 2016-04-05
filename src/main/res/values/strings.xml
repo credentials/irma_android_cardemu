@@ -7,7 +7,7 @@
 	<string name="irmalogo">IRMA logo</string>
 	<string name="credential_info">Card Proxy</string>
 	<string name="feedback_waiting_for_card">Waiting for card</string>
-    <string name="feedback_waiting_for_passport">Waiting for Passport</string>
+    <string name="feedback_waiting_for_passport">Waiting for Document</string>
     <string name="feedback_communicating_passport">Communicating with Passport…</string>
 	<string name="pinhint">PIN</string>
 	<string name="pinmessage">Please enter your IRMA pincode</string>
@@ -62,6 +62,7 @@
     <string name="error_enroll_serverdied">The server encountered a problem and aborted.</string>
     <string name="error_enroll_invalidresponse">The enrollment server returned an invalid response.</string>
     <string name="error_enroll_passporterror">Failed to establish contact with the passport.</string>
+    <string name="error_enroll_edlerror">Failed to establish contact with the driving license.</string>
     <string name="error_enroll_bacfailed">The document data you supplied seems to be wrong.</string>
     <string name="error_enroll_passportrejected">Could not establish passport validity.</string>
     <string name="error_enroll_passport_expired">You cannot enroll with an expired identity document.</string>
