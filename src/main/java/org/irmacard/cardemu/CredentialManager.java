@@ -491,8 +491,7 @@ public class CredentialManager {
 		for (int i = 0; i < sigs.size(); ++i) {
 			IdemixCredential cred = credentialBuilders.get(i).constructCredential(sigs.get(i));
 
-			short id = Attributes.extractCredentialId(cred.getAttribute(1));
-			CredentialDescription cd = descriptionStore.getCredentialDescription(id);
+			CredentialDescription cd = cred.getAllAttributes().getCredentialDescription();
 			if (cd == null)
 				throw new InfoException("Unknown credential");
 
