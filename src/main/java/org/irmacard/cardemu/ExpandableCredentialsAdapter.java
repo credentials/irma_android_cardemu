@@ -134,7 +134,7 @@ public class ExpandableCredentialsAdapter extends BaseExpandableListAdapter {
 
         TextView credential_name_field = (TextView) convertView.findViewById(R.id.credential_item_name);
         credential_name_field.setText(credential_name);
-        if (attrs.isValid()) // Since the convertView gets reused, the TextView might be grey from a previous usage
+        if (!attrs.isExpired()) // Since the convertView gets reused, the TextView might be grey from a previous usage
             credential_name_field.setTextColor(convertView.getResources().getColor(R.color.irmadarkblue));
         else
             credential_name_field.setTextColor(convertView.getResources().getColor(R.color.irmadarkgrey));
@@ -159,7 +159,7 @@ public class ExpandableCredentialsAdapter extends BaseExpandableListAdapter {
             String validDate = DateFormat.getDateInstance().format(attrs.getExpiryDate());
             attribute_name_field.setText("Valid until");
             attribute_value_field.setText(validDate);
-            if (attrs.isValid()) {
+            if (!attrs.isExpired()) {
                 attribute_name_field.setTextColor(convertView.getResources().getColor(R.color.irmadarkgrey));
                 attribute_value_field.setTextColor(convertView.getResources().getColor(R.color.irmadarkgrey));
             } else {

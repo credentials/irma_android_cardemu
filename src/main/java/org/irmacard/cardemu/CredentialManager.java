@@ -33,7 +33,6 @@ package org.irmacard.cardemu;
 import android.content.SharedPreferences;
 import android.util.Log;
 import com.google.gson.Gson;
-import com.google.gson.GsonBuilder;
 import com.google.gson.reflect.TypeToken;
 import org.irmacard.android.util.credentials.StoreManager;
 import org.irmacard.api.common.*;
@@ -72,7 +71,6 @@ public class CredentialManager {
 	private static Type credentialsType = new TypeToken<HashMap<CredentialIdentifier, IdemixCredential>>() {}.getType();
 	private static Type logsType = new TypeToken<List<LogEntry>>() {}.getType();
 
-	private static Gson gson;
 	private static SharedPreferences settings;
 	private static DescriptionStore descriptionStore;
 	private static IdemixKeyStore keyStore;
@@ -93,14 +91,6 @@ public class CredentialManager {
 			throw new RuntimeException("Could not read DescriptionStore", e);
 		}
 		load();
-	}
-
-	/**
-	 * Clear the instance: throw away all credentials and logs.
-	 */
-	public static void clear() {
-		credentials = new HashMap<>();
-		logs = new LinkedList<>();
 	}
 
 	/**
@@ -334,21 +324,27 @@ public class CredentialManager {
 	 */
 	public static boolean updateStores(StoreManager.DownloadHandler handler) {
 		HashSet<IssuerIdentifier> issuers = new HashSet<>();
+		HashMap<IssuerIdentifier,Integer> keys = new HashMap<>();
 		HashSet<CredentialIdentifier> creds = new HashSet<>();
 
 		for (CredentialIdentifier credential : credentials.keySet()) {
 			IssuerIdentifier issuer = credential.getIssuerIdentifier();
 
-			if (descriptionStore.getIssuerDescription(issuer) == null || keyStore.containsPublicKey(issuer))
-				issuers.add(issuer);
 			if (descriptionStore.getCredentialDescription(credential) == null)
 				creds.add(credential);
+			if (descriptionStore.getIssuerDescription(issuer) == null)
+				issuers.add(issuer);
+
+			int counter = credentials.get(credential).getAllAttributes().getKeyCounter();
+			if (keyStore.containsPublicKey(issuer, counter))
+				keys.put(issuer, counter);
+
 		}
 
 		if (issuers.size() == 0 && creds.size() == 0)
 			return false;
 
-		StoreManager.download(issuers, creds, handler);
+		StoreManager.download(issuers, creds, keys, handler);
 		return true;
 	}
 
