@@ -174,9 +174,7 @@ public class CredentialManager {
 		for (CredentialIdentifier id : credentials.keySet()) {
 			try {
 				map.put(getCredentialDescription(id), getAttributes(id));
-			} catch (CredentialsException e) {
-				e.printStackTrace();
-			}
+			} catch (CredentialsException e) { /** Ignore absent descriptions, might be downloaded later */ }
 		}
 
 		return map;
@@ -335,8 +333,8 @@ public class CredentialManager {
 			if (descriptionStore.getIssuerDescription(issuer) == null)
 				issuers.add(issuer);
 
-			int counter = credentials.get(credential).getAllAttributes().getKeyCounter();
-			if (keyStore.containsPublicKey(issuer, counter))
+			int counter = credentials.get(credential).getKeyCounter();
+			if (!keyStore.containsPublicKey(issuer, counter))
 				keys.put(issuer, counter);
 
 		}
