@@ -43,17 +43,6 @@ android {
     }
 }
 
-if (project.file('schememanagers.gradle').exists()) {
-    apply from: 'schememanagers.gradle'
-} else {
-    android {
-        buildTypes.all { type ->
-            type.buildConfigField "org.irmacard.credentials.info.SchemeManager[]",
-                    "schemeManagers", '{ }'
-        }
-    }
-}
-
 if (project.file('acra.gradle').exists()) {
     apply from: 'acra.gradle'
 } else {
@@ -123,7 +112,7 @@ dependencies {
 
     compile "org.irmacard.android:irma_android_library:0.13.0"
     compile 'org.irmacard.metrics:irma_metrics_common:0.1.1'
-    compile('org.irmacard.mno:irma_mno_common:0.2.1')  {
+    compile('org.irmacard.mno:irma_mno_common:0.2.0')  {
         transitive = false // Prevent it from including Scuba
     }
     compile 'net.sf.scuba:scuba_sc_android:0.0.7-irma'

@@ -99,9 +99,6 @@ public class IRMApp extends Application {
             StoreManager serializer = new StoreManager(this);
             DescriptionStore.initialize(new DescriptionStoreDeserializer(reader), serializer, client);
             IdemixKeyStore.initialize(new IdemixKeyStoreDeserializer(reader), serializer, client);
-
-            for (SchemeManager manager : BuildConfig.schemeManagers)
-                DescriptionStore.getInstance().addSchemeManager(manager);
         } catch (InfoException e) { // Can't do anything in this case
             throw new RuntimeException(e);
         }
