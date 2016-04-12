@@ -24,15 +24,15 @@
 	<string name="status_waitingforpin">Waiting for PIN</string>
     <string name="menu_enroll">Enroll</string>
     <string name="enroll_expl">You are about to start receiving new (base) IRMA credentials. If you already have a set of credentials, then this step might overwrite some of those.
-    During this process your passport will be read remotely and the contents will be compared to the subscription information known for this phone.
-    If the passport data matches the subscription data, a set of base credentials will be issued to your IRMA app.</string>
+    During this process your document will be read remotely and the contents will be compared to the subscription information known for this phone.
+    If the document data matches the subscription data, a set of base credentials will be issued to your IRMA app.</string>
     <string name="se_welcome">IRMA self enrollment</string>
     <string name="se_connect_mno"><![CDATA[
     This process consists of the following three steps: <br/><br/>
-    &nbsp;&nbsp;1.&nbsp;&nbsp;Entering some data from your passport; <br/>
-    &nbsp;&nbsp;2.&nbsp;&nbsp;Reading data from your passport; <br/>
+    &nbsp;&nbsp;1.&nbsp;&nbsp;Entering some data from your document; <br/>
+    &nbsp;&nbsp;2.&nbsp;&nbsp;Reading data from your document; <br/>
     &nbsp;&nbsp;3.&nbsp;&nbsp;Issuing the credential. <br/><br/>
-    During the final process, your name, date and place of birth will be transmitted to the enrollment server (%1$s).
+    During the final process, your name, date and place of birth will be transmitted to the enrollment server, but these will not be stored by the server.
     <br/><br/>
     Proceed?
     ]]></string>

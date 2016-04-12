@@ -86,9 +86,9 @@ public class EnrollSelectActivity extends AbstractGUIEnrollActivity {
         screen = SCREEN_START;
         updateProgressCounter();
 
-        String enrollServer = getEnrollmentServer().substring(8); // Strip "https://"
-        enrollServer = enrollServer.substring(0, enrollServer.indexOf('/')); // Strip path from the url
-        String helpHtml = String.format(getString(R.string.se_connect_mno), enrollServer);
+      //  String enrollServer = getEnrollmentServer().substring(8); // Strip "https://"
+      //  enrollServer = enrollServer.substring(0, enrollServer.indexOf('/')); // Strip path from the url
+        String helpHtml = String.format(getString(R.string.se_connect_mno));
 
         TextView helpTextView = (TextView)findViewById(R.id.se_feedback_text);
         if (helpTextView != null) { // Can be null if we are on error screen

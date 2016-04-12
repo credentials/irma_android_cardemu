@@ -39,9 +39,13 @@
             android:layout_alignParentEnd="true" />
         <Spinner
             android:id="@+id/bac_selector"
-            android:layout_width="wrap_content"
+            android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:layout_below="@+id/bac_desc_textview" />
+            android:textAppearance="?android:attr/textAppearanceButton"
+            android:layout_below="@+id/bac_desc_textview"
+            android:layout_alignParentLeft="true"
+            android:layout_marginTop="10dp"
+            android:spinnerMode="dropdown"/>
 
         <RelativeLayout
             android:layout_width="match_parent"
