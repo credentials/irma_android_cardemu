@@ -138,6 +138,7 @@ public class EnrollSelectActivity extends AbstractGUIEnrollActivity {
                         // TODO Auto-generated method stub
                     }
                 });
+                spinner.setSelection(settings.getInt("enroll_document", PASSPORT_ACTIVITY));
                 populateBacAndBapFields();
                 EditText docnrEditText;
                 EditText dobEditText;
@@ -181,6 +182,7 @@ public class EnrollSelectActivity extends AbstractGUIEnrollActivity {
                         }
 
                         settings.edit()
+                                .putInt("enroll_document", next_activity)
                                 .putLong("enroll_bac_dob", bacDob)
                                 .putLong("enroll_bac_doe", bacDoe)
                                 .putString("enroll_bac_docnr", docnrEditText.getText().toString())
@@ -193,7 +195,10 @@ public class EnrollSelectActivity extends AbstractGUIEnrollActivity {
                     //safe the mrz text field for later.
                     EditText mrzText = (EditText) findViewById(R.id.mrz);
                     if (mrzText != null){
-                        settings.edit().putString("mrz",mrzText.getText().toString()).apply();
+                        settings.edit()
+                                .putInt("enroll_document", next_activity)
+                                .putString("mrz",mrzText.getText().toString())
+                                .apply();
                     }
                     //TODO handle DL GUI
 
