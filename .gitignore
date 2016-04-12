@@ -12,3 +12,5 @@ src/main/assets/irma_configuration
 src/main/assets/card.json
 acra.gradle
 schememanagers.gradle
+signingkeys.gradle
+enroll.gradle
