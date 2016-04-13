@@ -25,6 +25,11 @@ public abstract class Protocol implements SessionDialogFragment.SessionDialogLis
 	abstract public void disclose(final DisclosureProofRequest request);
 
 	/**
+	 * Informs the session that this session is to be deleted.
+	 */
+	abstract public void deleteSession();
+
+	/**
 	 * Perform an issuing session.
 	 * @param request The request containing which attributes we will receive, and which we have to disclose
 	 */
@@ -40,7 +45,7 @@ public abstract class Protocol implements SessionDialogFragment.SessionDialogLis
 	/**
 	 * Create a new session
 	 * @param qrcontent Contents of the QR code, containing the server to connect to and protocol version number
-	 * @param activity The activity to report progress to
+	 * @param handler The handler to report feedback to
 	 */
 	public static void NewSession(String qrcontent, ProtocolHandler handler) {
 		// Decide on the protocol version and the URL to connect to

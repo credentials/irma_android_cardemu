@@ -255,10 +255,11 @@ public class JsonProtocol extends Protocol {
 	}
 
 	/**
-	 * Deletes the current disclosure session by DELETE-ing the specified url and setting the state to idle.
+	 * Deletes the current session by DELETE-ing the specified url and setting the state to idle.
 	 */
+	@Override
 	public void deleteSession() {
-		Log.i(TAG, "Canceling disclosure to " + server);
+		Log.i(TAG, "DELETEing " + server);
 
 		new AsyncTask<String,Void,Void>() {
 			@Override protected Void doInBackground(String... params) {
