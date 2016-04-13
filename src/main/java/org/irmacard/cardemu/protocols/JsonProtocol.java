@@ -62,10 +62,13 @@ public class JsonProtocol extends Protocol {
 			feedback = "Server returned: " + errorMessage.getError().getDescription();
 			Log.w(TAG, "API error: " + errorMessage.getError().name() + ", " + errorMessage.getDescription());
 			Log.w(TAG, errorMessage.getStacktrace());
-		} else if (e.getCause() != null)
-			feedback = "Could not connect: " + e.getCause().getMessage();
-		else
+		} else if (e.getCause() != null) {
+			feedback = "Could not connect: " + e.getCause().toString() + "(" + e.getCause().getMessage() + ")";
+			Log.w(TAG, "Exception details ", e);
+		} else {
 			feedback = "Could not connect: Server returned status " + e.status;
+			Log.w(TAG, "Exception details ", e);
+		}
 
 		// Since we got a HttpClientException, the server is either not reachable, or it returned
 		// some error message. In the first case DELETEing the session will probably also fail;
