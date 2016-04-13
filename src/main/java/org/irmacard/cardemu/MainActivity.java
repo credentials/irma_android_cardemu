@@ -426,6 +426,7 @@ public class MainActivity extends Activity {
 		super.onResume();
 		Log.i(TAG, "onResume() called");
 		lastSessionUrl = settings.getString("lastSessionUrl", "");
+		updateCredentialList();
 		processIntent();
 	}
 
