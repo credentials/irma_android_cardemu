@@ -65,6 +65,7 @@ public class EnrollSelectActivity extends AbstractGUIEnrollActivity {
     // State variables
     protected int next_activity;
     protected DateFormat hrDateFormat = DateFormat.getDateInstance();
+    private TextWatcher bacFieldWatcher;
 
 
     @Override
@@ -131,6 +132,8 @@ public class EnrollSelectActivity extends AbstractGUIEnrollActivity {
                         } else {
                             throw new IllegalArgumentException("Pulldown list provided unspecified argument");
                         }
+                        if (bacFieldWatcher != null)
+                            bacFieldWatcher.onTextChanged("", 0, 0, 0);
                     }
 
                     @Override
@@ -146,9 +149,8 @@ public class EnrollSelectActivity extends AbstractGUIEnrollActivity {
                 long bacDob;
                 long bacDoe;
 
-
-                setBacFieldWatcher();
                 enableContinueButton();
+                setBacFieldWatcher();
 
                 break;
             case SCREEN_BAC:
@@ -293,7 +295,7 @@ public class EnrollSelectActivity extends AbstractGUIEnrollActivity {
         final Button continueButton = (Button) findViewById(R.id.se_button_continue);
 
 
-        TextWatcher bacFieldWatcher = new TextWatcher() {
+        bacFieldWatcher = new TextWatcher() {
             @Override public void beforeTextChanged(CharSequence s, int start, int count, int after) {}
             @Override public void afterTextChanged(Editable s) {}
             @Override
