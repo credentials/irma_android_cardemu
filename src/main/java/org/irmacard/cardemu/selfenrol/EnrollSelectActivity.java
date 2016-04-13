@@ -340,7 +340,9 @@ public class EnrollSelectActivity extends AbstractGUIEnrollActivity {
                 String contents = scanResult.getContents();
                 if (contents != null) {
                     EditText mrzEditText = (EditText) findViewById(R.id.mrz);
-                    mrzEditText.setText(contents);
+                    if (mrzEditText != null) {
+                        mrzEditText.setText(contents);
+                    }
                 }
             }
         }
