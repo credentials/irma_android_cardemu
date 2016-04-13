@@ -471,7 +471,7 @@ public class MainActivity extends Activity {
 
 	public void onOnlineEnrollButtonTouch(View v) {
 		Intent i = new Intent(Intent.ACTION_VIEW);
-		i.setData(Uri.parse("https://demo.irmacard.org/tomcat/irma_api_server/examples/issue.html"));
+		i.setData(Uri.parse("https://demo.irmacard.org/tomcat/irma_api_server/examples/issue-all.html"));
 		startActivity(i);
 	}
 
