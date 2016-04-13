@@ -307,6 +307,7 @@ public class EnrollSelectActivity extends AbstractGUIEnrollActivity {
                         || next_activity == DL_ACTIVITY
                         && mrzEditText.getText().length() > 0;
                 continueButton.setEnabled(enableButton);
+                continueButton.setVisibility(enableButton ? View.VISIBLE : View.INVISIBLE);
             }
         };
 

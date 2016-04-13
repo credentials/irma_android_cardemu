@@ -174,7 +174,8 @@
             android:layout_alignParentBottom="true"
             android:layout_alignParentRight="true"
             android:layout_alignParentEnd="true"
-            android:enabled="false"/>
+            android:enabled="false"
+            android:visibility="invisible"/>
 
 
 
