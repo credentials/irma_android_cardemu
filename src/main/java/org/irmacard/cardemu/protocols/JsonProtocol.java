@@ -154,6 +154,10 @@ public class JsonProtocol extends Protocol {
 		Log.i(TAG, "Posting issuing commitments");
 
 		final HttpClient client = new HttpClient(GsonUtil.getGson());
+
+		// Increase timeout for this step as issuance server might take longer for many creds
+		client.setTimeout(15000);
+
 		IssueCommitmentMessage msg;
 		try {
 			msg = CredentialManager.getIssueCommitments(request);

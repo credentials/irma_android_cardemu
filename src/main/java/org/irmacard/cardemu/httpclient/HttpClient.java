@@ -71,6 +71,10 @@ public class HttpClient {
 		this.socketFactory = socketFactory;
 	}
 
+	public void setTimeout(int timeout) {
+		this.timeout = timeout;
+	}
+
 	/**
 	 * Performs a GET on the specified url. See the javadoc of doPost.
 	 *
