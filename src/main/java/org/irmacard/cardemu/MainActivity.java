@@ -36,6 +36,7 @@ import android.app.AlertDialog;
 import android.content.DialogInterface;
 import android.content.Intent;
 import android.content.SharedPreferences;
+import android.net.Uri;
 import android.os.Bundle;
 import android.os.CountDownTimer;
 import android.util.Log;
@@ -391,11 +392,13 @@ public class MainActivity extends Activity {
 
 		TextView noCredsText = (TextView) findViewById(R.id.no_credentials_text);
 		Button enrollButton = (Button) findViewById(R.id.enroll_button);
+		Button onlineEnrollButton = (Button) findViewById(R.id.online_enroll_button);
 		int visibility = cds.isEmpty() ? View.VISIBLE : View.INVISIBLE;
 
 		if (noCredsText != null && enrollButton != null) {
 			noCredsText.setVisibility(visibility);
 			enrollButton.setVisibility(visibility);
+			onlineEnrollButton.setVisibility(visibility);
 		}
 	}
 
@@ -465,6 +468,12 @@ public class MainActivity extends Activity {
 		startActivityForResult(i, EnrollSelectActivity.EnrollSelectActivityCode);
 	}
 
+	public void onOnlineEnrollButtonTouch(View v) {
+		Intent i = new Intent(Intent.ACTION_VIEW);
+		i.setData(Uri.parse("https://demo.irmacard.org/tomcat/irma_api_server/examples/issue.html"));
+		startActivity(i);
+	}
+
 	@Override
 	protected void onActivityResult(int requestCode, int resultCode, Intent data) {
 		super.onActivityResult(requestCode, resultCode, data);
@@ -531,6 +540,10 @@ public class MainActivity extends Activity {
 			case R.id.enroll:
 				Log.d(TAG, "enroll menu item pressed");
 				onEnrollButtonTouch(null);
+				return true;
+			case R.id.online_enroll:
+				Log.d(TAG, "online enroll menu item pressed");
+				onOnlineEnrollButtonTouch(null);
 				return true;
 			case R.id.show_card_log:
 				Log.d(TAG, "show_card_log pressed");

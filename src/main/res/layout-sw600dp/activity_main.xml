@@ -111,13 +111,34 @@
         android:textSize="20sp"
         android:gravity="center"/>
 
-    <Button
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:text="@string/enroll"
-        android:id="@+id/enroll_button"
-        android:layout_marginTop="15dp"
-        android:layout_below="@+id/no_credentials_text"
-        android:layout_centerHorizontal="true"
-        android:onClick="onEnrollButtonTouch"/>
+    <LinearLayout
+            android:layout_width="fill_parent"
+            android:layout_height="wrap_content"
+            android:layout_below="@id/no_credentials_text"
+            android:gravity="center">
+
+        <Button
+                style="@style/Irma.Button"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="@string/enroll"
+                android:id="@+id/enroll_button"
+                android:layout_marginTop="15dp"
+                android:onClick="onEnrollButtonTouch"
+                android:layout_marginRight="10sp"
+                android:paddingLeft="10sp"
+                android:paddingRight="10sp"/>
+
+        <Button
+                style="@style/Irma.Button"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="@string/online_enroll"
+                android:id="@+id/online_enroll_button"
+                android:layout_marginTop="15dp"
+                android:onClick="onOnlineEnrollButtonTouch"
+                android:paddingLeft="10sp"
+                android:paddingRight="10sp"/>
+
+    </LinearLayout>
 </RelativeLayout>

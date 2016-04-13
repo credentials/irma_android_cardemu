@@ -75,7 +75,8 @@
     <string name="no_new_updates">No updates found.</string>
     <string name="update_server_error">Could not connect to the update server.</string>
     <string name="no_credentials">You don\'t have any credentials yet.</string>
-    <string name="enroll">Enroll</string>
+    <string name="enroll">Document Enroll</string>
+    <string name="online_enroll">Demo Enroll</string>
     <string name="yes">Yes</string>
     <string name="no">No</string>
     <string name="more_info">More Info</string>
