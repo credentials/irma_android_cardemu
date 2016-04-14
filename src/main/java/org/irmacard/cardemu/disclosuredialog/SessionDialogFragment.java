@@ -249,6 +249,8 @@ public class SessionDialogFragment extends DialogFragment {
 
 		final AlertDialog d = builder.create();
 
+		d.setCanceledOnTouchOutside(false);
+
 		// We set the listener for the neutral ("More Information") button instead of above, because if we set it
 		// above then the dialog is dismissed afterwards and we don't want that.
 		if (dislosing) {
