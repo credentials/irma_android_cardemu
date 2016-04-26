@@ -31,14 +31,18 @@
 package org.irmacard.cardemu;
 
 
+import android.Manifest;
 import android.app.Activity;
 import android.app.AlertDialog;
 import android.content.DialogInterface;
 import android.content.Intent;
 import android.content.SharedPreferences;
+import android.content.pm.PackageManager;
 import android.net.Uri;
 import android.os.Bundle;
 import android.os.CountDownTimer;
+import android.support.v4.app.ActivityCompat;
+import android.support.v4.content.ContextCompat;
 import android.util.Log;
 import android.view.Menu;
 import android.view.MenuItem;
@@ -69,6 +73,7 @@ public class MainActivity extends Activity {
 
 	private static final String TAG = "CardEmuMainActivity";
 	private static final String SETTINGS = "cardemu";
+	private static final int PERMISSION_REQUEST_CAMERA = 1;
 
 	private SharedPreferences settings;
 
@@ -459,8 +464,29 @@ public class MainActivity extends Activity {
 	}
 
 	public void onMainShapeTouch(View v) {
-		if (activityState == STATE_IDLE) {
+		if (activityState != STATE_IDLE)
+			return;
+
+		if (ContextCompat.checkSelfPermission(this, Manifest.permission.CAMERA)
+				== PackageManager.PERMISSION_DENIED) {
+			ActivityCompat.requestPermissions(this,
+					new String[] { Manifest.permission.CAMERA }, PERMISSION_REQUEST_CAMERA);
+		}
+		else {
 			startQRScanner("Scan the QR image in the browser.");
+		}
+	}
+
+	@Override
+	public void onRequestPermissionsResult(int requestCode, String[] permissions, int[] grantResults) {
+		switch (requestCode) {
+			case PERMISSION_REQUEST_CAMERA:
+				if (grantResults.length > 0
+						&& grantResults[0] == PackageManager.PERMISSION_GRANTED
+						&& permissions[0].equals(Manifest.permission.CAMERA)) {
+					startQRScanner("Scan the QR image in the browser.");
+				}
+				break;
 		}
 	}
 
