@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="utf-8"?>
+<PreferenceScreen
+    xmlns:android="http://schemas.android.com/apk/res/android"
+    android:title="@string/scheme_managers">
+
+    <EditTextPreference
+        android:order="100"
+        android:key="add_new_manager"
+        android:title="@string/add_new"
+        android:dialogTitle="@string/add_new_scheme_manager"
+        android:dialogMessage="@string/enter_scheme_manager_url"
+        android:icon="@android:drawable/ic_menu_add"/>
+</PreferenceScreen>

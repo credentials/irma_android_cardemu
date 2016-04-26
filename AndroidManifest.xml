@@ -2,8 +2,8 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:tools="http://schemas.android.com/tools"
     package="org.irmacard.cardemu"
-    android:versionCode="6"
-    android:versionName="2.0" >
+    android:versionCode="7"
+    android:versionName="2.1" >
 
     <uses-sdk
         android:minSdkVersion="16"
@@ -96,6 +96,17 @@
                 android:value=".MainActivity" />
             <intent-filter>
                 <action android:name="android.nfc.action.TECH_DISCOVERED" />
+            </intent-filter>
+        </activity>
+
+        <activity
+            android:name="org.irmacard.cardemu.preferences.IRMAPreferenceActivity"
+            android:label="Preferences">
+            <intent-filter>
+                <action android:name="android.intent.action.VIEW" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <category android:name="android.intent.category.BROWSABLE" />
+                <data android:scheme="schememanager"/>
             </intent-filter>
         </activity>
 

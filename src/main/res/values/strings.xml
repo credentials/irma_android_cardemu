@@ -89,6 +89,13 @@
     <string name="or">or enter</string>
     <string name="feedback_communicating_driverslicense">Communicating with drivers license</string>
     <string name="error_enroll_driverslicense_error">Failed to establish contact with drivers license</string>
+    <string name="preferences">Preferences</string>
+    <string name="delete_scheme_manager">Delete scheme manager</string>
+    <string name="scheme_managers">Scheme Managers</string>
+    <string name="scheme_managers_summary">View, add or remove scheme managers</string>
+    <string name="add_new">Add new</string>
+    <string name="add_new_scheme_manager">Add new scheme manager</string>
+    <string name="enter_scheme_manager_url">Enter the URL of the scheme manager</string>
     <string-array name="document_list">
         <item>Passport / ID card</item>
         <item>Drivers License</item>

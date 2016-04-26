@@ -54,6 +54,7 @@ import org.irmacard.android.util.credentialdetails.CredentialDetailFragment;
 import org.irmacard.android.util.credentials.CredentialPackage;
 import org.irmacard.android.util.credentials.StoreManager;
 import org.irmacard.api.common.exceptions.ApiErrorMessage;
+import org.irmacard.cardemu.preferences.IRMAPreferenceActivity;
 import org.irmacard.cardemu.protocols.Protocol;
 import org.irmacard.cardemu.protocols.ProtocolHandler;
 import org.irmacard.cardemu.selfenrol.EnrollSelectActivity;
@@ -538,6 +539,11 @@ public class MainActivity extends Activity {
 		Log.d(TAG, "menu press registered");
 		// Handle item selection
 		switch (item.getItemId()) {
+			case R.id.preferences:
+				Intent intent = new Intent();
+				intent.setClassName(this, IRMAPreferenceActivity.class.getName());
+				startActivity(intent);
+				return true;
 			case R.id.enroll:
 				Log.d(TAG, "enroll menu item pressed");
 				onEnrollButtonTouch(null);

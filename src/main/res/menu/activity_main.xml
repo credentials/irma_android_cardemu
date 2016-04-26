@@ -3,6 +3,11 @@
     tools:context=".MainActivity">
 
     <item
+        android:id="@+id/preferences"
+        android:orderInCategory="100"
+        android:title="@string/preferences" />
+
+    <item
         android:id="@+id/enroll"
         android:orderInCategory="101"
         android:showAsAction="never"

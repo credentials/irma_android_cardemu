@@ -73,6 +73,7 @@ import org.irmacard.credentials.util.log.LogEntry;
         resToastText = R.string.crash_toast_text)
 public class IRMApp extends Application {
     private final static long reportTimeInterval = 1000*60*60*24; // 1 day in milliseconds
+    private static StoreManager storeManager;
 
     @Override
     public void onCreate() {
@@ -96,9 +97,9 @@ public class IRMApp extends Application {
         FileReader reader = new AndroidFileReader(this);
         HttpClient client = new DefaultHttpClient();
         try {
-            StoreManager serializer = new StoreManager(this);
-            DescriptionStore.initialize(new DescriptionStoreDeserializer(reader), serializer, client);
-            IdemixKeyStore.initialize(new IdemixKeyStoreDeserializer(reader), serializer, client);
+            storeManager = new StoreManager(this);
+            DescriptionStore.initialize(new DescriptionStoreDeserializer(reader), storeManager, client);
+            IdemixKeyStore.initialize(new IdemixKeyStoreDeserializer(reader), storeManager, client);
         } catch (InfoException e) { // Can't do anything in this case
             throw new RuntimeException(e);
         }
@@ -107,5 +108,9 @@ public class IRMApp extends Application {
 
         MetricsReporter.init(this, BuildConfig.metricServer, reportTimeInterval);
         CredentialManager.init(getSharedPreferences("cardemu", 0));
+    }
+
+    public static StoreManager getStoreManager() {
+        return storeManager;
     }
 }
