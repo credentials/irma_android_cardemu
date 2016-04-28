@@ -1,0 +1,84 @@
+<RelativeLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:paddingLeft="@dimen/detail_small_vspace"
+    android:paddingRight="@dimen/detail_small_vspace"
+    android:paddingTop="@dimen/detail_small_vspace"
+    android:paddingBottom="@dimen/detail_small_vspace"
+    tools:context="org.irmacard.cardemu.SchemeManagerDetailActivity">
+
+    <TextView
+        android:id="@+id/manager_name"
+        style="@style/DetailHeading.Table"
+        android:layout_alignParentLeft="true"
+        android:layout_marginTop="@dimen/detail_medium_vspace"
+        android:text="@string/name" />
+
+    <TextView
+        android:id="@+id/manager_name_value"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_toRightOf="@id/manager_name"
+        android:layout_alignBaseline="@id/manager_name"
+        android:textIsSelectable="true"
+        android:text="@android:string/unknownName" />
+
+    <TextView
+        android:id="@+id/manager_url"
+        style="@style/DetailHeading.Table"
+        android:layout_below="@id/manager_name"
+        android:layout_marginTop="@dimen/detail_medium_vspace"
+        android:text="@string/url" />
+
+    <TextView
+        android:id="@+id/manager_url_value"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_toRightOf="@id/manager_url"
+        android:layout_alignBaseline="@id/manager_url"
+        android:textIsSelectable="true"
+        android:text="@android:string/unknownName" />
+
+    <TextView
+        android:id="@+id/manager_description"
+        style="@style/DetailHeading.Table"
+        android:layout_below="@id/manager_url"
+        android:layout_marginTop="@dimen/detail_medium_vspace"
+        android:text="@string/description" />
+
+    <TextView
+        android:id="@+id/manager_description_value"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_toRightOf="@id/manager_description"
+        android:layout_alignBaseline="@id/manager_description"
+        android:textIsSelectable="true"
+        android:text="@android:string/unknownName" />
+
+    <TextView
+        android:id="@+id/manager_contact"
+        style="@style/DetailHeading.Table"
+        android:layout_below="@id/manager_description"
+        android:layout_marginTop="@dimen/detail_medium_vspace"
+        android:text="@string/contact" />
+
+    <TextView
+        android:id="@+id/manager_contact_value"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_below="@id/manager_contact"
+        android:layout_marginTop="@dimen/detail_small_vspace"
+        android:text="@android:string/unknownName" />
+
+    <Button
+        android:id="@+id/trash_manager"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_margin="16sp"
+        android:layout_below="@id/manager_contact_value"
+        android:layout_alignParentRight="true"
+        android:text="@string/deletetext"
+        android:onClick="onDeleteButtonClick" />
+
+</RelativeLayout>

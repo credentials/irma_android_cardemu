@@ -109,13 +109,26 @@
         <activity
             android:name="org.irmacard.cardemu.preferences.IRMAPreferenceActivity"
             android:screenOrientation="portrait"
+            android:parentActivityName=".MainActivity"
             android:label="Preferences">
+            <meta-data
+                android:name="android.support.PARENT_ACTIVITY"
+                android:value="org.irmacard.cardemu.MainActivity" />
             <intent-filter>
                 <action android:name="android.intent.action.VIEW" />
                 <category android:name="android.intent.category.DEFAULT" />
                 <category android:name="android.intent.category.BROWSABLE" />
                 <data android:scheme="schememanager"/>
             </intent-filter>
+        </activity>
+
+        <activity
+            android:name=".SchemeManagerDetailActivity"
+            android:label="@string/title_activity_scheme_manager_detail"
+            android:parentActivityName=".preferences.IRMAPreferenceActivity">
+            <meta-data
+                android:name="android.support.PARENT_ACTIVITY"
+                android:value="org.irmacard.cardemu.MainActivity" />
         </activity>
 
     </application>

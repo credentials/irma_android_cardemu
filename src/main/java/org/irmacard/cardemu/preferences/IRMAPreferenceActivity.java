@@ -4,6 +4,7 @@ import android.content.Intent;
 import android.os.Bundle;
 import android.preference.PreferenceActivity;
 import android.support.annotation.NonNull;
+import android.view.MenuItem;
 import android.webkit.URLUtil;
 import org.irmacard.cardemu.R;
 
@@ -39,6 +40,20 @@ public class IRMAPreferenceActivity extends PreferenceActivity {
 	// go download some new scheme manager
 	public void setSchemeManagersFragment(SchemeManagersPreferenceFragment schemeManagersFragment) {
 		this.schemeManagersFragment = schemeManagersFragment;
+	}
+
+	@Override
+	public boolean onOptionsItemSelected(MenuItem item) {
+		switch (item.getItemId()) {
+			case android.R.id.home:
+				if (getFragmentManager().getBackStackEntryCount() != 0)
+					getFragmentManager().popBackStack();
+				else
+					onBackPressed();
+				return true;
+		}
+
+		return super.onOptionsItemSelected(item);
 	}
 
 	@Override

@@ -100,4 +100,12 @@
         <item>Passport / ID card</item>
         <item>Drivers License</item>
     </string-array>
+    <string name="title_activity_scheme_manager_detail">Scheme Manager Details</string>
+
+    <string name="hello_world">Hello world!</string>
+    <string name="action_settings">Settings</string>
+    <string name="name">Name:</string>
+    <string name="url">URL:</string>
+    <string name="description">Description:</string>
+    <string name="contact">Contact:</string>
 </resources>

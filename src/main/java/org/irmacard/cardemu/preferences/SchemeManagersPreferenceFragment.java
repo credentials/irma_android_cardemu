@@ -9,7 +9,9 @@ import android.preference.EditTextPreference;
 import android.preference.Preference;
 import android.preference.PreferenceFragment;
 import android.preference.PreferenceScreen;
+import android.util.Log;
 import org.irmacard.android.util.credentials.StoreManager;
+import org.irmacard.cardemu.IRMApp;
 import org.irmacard.cardemu.R;
 import org.irmacard.credentials.info.DescriptionStore;
 import org.irmacard.credentials.info.InfoException;
@@ -38,8 +40,27 @@ public class SchemeManagersPreferenceFragment
 		} catch (InfoException e) {
 			throw new RuntimeException(e);
 		}
+	}
 
-		repopulate();
+	public static void confirmAndDeleteManager(final SchemeManager manager,
+	                                           final Context context,
+	                                           final Runnable runnable) {
+		new AlertDialog.Builder(context)
+				.setIcon(android.R.drawable.ic_dialog_alert)
+				.setTitle("Remove scheme manager?")
+				.setMessage("Are you certain you want to remove this scheme manager? " +
+						"This renders all credentials that you might have that fall under " +
+						"the authority of this scheme manager unusable.")
+				.setNegativeButton(android.R.string.cancel, null)
+				.setPositiveButton(android.R.string.ok, new DialogInterface.OnClickListener() {
+					@Override public void onClick(DialogInterface dialog, int which) {
+						Log.i("SchemePrefs", "Deleting scheme manager " + manager.getName());
+						IRMApp.getStoreManager().removeSchemeManager(manager.getName());
+						if (runnable != null)
+							runnable.run();
+					}
+				})
+				.show();
 	}
 
 	public void confirmAndDownloadManager(final String url, final Context context) {
@@ -102,6 +123,13 @@ public class SchemeManagersPreferenceFragment
 	public void onPause() {
 		super.onPause();
 		cancelFeedback = true;
+	}
+
+	@Override
+	public void onResume() {
+		super.onResume();
+		repopulate();
+		cancelFeedback = false;
 	}
 
 	// We explicitly implement Preference.OnPreferenceChangeListener here instead of using an
