@@ -31,6 +31,8 @@
 package org.irmacard.cardemu;
 
 import android.app.Application;
+import android.content.Intent;
+import android.os.Bundle;
 import org.acra.ACRA;
 import org.acra.ACRAConfiguration;
 import org.acra.ReportField;

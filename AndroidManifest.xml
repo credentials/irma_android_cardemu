@@ -60,7 +60,14 @@
             android:name="org.irmacard.cardemu.MainActivity"
             android:label="@string/app_name"
             android:screenOrientation="portrait"
-            android:launchMode="singleTop">
+            android:launchMode="singleTask">
+            <!-- The singleTask launchmode means that in the recept app list (i.e., this:
+                 https://developer.android.com/guide/components/recents.html), the MainActivity
+                 always has its own dedicated entry to which intents are routed - as opposed to
+                 the MainActivity appearing "on top of" the browser when the browser sends an
+                 intent to us. See also
+                 https://developer.android.com/guide/topics/manifest/activity-element.html#lmode
+            -->
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
                 <category android:name="android.intent.category.LAUNCHER" />

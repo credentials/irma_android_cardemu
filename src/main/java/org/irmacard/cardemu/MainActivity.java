@@ -102,8 +102,9 @@ public class MainActivity extends Activity {
 
 	// Keep track of last verification url to ensure we handle it only once
 	private String lastSessionUrl = "()";
-
+	private String currentSessionUrl = "()";
 	private boolean launchedFromBrowser;
+	private boolean onlineEnrolling;
 
 	private ProtocolHandler protocolHandler = new ProtocolHandler(this) {
 		@Override public void onStatusUpdate(Action action, Status status) {
@@ -155,8 +156,15 @@ public class MainActivity extends Activity {
 
 		private void finish(boolean returnToBrowser) {
 			setState(STATE_IDLE);
-			if (launchedFromBrowser && returnToBrowser)
+
+			lastSessionUrl = currentSessionUrl;
+			currentSessionUrl = "";
+
+			if (!onlineEnrolling && launchedFromBrowser && returnToBrowser)
 				onBackPressed();
+
+			onlineEnrolling = false;
+			launchedFromBrowser = false;
 		}
 	};
 
@@ -412,8 +420,14 @@ public class MainActivity extends Activity {
 	@Override
 	protected void onPause() {
 		super.onPause();
-		settings.edit().putString("lastSessionUrl", lastSessionUrl).apply();
 		Log.i(TAG, "onPause() called");
+
+		settings.edit()
+				.putString("lastSessionUrl", lastSessionUrl)
+				.putString("currentSessionUrl", currentSessionUrl)
+				.putBoolean("onlineEnrolling", onlineEnrolling)
+				.putBoolean("launchedFromBrowser", launchedFromBrowser)
+				.apply();
 	}
 
 	@Override
@@ -431,7 +445,12 @@ public class MainActivity extends Activity {
 	protected void onResume() {
 		super.onResume();
 		Log.i(TAG, "onResume() called");
-		lastSessionUrl = settings.getString("lastSessionUrl", "");
+
+		lastSessionUrl = settings.getString("lastSessionUrl", "()");
+		currentSessionUrl = settings.getString("currentSessionUrl", "()");
+		onlineEnrolling = settings.getBoolean("onlineEnrolling", false);
+		launchedFromBrowser = settings.getBoolean("launchedFromBrowser", false);
+
 		updateCredentialList();
 		processIntent();
 	}
@@ -441,26 +460,26 @@ public class MainActivity extends Activity {
 		Log.i(TAG, "processIntent() called, action: " + intent.getAction());
 
 		String qr = intent.getStringExtra("qr");
-		long timestamp  = intent.getLongExtra("timestamp", 0);
-
-		if (!intent.getAction().equals(Intent.ACTION_VIEW) || qr == null) {
+		if (!intent.getAction().equals(Intent.ACTION_VIEW) || qr == null)
 			return;
-		}
 
+		// The rest of this methoud should already prevent double intent handling, so checking
+		// the timestamp might be superfluous. But let's let it stay for now just to be sure
+		long timestamp  = intent.getLongExtra("timestamp", 0);
 		if (timestamp > 0 && System.currentTimeMillis() - timestamp > INTENT_EXPIRY_TIME) {
-			Log.i(TAG, "Discarding event, timestamp (" + timestamp +
-					") too old for qr: " + qr);
+			Log.i(TAG, "Discarding event, timestamp (" + timestamp + ") too old for qr: " + qr);
 			return;
 		}
 
 		Log.i(TAG, "Received qr in intent: " + qr);
-		if(!qr.equals(lastSessionUrl)) {
-			lastSessionUrl = qr;
-			launchedFromBrowser = true;
-			Protocol.NewSession(qr, protocolHandler);
-		} else {
+		if(qr.equals(currentSessionUrl) || qr.equals(lastSessionUrl)) {
 			Log.i(TAG, "Already processed this qr");
+			return;
 		}
+
+		currentSessionUrl = qr;
+		launchedFromBrowser = true;
+		Protocol.NewSession(qr, protocolHandler);
 	}
 
 	public void onMainShapeTouch(View v) {
@@ -497,6 +516,7 @@ public class MainActivity extends Activity {
 	}
 
 	public void onOnlineEnrollButtonTouch(View v) {
+		onlineEnrolling = true;
 		Intent i = new Intent(Intent.ACTION_VIEW);
 		i.setData(Uri.parse("https://demo.irmacard.org/tomcat/irma_api_server/examples/issue-all.html"));
 		startActivity(i);
@@ -525,6 +545,7 @@ public class MainActivity extends Activity {
 				String contents = scanResult.getContents();
 				if (contents != null) {
 					launchedFromBrowser = false;
+					onlineEnrolling = false;
 					Protocol.NewSession(contents, protocolHandler);
 				}
 			}

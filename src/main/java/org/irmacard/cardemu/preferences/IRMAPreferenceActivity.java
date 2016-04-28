@@ -73,13 +73,14 @@ public class IRMAPreferenceActivity extends PreferenceActivity {
 				// So we have to open the scheme managers fragment, by sending another intent to ourself, with a
 				// different action so that we can tell the two intents apart.
 				Intent i = new Intent(this, IRMAPreferenceActivity.class);
-				i.setAction(Intent.ACTION_MAIN);
+				i.setAction(Intent.ACTION_RUN);
 				i.putExtra(PreferenceActivity.EXTRA_SHOW_FRAGMENT, SchemeManagersPreferenceFragment.class.getName());
 				i.putExtra(PreferenceActivity.EXTRA_NO_HEADERS, true);
 				i.putExtra("url", url);
-				startActivity(i);
+				startActivity(i); // This starts a second instance of this class
+				finish();         // so we should close this first instance to remove it from the task.
 				break;
-			case Intent.ACTION_MAIN:
+			case Intent.ACTION_RUN:
 				// We received an intent opening the scheme managers fragment; do the downloading now
 				schemeManagersFragment.confirmAndDownloadManager(url, this);
 				break;
