@@ -336,10 +336,9 @@ public class CredentialManager {
 			int counter = credentials.get(credential).getKeyCounter();
 			if (!keyStore.containsPublicKey(issuer, counter))
 				keys.put(issuer, counter);
-
 		}
 
-		if (issuers.size() == 0 && creds.size() == 0)
+		if (issuers.size() == 0 && creds.size() == 0 && keys.size() == 0)
 			return false;
 
 		StoreManager.download(issuers, creds, keys, handler);
