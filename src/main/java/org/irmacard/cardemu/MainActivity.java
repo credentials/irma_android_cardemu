@@ -73,7 +73,7 @@ public class MainActivity extends Activity {
 
 	private static final String TAG = "CardEmuMainActivity";
 	private static final String SETTINGS = "cardemu";
-	private static final int PERMISSION_REQUEST_CAMERA = 1;
+	public static final int PERMISSION_REQUEST_CAMERA = 1;
 
 	private SharedPreferences settings;
 

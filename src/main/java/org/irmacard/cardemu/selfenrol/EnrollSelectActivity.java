@@ -30,10 +30,14 @@
 
 package org.irmacard.cardemu.selfenrol;
 
+import android.Manifest;
 import android.app.*;
 import android.content.*;
+import android.content.pm.PackageManager;
 import android.os.*;
 import android.provider.Settings;
+import android.support.v4.app.ActivityCompat;
+import android.support.v4.content.ContextCompat;
 import android.telephony.TelephonyManager;
 import android.text.Editable;
 import android.text.Html;
@@ -319,9 +323,30 @@ public class EnrollSelectActivity extends AbstractGUIEnrollActivity {
         bacFieldWatcher.onTextChanged("", 0, 0, 0);
     }
 
-    public void onQRButtonTouch (View v) {
+    public void onQRButtonTouch(View v) {
         if (next_activity == DL_ACTIVITY) {
-            startQRScanner("Scan the QR image on your Driver's License.");
+
+            if (ContextCompat.checkSelfPermission(this, Manifest.permission.CAMERA)
+                    == PackageManager.PERMISSION_DENIED) {
+                ActivityCompat.requestPermissions(this,
+                        new String[]{Manifest.permission.CAMERA}, MainActivity.PERMISSION_REQUEST_CAMERA);
+            }
+            else {
+                startQRScanner("Scan the QR image on your Driver's License.");
+            }
+        }
+    }
+
+    @Override
+    public void onRequestPermissionsResult(int requestCode, String[] permissions, int[] grantResults) {
+        switch (requestCode) {
+            case MainActivity.PERMISSION_REQUEST_CAMERA:
+                if (grantResults.length > 0
+                        && grantResults[0] == PackageManager.PERMISSION_GRANTED
+                        && permissions[0].equals(Manifest.permission.CAMERA)) {
+                    startQRScanner("Scan the QR image in the browser.");
+                }
+                break;
         }
     }
 
