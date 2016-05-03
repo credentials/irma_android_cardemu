@@ -26,11 +26,9 @@ The build system depends on gradle version at least 2.1, which is why we've incl
 
 ## irma_configure
 
-Make sure to link a version of irma_configuration into assets/
+Make sure to link a version of `irma_configuration` into `src/main/assets`. For example, if `irma_android_cardemu` and `irma_configuration` are checked out in the same directory, you can do
 
-## Including credentials
-
-If you include a Gson-serialized `IRMACard` instance (see the [idemix_terminal](https://github.com/credentials/idemix_terminal/) project) in the assets/ folder, then the app will allow you to load the credentials contained in this card through the context menu.
+    ln -s ../../../../irma_configuration
 
 ## Building
 
