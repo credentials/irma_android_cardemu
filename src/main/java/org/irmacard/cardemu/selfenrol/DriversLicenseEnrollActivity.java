@@ -2,16 +2,9 @@ package org.irmacard.cardemu.selfenrol;
 
 import android.os.AsyncTask;
 import android.os.Bundle;
-import android.os.Handler;
-import android.os.Message;
 import android.util.Log;
-import android.view.View;
 import android.widget.ProgressBar;
 import android.widget.TextView;
-
-import com.google.gson.Gson;
-import com.google.gson.GsonBuilder;
-
 import net.sf.scuba.smartcards.*;
 import net.sf.scuba.tlv.TLVInputStream;
 import net.sf.scuba.tlv.TLVOutputStream;
@@ -20,7 +13,6 @@ import org.irmacard.cardemu.R;
 import org.irmacard.mno.common.DocumentDataMessage;
 import org.irmacard.mno.common.EDLDataMessage;
 import org.irmacard.mno.common.EnrollmentStartMessage;
-import org.irmacard.mno.common.util.GsonUtil;
 import org.jmrtd.PassportService;
 import org.jmrtd.Util;
 import org.jmrtd.lds.DG14File;
@@ -34,7 +26,6 @@ import java.io.InputStream;
 import java.io.UnsupportedEncodingException;
 import java.security.GeneralSecurityException;
 import java.security.MessageDigest;
-import java.security.Security;
 
 public class DriversLicenseEnrollActivity extends AbstractNFCEnrollActivity {
     // Configuration
@@ -56,45 +47,10 @@ public class DriversLicenseEnrollActivity extends AbstractNFCEnrollActivity {
 
         setNfcScreen(SCREEN_PASSPORT);
 
-        // Get the BasicClientMessage containing our nonce to send to the passport.
-        getEnrollmentSession(new Handler() {
-            @Override
-            public void handleMessage(Message msg) {
-                EnrollmentStartResult result = (EnrollmentStartResult) msg.obj;
-
-                if (result.exception != null) { // Something went wrong
-                    showErrorScreen(result.errorId);
-                } else {
-                    TextView connectedTextView = (TextView) findViewById(R.id.se_connected);
-                    connectedTextView.setTextColor(getResources().getColor(R.color.irmagreen));
-                    connectedTextView.setText(R.string.se_connected_mno);
-
-                    findViewById(R.id.se_feedback_text).setVisibility(View.VISIBLE);
-                    findViewById(R.id.se_progress_bar).setVisibility(View.VISIBLE);
-                }
-            }
-        });
-
-        // Spongycastle provides the MAC ISO9797Alg3Mac, which JMRTD usesin the doBAC method below (at
-        // DESedeSecureMessagingWrapper.java, line 115)
-        Security.addProvider(new org.spongycastle.jce.provider.BouncyCastleProvider());
-
         // Update the UI
         setContentView(R.layout.enroll_activity_passport);
         screen = SCREEN_PASSPORT;
         updateProgressCounter();
-
-        // The next advanceScreen() is called when the passport reading was successful (see onPostExecute() in
-        // readPassport() above). Thus, if no passport arrives or we can't successfully read it, we have to
-        // ensure here that we don't stay on the passport screen forever with this timeout.
-        new Handler().postDelayed(new Runnable() {
-            @Override
-            public void run() {
-                if (screen == SCREEN_PASSPORT && (documentMsg == null || !documentMsg.isComplete())) {
-                    showErrorScreen(getString(R.string.error_enroll_edlerror));
-                }
-            }
-        }, MAX_TAG_READ_TIME);
     }
 
     @Override

@@ -32,10 +32,7 @@ package org.irmacard.cardemu.selfenrol;
 
 import android.os.AsyncTask;
 import android.os.Bundle;
-import android.os.Handler;
-import android.os.Message;
 import android.util.Log;
-import android.view.View;
 import android.widget.ProgressBar;
 import android.widget.TextView;
 import net.sf.scuba.smartcards.CardService;
@@ -54,7 +51,6 @@ import org.jmrtd.lds.DG1File;
 import org.jmrtd.lds.SODFile;
 
 import java.io.IOException;
-import java.security.Security;
 import java.text.SimpleDateFormat;
 import java.util.Date;
 import java.util.Locale;
@@ -83,45 +79,10 @@ public class PassportEnrollActivity extends AbstractNFCEnrollActivity {
 
 		setNfcScreen(SCREEN_PASSPORT);
 
-        // Get the BasicClientMessage containing our nonce to send to the passport.
-        getEnrollmentSession(new Handler() {
-            @Override
-            public void handleMessage(Message msg) {
-                EnrollmentStartResult result = (EnrollmentStartResult) msg.obj;
-
-                if (result.exception != null) { // Something went wrong
-                    showErrorScreen(result.errorId);
-                } else {
-                    TextView connectedTextView = (TextView) findViewById(R.id.se_connected);
-                    connectedTextView.setTextColor(getResources().getColor(R.color.irmagreen));
-                    connectedTextView.setText(R.string.se_connected_mno);
-
-                    findViewById(R.id.se_feedback_text).setVisibility(View.VISIBLE);
-                    findViewById(R.id.se_progress_bar).setVisibility(View.VISIBLE);
-                }
-            }
-        });
-
-        // Spongycastle provides the MAC ISO9797Alg3Mac, which JMRTD usesin the doBAC method below (at
-        // DESedeSecureMessagingWrapper.java, line 115)
-        Security.addProvider(new org.spongycastle.jce.provider.BouncyCastleProvider());
-
-        // Update the UI
-        setContentView(R.layout.enroll_activity_passport);
-        screen = SCREEN_PASSPORT;
-        updateProgressCounter();
-
-        // The next advanceScreen() is called when the passport reading was successful (see onPostExecute() in
-        // readPassport() above). Thus, if no passport arrives or we can't successfully read it, we have to
-        // ensure here that we don't stay on the passport screen forever with this timeout.
-        new Handler().postDelayed(new Runnable() {
-            @Override
-            public void run() {
-                if (screen == SCREEN_PASSPORT && (documentMsg == null || !documentMsg.isComplete())) {
-                    showErrorScreen(getString(R.string.error_enroll_passporterror));
-                }
-            }
-        }, MAX_TAG_READ_TIME);
+		// Update the UI
+		setContentView(R.layout.enroll_activity_passport);
+		screen = SCREEN_PASSPORT;
+		updateProgressCounter();
 	}
 
 

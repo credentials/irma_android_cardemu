@@ -68,8 +68,7 @@
     <string name="error_enroll_passport_expired">You cannot enroll with an expired identity document.</string>
     <string name="unknown_error">An unknown error occurred.</string>
     <string name="enroll_enter_bac_title">Document data</string>
-    <string name="enroll_enter_bac_desc">Please select the identity document you wish to use and provide the requested data to allow the app
-        to communicate with the document.</string>
+    <string name="enroll_enter_bac_desc">Please select the identity document you wish to use, and provide the requested data to allow the app to communicate with the document.</string>
     <string name="menu_show_log">Show log</string>
     <string name="check_for_updates">Check for updates</string>
     <string name="no_new_updates">No updates found.</string>

@@ -31,27 +31,26 @@
 package org.irmacard.cardemu.selfenrol;
 
 import android.Manifest;
-import android.app.*;
-import android.content.*;
+import android.app.DatePickerDialog;
+import android.content.Intent;
 import android.content.pm.PackageManager;
-import android.os.*;
-import android.provider.Settings;
+import android.os.Bundle;
 import android.support.v4.app.ActivityCompat;
 import android.support.v4.content.ContextCompat;
-import android.telephony.TelephonyManager;
 import android.text.Editable;
 import android.text.Html;
 import android.text.TextWatcher;
 import android.text.method.LinkMovementMethod;
 import android.util.Log;
-import android.view.*;
+import android.view.View;
+import android.view.WindowManager;
 import android.widget.*;
-
 import com.google.zxing.integration.android.IntentIntegrator;
 import com.google.zxing.integration.android.IntentResult;
-
-import org.irmacard.cardemu.*;
 import org.irmacard.cardemu.BuildConfig;
+import org.irmacard.cardemu.MainActivity;
+import org.irmacard.cardemu.R;
+
 import java.text.DateFormat;
 import java.text.ParseException;
 import java.util.Calendar;
@@ -91,9 +90,7 @@ public class EnrollSelectActivity extends AbstractGUIEnrollActivity {
         screen = SCREEN_START;
         updateProgressCounter();
 
-      //  String enrollServer = getEnrollmentServer().substring(8); // Strip "https://"
-      //  enrollServer = enrollServer.substring(0, enrollServer.indexOf('/')); // Strip path from the url
-        String helpHtml = String.format(getString(R.string.se_connect_mno));
+        String helpHtml = getString(R.string.se_connect_mno);
 
         TextView helpTextView = (TextView)findViewById(R.id.se_feedback_text);
         if (helpTextView != null) { // Can be null if we are on error screen
