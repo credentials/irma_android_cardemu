@@ -96,7 +96,7 @@ dependencies {
     compile('org.jmrtd:jmrtd:0.5.5') { transitive = false } // Don't include scuba
 
     // Our stuff
-    compile "org.irmacard.android:irma_android_library:0.13.3"
+    compile "org.irmacard.android:irma_android_library:0.13.4"
     compile 'org.irmacard.metrics:irma_metrics_common:0.1.1'
     compile('org.irmacard.mno:irma_mno_common:0.2.0')  { transitive = false } // Don't include scuba
 }
