@@ -63,9 +63,6 @@ public class PassportEnrollActivity extends AbstractNFCEnrollActivity {
 	// Configuration
 	private static final String TAG = "cardemu.PassportEnrollA";
 	public static final int PassportEnrollActivityCode = 300;
-	private static final int SCREEN_BAC = 2;
-	private static final int SCREEN_PASSPORT = 3;
-	private static final int SCREEN_ISSUE = 4;
 
 	protected int tagReadAttempt = 0;
 
@@ -295,7 +292,7 @@ public class PassportEnrollActivity extends AbstractNFCEnrollActivity {
 
 				// If we're here, we're done. Check for errors or failures, and advance the screen
 				if (!bacError && !passportError) {
-					advanceScreen();
+					doEnroll(); // This also advances the screen
 				}
 
 				if (bacError) {
@@ -309,42 +306,6 @@ public class PassportEnrollActivity extends AbstractNFCEnrollActivity {
 				}
 			}
 		}.execute(ps,pdm);
-	}
-
-	@Override
-	protected void advanceScreen() {
-		switch (screen) {
-			case SCREEN_PASSPORT:
-				setContentView(R.layout.enroll_activity_issue);
-				screen = SCREEN_ISSUE;
-				updateProgressCounter();
-
-				// Do it!
-				enroll(new Handler() {
-					@Override
-					public void handleMessage(Message msg) {
-						if (msg.obj == null) { // Success
-							enableContinueButton();
-							findViewById(R.id.se_done_text).setVisibility(View.VISIBLE);
-						} else {
-							if (msg.what != 0) // .what may contain a string identifier saying what went wrong
-								showErrorScreen(msg.what);
-							else
-								showErrorScreen(R.string.unknown_error);
-						}
-					}
-				});
-				break;
-			case SCREEN_ISSUE:
-			case SCREEN_ERROR:
-				screen = SCREEN_START;
-				finish();
-				break;
-
-			default:
-				Log.e(TAG, "Error, screen switch fall through");
-				break;
-		}
 	}
 
 	/**

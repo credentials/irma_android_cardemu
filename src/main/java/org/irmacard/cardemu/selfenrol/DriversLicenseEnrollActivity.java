@@ -41,12 +41,6 @@ public class DriversLicenseEnrollActivity extends AbstractNFCEnrollActivity {
     private static final String TAG = "DriversLicenseEnrollAct";
     public static final int DriversLicenseEnrollActivityCode = 400;
 
-
-    private static final int SCREEN_BAC = 2;
-    private static final int SCREEN_PASSPORT = 3;
-    private static final int SCREEN_ISSUE = 4;
-
-
     // State variables
     //private EDLDataMessage eDLMsg = null;
     protected int tagReadAttempt = 0;
@@ -126,46 +120,6 @@ public class DriversLicenseEnrollActivity extends AbstractNFCEnrollActivity {
                     getString(R.string.retry), SCREEN_PASSPORT);
         }
     }
-
-    @Override
-    protected void advanceScreen() {
-        switch (screen) {
-            case SCREEN_PASSPORT:
-                setContentView(R.layout.enroll_activity_issue);
-                screen = SCREEN_ISSUE;
-                updateProgressCounter();
-
-                // Do it!
-                enroll(new Handler() {
-                    @Override
-                    public void handleMessage(Message msg) {
-                        if (msg.obj == null) { // Success
-                            enableContinueButton();
-                            findViewById(R.id.se_done_text).setVisibility(View.VISIBLE);
-                        } else {
-                            if (msg.what != 0) // .what may contain a string identifier saying what went wrong
-                                showErrorScreen(msg.what);
-                            else
-                                showErrorScreen(R.string.unknown_error);
-                        }
-                    }
-                });
-
-                break;
-
-            case SCREEN_ISSUE:
-            case SCREEN_ERROR:
-                screen = SCREEN_START;
-                finish();
-                break;
-
-            default:
-                Log.e(TAG, "Error, screen switch fall through");
-                break;
-        }
-
-    }
-
 
     public synchronized void doBAP(PassportService ps, String mrz) throws CardServiceException {
         if (mrz != null && mrz.length()>0) {
@@ -389,7 +343,7 @@ public class DriversLicenseEnrollActivity extends AbstractNFCEnrollActivity {
                 Log.i(TAG, "PassportEnrollActivity: attempt " + tagReadAttempt + " finished, done: " + done);
 
                 if (!bacError && !passportError) {
-                    advanceScreen();
+                    doEnroll(); // This also advances the screen
                 }
 
                 if (bacError) {

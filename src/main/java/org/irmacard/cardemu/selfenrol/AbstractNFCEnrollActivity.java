@@ -11,6 +11,7 @@ import android.os.Bundle;
 import android.os.Handler;
 import android.os.Message;
 import android.util.Log;
+import android.view.View;
 import android.view.WindowManager;
 import com.google.gson.JsonSyntaxException;
 import net.sf.scuba.smartcards.CardService;
@@ -145,6 +146,23 @@ public abstract class AbstractNFCEnrollActivity extends AbstractGUIEnrollActivit
         uiHandler.sendMessage(msg);
     }
 
+    protected void doEnroll() {
+        enroll(new Handler() {
+            @Override
+            public void handleMessage(Message msg) {
+                if (msg.obj == null) { // Success
+                    enableContinueButton();
+                    findViewById(R.id.se_done_text).setVisibility(View.VISIBLE);
+                } else {
+                    if (msg.what != 0) // .what may contain a string identifier saying what went wrong
+                        showErrorScreen(msg.what);
+                    else
+                        showErrorScreen(R.string.unknown_error);
+                }
+            }
+        });
+    }
+
 
     protected void enroll(final Handler uiHandler) {
         final String serverUrl = getEnrollmentServer();
@@ -168,6 +186,7 @@ public abstract class AbstractNFCEnrollActivity extends AbstractGUIEnrollActivit
                             return;
                         }
 
+                        advanceScreen();
                         Protocol.NewSession(result.getIssueQr(), protocolHandler);
                     }
                 });

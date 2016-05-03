@@ -32,8 +32,10 @@ public abstract class AbstractGUIEnrollActivity extends Activity{
 
     protected static final String SETTINGS = "cardemu";
     protected static final int SCREEN_START = 1;
-    protected static final int SCREEN_BAC = 2;
     protected static final int SCREEN_ERROR = -1;
+    protected static final int SCREEN_BAC = 2;
+    protected static final int SCREEN_PASSPORT = 3;
+    protected static final int SCREEN_ISSUE = 4;
 
     //state variables
     protected int screen;
@@ -173,7 +175,24 @@ public abstract class AbstractGUIEnrollActivity extends Activity{
         }
     }
 
-    abstract protected void advanceScreen ();
+    protected void advanceScreen() {
+        switch (screen) {
+            case SCREEN_PASSPORT:
+                setContentView(R.layout.enroll_activity_issue);
+                screen = SCREEN_ISSUE;
+                updateProgressCounter();
+                break;
+            case SCREEN_ISSUE:
+            case SCREEN_ERROR:
+                screen = SCREEN_START;
+                finish();
+                break;
+
+            default:
+                Log.e(TAG, "Error, screen switch fall through");
+                break;
+        }
+    }
 
     protected static String getEnrollmentServer() {
         return BuildConfig.enrollServer + "/v" + protocolVersion;
