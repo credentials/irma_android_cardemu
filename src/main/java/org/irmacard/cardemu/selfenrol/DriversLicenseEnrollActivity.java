@@ -9,6 +9,7 @@ import net.sf.scuba.smartcards.*;
 import net.sf.scuba.tlv.TLVInputStream;
 import net.sf.scuba.tlv.TLVOutputStream;
 import org.acra.ACRA;
+import org.irmacard.cardemu.MetricsReporter;
 import org.irmacard.cardemu.R;
 import org.irmacard.mno.common.DocumentDataMessage;
 import org.irmacard.mno.common.EDLDataMessage;
@@ -77,6 +78,7 @@ public class DriversLicenseEnrollActivity extends AbstractNFCEnrollActivity {
         }
     }
 
+    @SuppressWarnings("deprecation")
     public synchronized void doBAP(PassportService ps, String mrz) throws CardServiceException {
         if (mrz != null && mrz.length()>0) {
             try {
@@ -89,11 +91,11 @@ public class DriversLicenseEnrollActivity extends AbstractNFCEnrollActivity {
                     ps.doBAC(kEnc,kMac);
                 } catch (CardServiceException cse) {
                     Log.e(TAG,"BAP failed");
-                    Log.e(TAG, cse.getMessage().toString());
+                    Log.e(TAG, cse.getMessage());
                     throw cse;
                 }
             } catch (GeneralSecurityException gse) {
-                Log.e(TAG,gse.getStackTrace().toString());
+                gse.printStackTrace();
                 throw new CardServiceException(gse.toString());
             }
         } else {
@@ -207,18 +209,6 @@ public class DriversLicenseEnrollActivity extends AbstractNFCEnrollActivity {
                 }
             }
 
-            /* we need this method for now to be able to send secured APDUs to cards */
-            private ResponseAPDU transmitWrappedAPDU (PassportService ps, CommandAPDU capdu) throws CardServiceException {
-                APDUWrapper wrapper = ps.getWrapper();
-                if (wrapper == null){
-                    throw new NullPointerException("No wrapper was set for secure messaging");
-                }
-                CommandAPDU wcapdu = wrapper.wrap(capdu);
-                ResponseAPDU wrapdu = ps.transmit(wcapdu);
-                return wrapper.unwrap(wrapdu, wrapdu.getBytes().length);
-
-            }
-
             protected byte[] readDg1File(InputStream inputStream) throws IOException {
                 int dataGroupTag = 0x61;
                 TLVInputStream tlvIn = inputStream instanceof TLVInputStream ? (TLVInputStream)inputStream : new TLVInputStream(inputStream);
@@ -226,15 +216,14 @@ public class DriversLicenseEnrollActivity extends AbstractNFCEnrollActivity {
                 if (tag != dataGroupTag) {
                     throw new IllegalArgumentException("Was expecting tag " + Integer.toHexString(dataGroupTag) + ", found " + Integer.toHexString(tag));
                 }
-                int dataGroupLength = tlvIn.readLength();
+                tlvIn.readLength();
                 byte[] value = tlvIn.readValue();
 
                 ByteArrayOutputStream bOut = new ByteArrayOutputStream();
                 TLVOutputStream tlvOut = new TLVOutputStream(bOut);
                 tlvOut.writeTag(tag);
                 tlvOut.writeValue(value);
-                byte[] contents = bOut.toByteArray();
-                return contents;
+                return bOut.toByteArray();
             }
 
 
@@ -295,6 +284,10 @@ public class DriversLicenseEnrollActivity extends AbstractNFCEnrollActivity {
                 Boolean done = eDLMessage != null && eDLMessage.isComplete();
 
                 progressBar.setProgress(progressBar.getMax());
+
+                stop = System.currentTimeMillis();
+                MetricsReporter.getInstance().reportMeasurement("passport_data_attempts", tagReadAttempt, false);
+                MetricsReporter.getInstance().reportMeasurement("passport_data_time", stop-start);
 
                 Log.i(TAG, "PassportEnrollActivity: attempt " + tagReadAttempt + " finished, done: " + done);
 
