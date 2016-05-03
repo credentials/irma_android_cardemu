@@ -253,7 +253,7 @@ public class PassportEnrollActivity extends AbstractNFCEnrollActivity {
 
 				// If we're here, we're done. Check for errors or failures, and advance the screen
 				if (!bacError && !passportError) {
-					doEnroll(); // This also advances the screen
+					enroll(); // This also advances the screen
 				}
 
 				if (bacError) {

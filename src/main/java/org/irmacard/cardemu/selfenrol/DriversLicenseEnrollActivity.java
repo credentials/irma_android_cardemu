@@ -299,7 +299,7 @@ public class DriversLicenseEnrollActivity extends AbstractNFCEnrollActivity {
                 Log.i(TAG, "PassportEnrollActivity: attempt " + tagReadAttempt + " finished, done: " + done);
 
                 if (!bacError && !passportError) {
-                    doEnroll(); // This also advances the screen
+                    enroll(); // This also advances the screen
                 }
 
                 if (bacError) {

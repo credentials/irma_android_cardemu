@@ -9,7 +9,7 @@ import android.nfc.tech.IsoDep;
 import android.os.AsyncTask;
 import android.os.Bundle;
 import android.os.Handler;
-import android.os.Message;
+import android.support.v4.content.ContextCompat;
 import android.util.Log;
 import android.view.View;
 import android.view.WindowManager;
@@ -41,7 +41,7 @@ import java.security.Security;
  * Abstract base class for enrolling, coontaining generic UI, NFC and networking logic. Things handled by this class
  * include:
  * <ul>
- *     <li>Fetching an EnrollmentStartMessage, see {@link #getEnrollmentSession(Handler)}</li>
+ *     <li>Fetching an EnrollmentStartMessage, see {@link #getEnrollmentSession()}</li>
  *     <li>Catching the NFC intent and dispatching a tag to inheritors that is ready to be read</li>
  * </ul>
  * Inheriting classes are expected to handle NFC events that we dispatch to it (see
@@ -67,8 +67,6 @@ public abstract class AbstractNFCEnrollActivity extends AbstractGUIEnrollActivit
     // Enrolling variables
     protected HttpClient client = null;
     private EnrollmentStartMessage enrollSession = null;
-    private Handler uiHandler;
-    private Message msg;
 
     protected abstract String getURLPath();
 
@@ -107,23 +105,7 @@ public abstract class AbstractNFCEnrollActivity extends AbstractGUIEnrollActivit
         }
 
         // Get the BasicClientMessage containing our nonce to send to the passport.
-        getEnrollmentSession(new Handler() {
-            @Override
-            public void handleMessage(Message msg) {
-                EnrollmentStartResult result = (EnrollmentStartResult) msg.obj;
-
-                if (result.exception != null) { // Something went wrong
-                    showErrorScreen(result.errorId);
-                } else {
-                    TextView connectedTextView = (TextView) findViewById(R.id.se_connected);
-                    connectedTextView.setTextColor(getResources().getColor(R.color.irmagreen));
-                    connectedTextView.setText(R.string.se_connected_mno);
-
-                    findViewById(R.id.se_feedback_text).setVisibility(View.VISIBLE);
-                    findViewById(R.id.se_progress_bar).setVisibility(View.VISIBLE);
-                }
-            }
-        });
+        getEnrollmentSession();
 
         // Spongycastle provides the MAC ISO9797Alg3Mac, which JMRTD usesin the doBAC method below (at
         // DESedeSecureMessagingWrapper.java, line 115)
@@ -159,12 +141,10 @@ public abstract class AbstractNFCEnrollActivity extends AbstractGUIEnrollActivit
     };
 
     private void fail(int resource, Exception e) {
-        if (e != null)
-            msg.obj = e;
+        if (resource != 0)
+            showErrorScreen(resource);
         else
-            msg.obj = new Exception();
-        msg.what = resource;
-        uiHandler.sendMessage(msg);
+            showErrorScreen(String.format(getString(R.string.unknown_error), e.getMessage()));
     }
 
     private void fail(int resource) {
@@ -180,31 +160,12 @@ public abstract class AbstractNFCEnrollActivity extends AbstractGUIEnrollActivit
     }
 
     private void done() {
-        uiHandler.sendMessage(msg);
+        enableContinueButton();
+        findViewById(R.id.se_done_text).setVisibility(View.VISIBLE);
     }
 
-    protected void doEnroll() {
-        enroll(new Handler() {
-            @Override
-            public void handleMessage(Message msg) {
-                if (msg.obj == null) { // Success
-                    enableContinueButton();
-                    findViewById(R.id.se_done_text).setVisibility(View.VISIBLE);
-                } else {
-                    if (msg.what != 0) // .what may contain a string identifier saying what went wrong
-                        showErrorScreen(msg.what);
-                    else
-                        showErrorScreen(R.string.unknown_error);
-                }
-            }
-        });
-    }
-
-
-    protected void enroll(final Handler uiHandler) {
+    protected void enroll() {
         final String serverUrl = getEnrollmentServer();
-        this.uiHandler = uiHandler;
-        this.msg = Message.obtain();
 
         // Send our passport message to the enroll server; if it accepts, perform an issuing
         // session with the issuing API server that the enroll server returns
@@ -318,7 +279,7 @@ public abstract class AbstractNFCEnrollActivity extends AbstractGUIEnrollActivit
     /**
      * Fetch an enrollment session. When done, the specified handler will be called with the result in its .obj.
      */
-    protected void getEnrollmentSession(final Handler uiHandler) {
+    protected void getEnrollmentSession() {
         final String serverUrl = getEnrollmentServer();
 
         new AsyncTask<Void, Void, EnrollmentStartResult>() {
@@ -340,10 +301,19 @@ public abstract class AbstractNFCEnrollActivity extends AbstractGUIEnrollActivit
 
             @Override
             protected void onPostExecute(EnrollmentStartResult result) {
-                Message msg = Message.obtain();
-                msg.obj = result;
                 enrollSession = result.msg;
-                uiHandler.sendMessage(msg);
+
+                if (result.exception != null) { // Something went wrong
+                    showErrorScreen(result.errorId);
+                } else {
+                    TextView connectedTextView = (TextView) findViewById(R.id.se_connected);
+                    connectedTextView.setTextColor(ContextCompat.getColor(
+                            AbstractNFCEnrollActivity.this, R.color.irmagreen));
+                    connectedTextView.setText(R.string.se_connected_mno);
+
+                    findViewById(R.id.se_feedback_text).setVisibility(View.VISIBLE);
+                    findViewById(R.id.se_progress_bar).setVisibility(View.VISIBLE);
+                }
             }
         }.execute();
     }

@@ -66,7 +66,7 @@
     <string name="error_enroll_bacfailed">The document data you supplied seems to be wrong.</string>
     <string name="error_enroll_passportrejected">Could not establish passport validity.</string>
     <string name="error_enroll_passport_expired">You cannot enroll with an expired identity document.</string>
-    <string name="unknown_error">An unknown error occurred.</string>
+    <string name="unknown_error">The following error occurred: %1$s</string>
     <string name="enroll_enter_bac_title">Document data</string>
     <string name="enroll_enter_bac_desc">Please select the identity document you wish to use, and provide the requested data to allow the app to communicate with the document.</string>
     <string name="menu_show_log">Show log</string>
