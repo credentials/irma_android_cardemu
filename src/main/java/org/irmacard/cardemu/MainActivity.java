@@ -398,7 +398,8 @@ public class MainActivity extends Activity {
 		Collections.sort(cds, new Comparator<CredentialDescription>() {
 			@Override
 			public int compare(CredentialDescription lhs, CredentialDescription rhs) {
-				return lhs.getName().compareTo(rhs.getName());
+				return ExpandableCredentialsAdapter.getListTitle(lhs)
+						.compareTo(ExpandableCredentialsAdapter.getListTitle(rhs));
 			}
 		});
 

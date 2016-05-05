@@ -38,6 +38,10 @@ android {
         }
     }
 
+    dexOptions {
+        incremental true
+    }
+
     lintOptions {
         // BCProv references javax.naming
         // CredentialsAPI references java.awt and java.swing

@@ -121,10 +121,14 @@ public class ExpandableCredentialsAdapter extends BaseExpandableListAdapter {
         return true;
     }
 
+    public static String getListTitle(CredentialDescription cd) {
+        return cd.getIssuerDescription().getID() + " - " + cd.getName();
+    }
+
     @Override
     public View getGroupView(int credential_idx, boolean isExpanded, View convertView, ViewGroup parent) {
         CredentialDescription cd = credentials.get(credential_idx);
-        String credential_name = cd.getName();
+        String credential_name = getListTitle(cd);
         Attributes attrs = credentialAttributes.get(cd);
 
         if (convertView == null) {
