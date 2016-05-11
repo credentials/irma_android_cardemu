@@ -12,7 +12,6 @@ import android.widget.TextView;
 import org.irmacard.api.common.exceptions.ApiError;
 import org.irmacard.cardemu.BuildConfig;
 import org.irmacard.cardemu.R;
-import org.irmacard.cardemu.SecureSSLSocketFactory;
 
 /**
  * Abstract base class for enrolling, coontaining generic UI, NFC and networking logic. Things handled by this class
@@ -110,11 +109,19 @@ public abstract class AbstractGUIEnrollActivity extends Activity{
 
     protected void showErrorScreen(int errormsgId) {
         ApiError[] errors = ApiError.values();
-        if (errormsgId < errors.length)
-                if (errors[errormsgId] != ApiError.EXCEPTION) // Contains detailed message, show it
-                    showErrorScreen("Server reported: " + errors[errormsgId].getDescription());
-            else
-                showErrorScreen(getString(R.string.error_enroll_serverdied));
+        if (errormsgId < errors.length) {
+            if (errors[errormsgId] != ApiError.EXCEPTION) // Contains detailed message, show it
+                showErrorScreen("Server reported: " + errors[errormsgId].getDescription());
+            else {
+                String errormsg = getString(errormsgId);
+                if (errormsg != null && errormsg.length() > 0)
+                    showErrorScreen(errormsg);
+                else
+                    showErrorScreen(getString(R.string.error_enroll_serverdied));
+            }
+        }
+        else
+            showErrorScreen(getString(R.string.error_enroll_serverdied));
     }
 
     protected void showErrorScreen(String errormsg) {

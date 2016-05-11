@@ -30,8 +30,6 @@
 
 package org.irmacard.cardemu.httpclient;
 
-import android.content.Context;
-import android.content.res.Resources;
 import android.os.AsyncTask;
 import com.google.api.client.http.*;
 import com.google.api.client.http.javanet.NetHttpTransport;
@@ -41,9 +39,7 @@ import org.irmacard.credentials.info.DescriptionStore;
 
 import javax.net.ssl.SSLSocketFactory;
 import java.io.IOException;
-import java.io.InputStream;
 import java.lang.reflect.Type;
-import java.security.GeneralSecurityException;
 
 /**
  * Convenience class to (a)synchroniously do HTTP GET and PUT requests,
@@ -80,7 +76,6 @@ public class JsonHttpClient {
 					@Override
 					public void initialize(HttpRequest httpRequest) throws IOException {
 						httpRequest.setConnectTimeout(timeout);
-						httpRequest.setReadTimeout(timeout);
 					}
 				});
 	}
