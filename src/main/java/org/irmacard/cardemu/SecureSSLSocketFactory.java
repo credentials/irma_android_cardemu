@@ -239,8 +239,7 @@ public class SecureSSLSocketFactory extends SSLSocketFactory
 	 *
 	 * @param context Needed to load the file from the res/raw directory
 	 * @param filename Filename without .cert extension
-	 * @return A client whose SSL with our certificate pinnned. Will be null
-	 * if something went wrong.
+	 * @return A client whose SSL with our certificate pinnned
 	 */
 	public static SSLSocketFactory getPinningSocketFactory(Context context, String filename) {
 		try {
@@ -266,10 +265,10 @@ public class SecureSSLSocketFactory extends SSLSocketFactory
 			sslcontext.init(null, tmf.getTrustManagers(), null);
 
 			return new SecureSSLSocketFactory(sslcontext.getSocketFactory());
-		} catch (KeyManagementException |NoSuchAlgorithmException |KeyStoreException |CertificateException |IOException e) {
+		} catch (KeyManagementException|NoSuchAlgorithmException
+				|KeyStoreException|CertificateException|IOException e) {
 			ACRA.getErrorReporter().handleException(e);
-			e.printStackTrace();
-			return null;
+			throw new RuntimeException(e);
 		}
 	}
 }
