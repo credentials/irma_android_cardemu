@@ -23,7 +23,7 @@ import org.irmacard.api.common.exceptions.ApiErrorMessage;
 import org.irmacard.cardemu.BuildConfig;
 import org.irmacard.cardemu.R;
 import org.irmacard.cardemu.SecureSSLSocketFactory;
-import org.irmacard.cardemu.httpclient.HttpClient;
+import org.irmacard.cardemu.httpclient.JsonHttpClient;
 import org.irmacard.cardemu.httpclient.HttpClientException;
 import org.irmacard.cardemu.httpclient.HttpResultHandler;
 import org.irmacard.cardemu.protocols.Protocol;
@@ -34,6 +34,8 @@ import org.irmacard.mno.common.PassportVerificationResult;
 import org.irmacard.mno.common.PassportVerificationResultMessage;
 import org.irmacard.mno.common.util.GsonUtil;
 
+import java.io.IOException;
+import java.security.GeneralSecurityException;
 import java.security.Security;
 
 
@@ -65,7 +67,7 @@ public abstract class AbstractNFCEnrollActivity extends AbstractGUIEnrollActivit
     protected final static int MAX_TAG_READ_TIME = 40 * 1000;
 
     // Enrolling variables
-    protected HttpClient client = null;
+    protected JsonHttpClient client = null;
     private EnrollmentStartMessage enrollSession = null;
 
     protected abstract String getURLPath();
@@ -94,7 +96,7 @@ public abstract class AbstractNFCEnrollActivity extends AbstractGUIEnrollActivit
 
         settings = getSharedPreferences(SETTINGS, 0);
 
-        client = new HttpClient(GsonUtil.getGson(), new SecureSSLSocketFactory(this, "ca"));
+        client = new JsonHttpClient(GsonUtil.getGson(), new SecureSSLSocketFactory(this, "ca"));
 
         if (nfcA == null) {
             showErrorScreen(R.string.error_nfc_notsupported);
@@ -322,7 +324,7 @@ public abstract class AbstractNFCEnrollActivity extends AbstractGUIEnrollActivit
         @Override
         public void onError(HttpClientException exception) {
             try {
-                ApiErrorMessage msg = org.irmacard.api.common.util.GsonUtil.getGson().fromJson(exception.getMessage(), ApiErrorMessage.class);
+                ApiErrorMessage msg = GsonUtil.getGson().fromJson(exception.getMessage(), ApiErrorMessage.class);
                 fail(msg);
             } catch (Exception e) {
                 fail(exception);

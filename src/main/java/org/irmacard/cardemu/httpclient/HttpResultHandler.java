@@ -1,7 +1,7 @@
 package org.irmacard.cardemu.httpclient;
 
 /**
- * A generic interface for handling the result of asynchronious POSTs or GETs from {@link HttpClient}.
+ * A generic interface for handling the result of asynchronious POSTs or GETs from {@link JsonHttpClient}.
  * @param <T> Type of the object that was returned by the request
  */
 public interface HttpResultHandler<T> {

@@ -1,7 +1,7 @@
 package org.irmacard.cardemu.httpclient;
 
 /**
- * Simple generic class to store the result from using the {@link HttpClient}: either an object
+ * Simple generic class to store the result from using the {@link JsonHttpClient}: either an object
  * or a {@link HttpClientException}.
  * @param <T> Type of the object to store
  */

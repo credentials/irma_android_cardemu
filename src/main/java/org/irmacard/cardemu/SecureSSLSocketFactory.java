@@ -34,17 +34,25 @@ import android.content.Context;
 import android.content.res.Resources;
 import org.acra.ACRA;
 
-import javax.net.ssl.*;
+import javax.net.ssl.SSLContext;
+import javax.net.ssl.SSLSocket;
+import javax.net.ssl.SSLSocketFactory;
+import javax.net.ssl.TrustManagerFactory;
 import java.io.IOException;
 import java.io.InputStream;
 import java.net.InetAddress;
 import java.net.Socket;
-import java.security.*;
+import java.security.KeyManagementException;
+import java.security.KeyStore;
+import java.security.KeyStoreException;
+import java.security.NoSuchAlgorithmException;
 import java.security.cert.Certificate;
 import java.security.cert.CertificateException;
 import java.security.cert.CertificateFactory;
-import java.security.cert.X509Certificate;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Collections;
+import java.util.List;
 
 /**
  * Socket factory for configuring the cipher list
@@ -76,6 +84,10 @@ public class SecureSSLSocketFactory extends SSLSocketFactory
 	 */
 	public SecureSSLSocketFactory(Context context, String filename) {
 		this(SecureSSLSocketFactory.getPinningSocketFactory(context, filename));
+	}
+
+	public SecureSSLSocketFactory() {
+		this((SSLSocketFactory) SSLSocketFactory.getDefault());
 	}
 
 	@Override
@@ -167,7 +179,7 @@ public class SecureSSLSocketFactory extends SSLSocketFactory
 			}
 		}
 
-		List<String> aa = new ArrayList<String>();
+		List<String> aa = new ArrayList<>();
 		for (String protocol: preferredProtocols)
 			if (availableProtocols.contains(protocol))
 				aa.add(protocol);
@@ -203,7 +215,7 @@ public class SecureSSLSocketFactory extends SSLSocketFactory
 		List<String> availableCiphers = Arrays.asList(factory.getSupportedCipherSuites());
 		Collections.sort(availableCiphers);
 
-		List<String> aa = new ArrayList<String>();
+		List<String> aa = new ArrayList<>();
 		for (String cipher: preferredCiphers)
 			if (availableCiphers.contains(cipher))
 				aa.add(cipher);
@@ -235,7 +247,7 @@ public class SecureSSLSocketFactory extends SSLSocketFactory
 			Resources r = context.getResources();
 
 			// Get the certificate from the res/raw folder and parse it
-			InputStream ins = r.openRawResource(r.getIdentifier("ca", "raw", context.getPackageName()));
+			InputStream ins = r.openRawResource(r.getIdentifier(filename, "raw", context.getPackageName()));
 			Certificate ca;
 			try {
 				ca = CertificateFactory.getInstance("X.509").generateCertificate(ins);
@@ -258,39 +270,6 @@ public class SecureSSLSocketFactory extends SSLSocketFactory
 			ACRA.getErrorReporter().handleException(e);
 			e.printStackTrace();
 			return null;
-		}
-	}
-
-	/**
-	 * Trust any incoming TLS certificate. For debug purposes only, do not use!
-	 * This is permanent for all future HTTPS requests made using {@link HttpsURLConnection}.
-	 */
-	public static void trustAllCertificates() {
-		try {
-			HttpsURLConnection.setDefaultHostnameVerifier(new HostnameVerifier() {
-				@Override
-				public boolean verify(String hostname, SSLSession session) {
-					return true;
-				}
-			});
-
-			SSLContext context = SSLContext.getInstance("TLS");
-			context.init(null, new X509TrustManager[]{ new X509TrustManager() {
-				@Override
-				public void checkClientTrusted(X509Certificate[] chain, String authType) throws CertificateException {
-				}
-				@Override
-				public void checkServerTrusted(X509Certificate[] chain, String authType) throws CertificateException {
-				}
-				@Override
-				public X509Certificate[] getAcceptedIssuers() {
-					return new X509Certificate[0];
-				}
-			}}, new SecureRandom());
-
-			HttpsURLConnection.setDefaultSSLSocketFactory(context.getSocketFactory());
-		} catch (Exception e) { // should never happen
-			e.printStackTrace();
 		}
 	}
 }

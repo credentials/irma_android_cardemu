@@ -1,7 +1,7 @@
 package org.irmacard.cardemu.httpclient;
 
 /**
- * Exception class for HttpClient.
+ * Exception class for JsonHttpClient.
  */
 public class HttpClientException extends Exception {
 	private static final long serialVersionUID = -3138843561169048744L;

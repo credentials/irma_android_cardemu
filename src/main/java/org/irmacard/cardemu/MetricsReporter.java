@@ -44,7 +44,7 @@ import com.google.gson.Gson;
 import com.google.gson.JsonSyntaxException;
 import com.google.gson.reflect.TypeToken;
 import org.acra.util.Installation;
-import org.irmacard.cardemu.httpclient.HttpClient;
+import org.irmacard.cardemu.httpclient.JsonHttpClient;
 import org.irmacard.cardemu.httpclient.HttpClientException;
 import org.irmacard.metrics.common.ApplicationInformation;
 import org.irmacard.metrics.common.DataLogger;
@@ -92,7 +92,7 @@ public class MetricsReporter {
 	private Gson gson = new Gson();
 	private Type measurementsType = new TypeToken<ArrayList<Measurement>>(){}.getType(); // for Gson
 	private Type aggregratesType = new TypeToken<HashMap<String,DataLogger>>(){}.getType(); // for Gson
-	private final HttpClient client = new HttpClient(gson);
+	private final JsonHttpClient client = new JsonHttpClient(gson);
 
 	// Used to check every 10 mins if we should send something
 	private Handler handler = new Handler();
@@ -171,6 +171,9 @@ public class MetricsReporter {
 	 * metricToken member. If not, that member will stay null.
 	 */
 	private void getNewMetricToken() {
+		if (metricServer.length() == 0)
+			return;
+
 		new AsyncTask<Void,Void,SessionToken>() {
 			@Override
 			protected SessionToken doInBackground(Void... params) {
@@ -266,6 +269,9 @@ public class MetricsReporter {
 	}
 
 	private void sendAggregrates() {
+		if (metricServer.length() == 0)
+			return;
+
 		new AsyncTask<Void,Void,Boolean>() {
 			@Override
 			protected Boolean doInBackground(Void... params) {
@@ -295,6 +301,9 @@ public class MetricsReporter {
 	}
 
 	private void sendMeasurements() {
+		if (metricServer.length() == 0)
+			return;
+
 		new AsyncTask<Void,Void,Boolean>() {
 			@Override
 			protected Boolean doInBackground(Void... params) {

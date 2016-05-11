@@ -37,8 +37,6 @@ import org.acra.ACRA;
 import org.acra.ACRAConfiguration;
 import org.acra.ReportField;
 import org.acra.annotation.ReportsCrashes;
-import org.apache.http.client.HttpClient;
-import org.apache.http.impl.client.DefaultHttpClient;
 import org.irmacard.android.util.credentials.AndroidFileReader;
 import org.irmacard.android.util.credentials.StoreManager;
 import org.irmacard.api.common.util.GsonUtil;
@@ -97,11 +95,10 @@ public class IRMApp extends Application {
 
         // Setup the DescriptionStore and IdemixKeyStore
         FileReader reader = new AndroidFileReader(this);
-        HttpClient client = new DefaultHttpClient();
         try {
             storeManager = new StoreManager(this);
-            DescriptionStore.initialize(new DescriptionStoreDeserializer(reader), storeManager, client);
-            IdemixKeyStore.initialize(new IdemixKeyStoreDeserializer(reader), storeManager, client);
+            DescriptionStore.initialize(new DescriptionStoreDeserializer(reader), storeManager, new SecureSSLSocketFactory());
+            IdemixKeyStore.initialize(new IdemixKeyStoreDeserializer(reader), storeManager);
         } catch (InfoException e) { // Can't do anything in this case
             throw new RuntimeException(e);
         }

@@ -11,7 +11,7 @@ import org.irmacard.api.common.IssuingRequest;
 import org.irmacard.api.common.exceptions.ApiErrorMessage;
 import org.irmacard.api.common.util.GsonUtil;
 import org.irmacard.cardemu.CredentialManager;
-import org.irmacard.cardemu.httpclient.HttpClient;
+import org.irmacard.cardemu.httpclient.JsonHttpClient;
 import org.irmacard.cardemu.httpclient.HttpClientException;
 import org.irmacard.cardemu.httpclient.HttpResultHandler;
 import org.irmacard.credentials.CredentialsException;
@@ -122,7 +122,7 @@ public class JsonProtocol extends Protocol {
 
 		handler.onStatusUpdate(ProtocolHandler.Action.ISSUING, ProtocolHandler.Status.COMMUNICATING);
 		final String server = this.server;
-		final HttpClient client = new HttpClient(GsonUtil.getGson());
+		final JsonHttpClient client = new JsonHttpClient(GsonUtil.getGson());
 
 		// Get the issuance request
 		client.get(IssuingRequest.class, server, new JsonResultHandler<IssuingRequest>() {
@@ -148,7 +148,7 @@ public class JsonProtocol extends Protocol {
 
 	/**
 	 * Given an {@link IssuingRequest}, compute the first issuing message and post it to the server
-	 * (using the specified {@link HttpClient}). If the server returns corresponding CL signatures,
+	 * (using the specified {@link JsonHttpClient}). If the server returns corresponding CL signatures,
 	 * construct and save the new Idemix credentials.
 	 */
 	@Override
@@ -156,7 +156,7 @@ public class JsonProtocol extends Protocol {
 		handler.onStatusUpdate(ProtocolHandler.Action.ISSUING, ProtocolHandler.Status.COMMUNICATING);
 		Log.i(TAG, "Posting issuing commitments");
 
-		final HttpClient client = new HttpClient(GsonUtil.getGson());
+		final JsonHttpClient client = new JsonHttpClient(GsonUtil.getGson());
 
 		// Increase timeout for this step as issuance server might take longer for many creds
 		client.setTimeout(15000);
@@ -194,7 +194,7 @@ public class JsonProtocol extends Protocol {
 		handler.onStatusUpdate(ProtocolHandler.Action.DISCLOSING, ProtocolHandler.Status.COMMUNICATING);
 		Log.i(TAG, "Retrieving disclosure request: " + server);
 
-		HttpClient client = new HttpClient(GsonUtil.getGson());
+		JsonHttpClient client = new JsonHttpClient(GsonUtil.getGson());
 
 		// Get the disclosure request
 		client.get(DisclosureProofRequest.class, server, new JsonResultHandler<DisclosureProofRequest>() {
@@ -239,7 +239,7 @@ public class JsonProtocol extends Protocol {
 			return;
 		}
 
-		HttpClient client = new HttpClient(GsonUtil.getGson());
+		JsonHttpClient client = new JsonHttpClient(GsonUtil.getGson());
 		client.post(DisclosureProofResult.Status.class, server + "proofs", proofs,
 			new JsonResultHandler<DisclosureProofResult.Status>() {
 			@Override public void onSuccess(DisclosureProofResult.Status result) {
@@ -264,7 +264,7 @@ public class JsonProtocol extends Protocol {
 		new AsyncTask<String,Void,Void>() {
 			@Override protected Void doInBackground(String... params) {
 				try {
-					new HttpClient(GsonUtil.getGson()).doDelete(params[0]);
+					new JsonHttpClient(GsonUtil.getGson()).doDelete(params[0]);
 				} catch (HttpClientException e) {
 					e.printStackTrace();
 				}

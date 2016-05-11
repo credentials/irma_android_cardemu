@@ -30,16 +30,20 @@
 
 package org.irmacard.cardemu.httpclient;
 
+import android.content.Context;
+import android.content.res.Resources;
 import android.os.AsyncTask;
+import com.google.api.client.http.*;
+import com.google.api.client.http.javanet.NetHttpTransport;
 import com.google.gson.Gson;
-import com.google.gson.JsonSyntaxException;
+import com.google.gson.JsonParseException;
+import org.irmacard.credentials.info.DescriptionStore;
 
-import javax.net.ssl.HttpsURLConnection;
 import javax.net.ssl.SSLSocketFactory;
-import java.io.*;
+import java.io.IOException;
+import java.io.InputStream;
 import java.lang.reflect.Type;
-import java.net.HttpURLConnection;
-import java.net.URL;
+import java.security.GeneralSecurityException;
 
 /**
  * Convenience class to (a)synchroniously do HTTP GET and PUT requests,
@@ -47,28 +51,38 @@ import java.net.URL;
  * NOTE: the synchronious methods of this class must not be used on the main thread,
  * as otherwise a NetworkOnMainThreadException will occur.
  */
-public class HttpClient {
+public class JsonHttpClient {
 	private Gson gson;
-	private SSLSocketFactory socketFactory;
 	private int timeout = 5000;
+	private HttpRequestFactory requestFactory;
 
 	/**
-	 * Instantiate a new HttpClient.
+	 * Instantiate a new JsonHttpClient.
 	 *
 	 * @param gson The Gson object that will handle (de)serialization.
 	 */
-	public HttpClient(Gson gson) {
+	public JsonHttpClient(Gson gson) {
 		this(gson, null);
 	}
 
 	/**
-	 * Instantiate a new HttpClient.
+	 * Instantiate a new JsonHttpClient.
 	 * @param gson The Gson object that will handle (de)serialization.
 	 * @param socketFactory The SSLSocketFactory to use.
 	 */
-	public HttpClient(Gson gson, SSLSocketFactory socketFactory) {
+	public JsonHttpClient(Gson gson, SSLSocketFactory socketFactory) {
 		this.gson = gson;
-		this.socketFactory = socketFactory;
+
+		requestFactory = new NetHttpTransport.Builder()
+				.setSslSocketFactory(socketFactory)
+				.build()
+				.createRequestFactory(new HttpRequestInitializer() {
+					@Override
+					public void initialize(HttpRequest httpRequest) throws IOException {
+						httpRequest.setConnectTimeout(timeout);
+						httpRequest.setReadTimeout(timeout);
+					}
+				});
 	}
 
 	public void setTimeout(int timeout) {
@@ -171,62 +185,27 @@ public class HttpClient {
 	 */
 	private <T> T doRequest(Type type, String url, Object object, String authorization, String method)
 	throws HttpClientException {
-		HttpURLConnection c = null;
+		HttpContent post = null;
+		if (method.equals("POST"))
+			post = new ByteArrayContent("application/json;charset=utf-8", gson.toJson(object).getBytes());
 
+		HttpResponse response = null;
 		try {
-			URL u = new URL(url);
-			c = (HttpURLConnection) u.openConnection();
-			if (url.startsWith("https") && socketFactory != null)
-				((HttpsURLConnection) c).setSSLSocketFactory(socketFactory);
-			c.setRequestMethod(method);
-			c.setUseCaches(false);
-			c.setConnectTimeout(timeout);
-			c.setReadTimeout(timeout);
-			c.setDoInput(true);
+			HttpRequest request = requestFactory.buildRequest(method, new GenericUrl(url), post);
+			if (authorization != null && authorization.length() > 0)
+				request.getHeaders().setAuthorization(authorization);
 
-			byte[] objectBytes = new byte[] {};
-
-			if (method.equals("POST")) {
-				objectBytes = gson.toJson(object).getBytes();
-				c.setDoOutput(true);
-				// See http://www.evanjbrunner.info/posts/json-requests-with-httpurlconnection-in-android/
-				c.setFixedLengthStreamingMode(objectBytes.length);
-				c.setRequestProperty("Content-Type", "application/json;charset=utf-8");
-			}
-
-			if (authorization.length() > 0) {
-				c.setRequestProperty("Authorization", authorization);
-			}
-
-			c.connect();
-
-			if (method.equals("POST")) {
-				OutputStream os = new BufferedOutputStream(c.getOutputStream());
-				os.write(objectBytes);
-				os.flush();
-			}
-
-			int status = c.getResponseCode();
-			switch (status) {
-				case 200:
-				case 201:
-				case 204:
-					return gson.fromJson(inputStreamToString(c.getInputStream()), type);
-				default:
-					String error;
-					try {
-						error = inputStreamToString(c.getErrorStream());
-					} catch (Exception e) {
-						error = "";
-					}
-					throw new HttpClientException(status, error);
-			}
-		} catch (JsonSyntaxException|IOException e) { // IOException includes MalformedURLException
+			response = request.execute();
+			return gson.fromJson(DescriptionStore.inputStreamToString(response.getContent()), type);
+		} catch (HttpResponseException e) {
+			throw new HttpClientException(e.getStatusCode(), e.getMessage());
+		} catch (IOException|JsonParseException e) {
 			throw new HttpClientException(e);
 		} finally {
-			if (c != null) {
-				c.disconnect();
-			}
+			try {
+				if (response != null)
+					response.disconnect();
+			} catch (IOException e) { /* ignore */ }
 		}
 	}
 
@@ -276,17 +255,5 @@ public class HttpClient {
 					handler.onError(result.getException());
 			}
 		}.execute();
-	}
-
-	public static String inputStreamToString(InputStream is) throws IOException {
-		BufferedReader br = new BufferedReader(new InputStreamReader(is));
-		StringBuilder sb = new StringBuilder();
-		String line;
-		while ((line = br.readLine()) != null)
-			sb.append(line).append("\n");
-
-		br.close();
-		is.close();
-		return sb.toString();
 	}
 }
