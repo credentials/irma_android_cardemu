@@ -45,9 +45,9 @@ import org.irmacard.mno.common.EnrollmentStartMessage;
 import org.irmacard.mno.common.PassportDataMessage;
 import org.jmrtd.BACKey;
 import org.jmrtd.PassportService;
-import org.jmrtd.lds.DG14File;
-import org.jmrtd.lds.DG15File;
-import org.jmrtd.lds.DG1File;
+import org.jmrtd.lds.icao.DG14File;
+import org.jmrtd.lds.icao.DG15File;
+import org.jmrtd.lds.icao.DG1File;
 import org.jmrtd.lds.SODFile;
 
 import java.io.IOException;
@@ -222,7 +222,7 @@ public class PassportEnrollActivity extends AbstractNFCEnrollActivity {
 					// The doAA() method does not use its first three arguments, it only passes the challenge
 					// on to another functio within JMRTD.
 					if (pdm.getResponse() == null) {
-						pdm.setResponse(passportService.doAA(null, null, null, pdm.getChallenge()));
+						pdm.setResponse(passportService.doAA(null, null, null, pdm.getChallenge()).getResponse());
 						Log.i(TAG, "PassportEnrollActivity: doing AA");
 						publishProgress();
 					}

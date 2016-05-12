@@ -23,9 +23,9 @@ import org.irmacard.api.common.exceptions.ApiErrorMessage;
 import org.irmacard.cardemu.BuildConfig;
 import org.irmacard.cardemu.R;
 import org.irmacard.cardemu.SecureSSLSocketFactory;
-import org.irmacard.cardemu.httpclient.JsonHttpClient;
 import org.irmacard.cardemu.httpclient.HttpClientException;
 import org.irmacard.cardemu.httpclient.HttpResultHandler;
+import org.irmacard.cardemu.httpclient.JsonHttpClient;
 import org.irmacard.cardemu.protocols.Protocol;
 import org.irmacard.cardemu.protocols.ProtocolHandler;
 import org.irmacard.mno.common.DocumentDataMessage;
@@ -34,8 +34,6 @@ import org.irmacard.mno.common.PassportVerificationResult;
 import org.irmacard.mno.common.PassportVerificationResultMessage;
 import org.irmacard.mno.common.util.GsonUtil;
 
-import java.io.IOException;
-import java.security.GeneralSecurityException;
 import java.security.Security;
 
 

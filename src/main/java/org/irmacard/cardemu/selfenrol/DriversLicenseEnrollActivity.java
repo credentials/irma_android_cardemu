@@ -16,8 +16,8 @@ import org.irmacard.mno.common.EDLDataMessage;
 import org.irmacard.mno.common.EnrollmentStartMessage;
 import org.jmrtd.PassportService;
 import org.jmrtd.Util;
-import org.jmrtd.lds.DG14File;
-import org.jmrtd.lds.DG15File;
+import org.jmrtd.lds.icao.DG14File;
+import org.jmrtd.lds.icao.DG15File;
 import org.jmrtd.lds.SODFile;
 
 import javax.crypto.SecretKey;
@@ -265,7 +265,7 @@ public class DriversLicenseEnrollActivity extends AbstractNFCEnrollActivity {
                     // The doAA() method does not use its first three arguments, it only passes the challenge
                     // on to another functio within JMRTD.
                     if (eDLMessage.getResponse() == null) {
-                        eDLMessage.setResponse(passportService.doAA(null, null, null, eDLMessage.getChallenge()));
+                        eDLMessage.setResponse(passportService.doAA(null, null, null, eDLMessage.getChallenge()).getResponse());
                         Log.i(TAG, "doing AA");
                         publishProgress();
                     }
