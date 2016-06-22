@@ -196,8 +196,8 @@ public class MainActivity extends Activity {
 			public boolean onItemLongClick(AdapterView<?> adapterView, View view, int i, long id) {
 				try {
 					CredentialDescription cd = (CredentialDescription) adapterView.getItemAtPosition(i);
-					Log.i(TAG, "Credential with index " + i + " containing credential " + cd.getId() + " was " +
-							"longclicked");
+					Log.i(TAG, "Credential with index " + i + " containing credential "
+							+ cd.getIdentifier().toString() + " was " + "longclicked");
 
 					CredentialPackage credential = new CredentialPackage(cd, credentialListAdapter.getAttributes(cd));
 					Intent detailIntent = new Intent(MainActivity.this, CredentialDetailActivity.class);

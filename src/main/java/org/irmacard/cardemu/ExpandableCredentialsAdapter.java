@@ -103,7 +103,7 @@ public class ExpandableCredentialsAdapter extends BaseExpandableListAdapter {
 
     @Override
     public long getGroupId(int credential_idx) {
-        return credentials.get(credential_idx).getId();
+        return credentials.get(credential_idx).getIdentifier().hashCode();
     }
 
     @Override
