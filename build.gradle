@@ -78,7 +78,7 @@ if (project.file('signingkeys.gradle').exists()) { apply from: 'signingkeys.grad
 dependencies {
     // Google stuff
     compile 'com.android.support:support-v4:23+'
-    compile 'com.android.support:support-annotations:19.1.0'
+    compile 'com.android.support:support-annotations:23+'
     compile 'com.google.code.gson:gson:2.2.2'
 
     // zxing QR code libraries
@@ -95,7 +95,7 @@ dependencies {
     compile 'net.sf.scuba:scuba-sc-android:0.0.10'
 
     // Our stuff
-    compile "org.irmacard.android:irma_android_library:0.13.6"
+    compile "org.irmacard.android:irma_android_library:0.13.7"
     compile 'org.irmacard.metrics:irma_metrics_common:0.1.1'
     compile 'org.irmacard.mno:irma_mno_common:0.2.1'
 }
