@@ -27,21 +27,6 @@
         android:label="@string/app_name"
         android:theme="@style/AppTheme"
         tools:replace="android:icon">
-        <activity
-            android:name=".selfenrol.PassportEnrollActivity">
-        </activity>
-
-        <activity
-            android:name=".disclosuredialog.DisclosureInformationActivity"
-            android:label="Disclosure Information" />
-
-        <activity
-            android:name=".selfenrol.DriversLicenseEnrollActivity">
-        </activity>
-
-        <activity
-            android:name=".selfenrol.EnrollSelectActivity">
-        </activity>
 
         <activity
             android:name="org.irmacard.cardemu.MainActivity"
@@ -66,6 +51,20 @@
                 <data android:scheme="cardemu"/>
             </intent-filter>
         </activity>
+
+        <activity
+            android:name=".selfenrol.EnrollSelectActivity" />
+
+        <activity
+            android:name=".selfenrol.PassportEnrollActivity" />
+
+        <activity
+            android:name=".selfenrol.DriversLicenseEnrollActivity" />
+
+        <activity
+            android:name=".disclosuredialog.DisclosureInformationActivity"
+            android:label="Disclosure Information" />
+
 
         <activity
             android:name="org.irmacard.android.util.credentialdetails.CredentialDetailActivity"
