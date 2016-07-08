@@ -265,6 +265,7 @@ public class SessionDialogFragment extends DialogFragment {
 						public void onClick(View v) {
 							Intent intent = new Intent(getActivity(), DisclosureInformationActivity.class);
 							intent.putExtra("disjunctions", GsonUtil.getGson().toJson(disjunctions));
+							intent.putExtra("issuing", issuing);
 							startActivity(intent);
 						}
 					});

@@ -34,6 +34,7 @@ import android.app.Activity;
 import android.app.FragmentTransaction;
 import android.os.Bundle;
 import android.view.View;
+import android.widget.TextView;
 import org.irmacard.mno.common.util.GsonUtil;
 import org.irmacard.cardemu.R;
 import org.irmacard.api.common.AttributeDisjunction;
@@ -53,6 +54,12 @@ public class DisclosureInformationActivity extends Activity {
 				getIntent().getStringExtra("disjunctions"), AttributeDisjunctionList.class);
 
 		setContentView(R.layout.activity_disclose_info);
+
+		TextView info = (TextView) findViewById(R.id.disjunction_helptext);
+		if (getIntent().getBooleanExtra("issuing", false))
+			info.setText(R.string.disclosure_issuance_info);
+		else
+			info.setText(R.string.disclosure_info);
 
 		if (savedInstanceState != null)
 			return;

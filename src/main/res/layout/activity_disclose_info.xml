@@ -13,8 +13,8 @@
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:textAppearance="?android:attr/textAppearanceSmall"
-                android:text="For each of the categories listed below, the verifier accepts one of the following attributes. The icons indicate if you do or do not have this attribute."
-                android:id="@+id/disjunction_content"
+                android:text="@string/disclosure_info"
+                android:id="@+id/disjunction_helptext"
                 android:layout_marginBottom="10dp"
                 android:textSize="14sp"/>
 

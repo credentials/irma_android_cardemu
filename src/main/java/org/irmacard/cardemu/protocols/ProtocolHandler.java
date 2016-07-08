@@ -153,6 +153,7 @@ public abstract class ProtocolHandler implements SessionDialogFragment.SessionDi
 						onCancelled(action);
 						Intent intent = new Intent(activity, DisclosureInformationActivity.class);
 						intent.putExtra("disjunctions", GsonUtil.getGson().toJson(request.getContent()));
+						intent.putExtra("issuing", action == Action.ISSUING);
 						activity.startActivity(intent);
 					}
 				});
