@@ -61,11 +61,11 @@ public class DisjunctionFragment extends Fragment {
 		for (AttributeIdentifier ai : disjunction) {
 			View view = inflater.inflate(R.layout.disjunction_item, container, false);
 
-			String text = ai.getIssuerName() + " - ";
+			String text = ai.getIssuerName() + " - " + ai.getCredentialName();
 			if (ai.isCredential())
-				text += ai.getCredentialName() + " (possession of credential)";
+				text += " (possession of credential)";
 			else
-				text += ai.getAttributeName();
+				text += " - " + ai.getAttributeName();
 			if (disjunction.hasValues())
 				text += ": " + disjunction.getValues().get(ai);
 
