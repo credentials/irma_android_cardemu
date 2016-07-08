@@ -1,5 +1,0 @@
-includeFlat 'credentials_api'
-includeFlat 'credentials_idemix'
-includeFlat 'irma_api_common'
-includeFlat 'irma_mno_common'
-includeFlat 'irma_android_library'
