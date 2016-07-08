@@ -61,15 +61,17 @@ public class DisjunctionFragment extends Fragment {
 		for (AttributeIdentifier ai : disjunction) {
 			View view = inflater.inflate(R.layout.disjunction_item, container, false);
 
-			TextView textView = (TextView) view.findViewById(R.id.disjunction_title);
-			String text;
+			String text = ai.getIssuerName() + " - ";
 			if (ai.isCredential())
-				text = ai.getIssuerName() + " - " + ai.getCredentialName() + " (possession of credential)";
+				text += ai.getCredentialName() + " (possession of credential)";
 			else
-				text = ai.getIssuerName() + " - " + ai.getAttributeName();
-			textView.setText(text);
+				text += ai.getAttributeName();
+			if (disjunction.hasValues())
+				text += ": " + disjunction.getValues().get(ai);
 
-			if (!CredentialManager.contains(ai)) {
+			((TextView) view.findViewById(R.id.disjunction_title)).setText(text);
+
+			if (!CredentialManager.getCandidates(disjunction).containsKey(ai)) {
 				ImageView image = (ImageView) view.findViewById(R.id.disjunction_icon);
 				image.setImageResource(R.drawable.irma_icon_missing_064px);
 			}
