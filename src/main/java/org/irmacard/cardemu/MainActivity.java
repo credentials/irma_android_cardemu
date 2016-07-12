@@ -41,6 +41,7 @@ import android.content.pm.PackageManager;
 import android.net.Uri;
 import android.os.Bundle;
 import android.os.CountDownTimer;
+import android.support.annotation.NonNull;
 import android.support.v4.app.ActivityCompat;
 import android.support.v4.content.ContextCompat;
 import android.util.Log;
@@ -217,6 +218,7 @@ public class MainActivity extends Activity {
 		settings = getSharedPreferences(SETTINGS, 0);
 	}
 
+	@SuppressWarnings("unused")
 	public int getState() {
 		return activityState;
 	}
@@ -498,7 +500,8 @@ public class MainActivity extends Activity {
 	}
 
 	@Override
-	public void onRequestPermissionsResult(int requestCode, String[] permissions, int[] grantResults) {
+	public void onRequestPermissionsResult(int requestCode, @NonNull String[] permissions,
+	                                       @NonNull int[] grantResults) {
 		switch (requestCode) {
 			case PERMISSION_REQUEST_CAMERA:
 				if (grantResults.length > 0
