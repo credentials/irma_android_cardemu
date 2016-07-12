@@ -42,6 +42,7 @@ import org.irmacard.credentials.CredentialsException;
 import org.irmacard.credentials.idemix.CredentialBuilder;
 import org.irmacard.credentials.idemix.IdemixCredential;
 import org.irmacard.credentials.idemix.IdemixSystemParameters;
+import org.irmacard.credentials.idemix.IdemixSystemParameters1024;
 import org.irmacard.credentials.idemix.info.IdemixKeyStore;
 import org.irmacard.credentials.idemix.messages.IssueCommitmentMessage;
 import org.irmacard.credentials.idemix.messages.IssueSignatureMessage;
@@ -423,7 +424,9 @@ public class CredentialManager {
 	private static BigInteger getSecretKey() {
 		if (secretKey == null) {
 			if (credentials == null || credentials.size() == 0)
-				secretKey = new BigInteger(new IdemixSystemParameters().l_m, new SecureRandom());
+				// Our secret key will have to fit as an attribute in all credentials,
+				// so we should have it be as large as the smallest maximum attribute size.
+				secretKey = new BigInteger(new IdemixSystemParameters1024().get_l_m(), new SecureRandom());
 			else
 				secretKey = credentials.values().iterator().next().getAttribute(0);
 		}
@@ -447,8 +450,7 @@ public class CredentialManager {
 		// Initialize issuing state
 		credentialBuilders = new ArrayList<>(request.getCredentials().size());
 
-		// TODO This reuses the same nonce for all credentials: not good once pk sizes start to vary
-		BigInteger nonce2 = CredentialBuilder.createReceiverNonce(request.getCredentials().get(0).getPublicKey());
+		BigInteger nonce2 = CredentialBuilder.createReceiverNonce(request.getLargestParameters());
 
 		// Construct the commitment proofs
 		ProofListBuilder proofsBuilder = new ProofListBuilder(request.getContext(), request.getNonce());
