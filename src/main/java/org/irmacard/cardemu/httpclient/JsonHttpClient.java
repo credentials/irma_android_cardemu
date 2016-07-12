@@ -76,6 +76,7 @@ public class JsonHttpClient {
 					@Override
 					public void initialize(HttpRequest httpRequest) throws IOException {
 						httpRequest.setConnectTimeout(timeout);
+						httpRequest.setReadTimeout(timeout);
 					}
 				});
 	}

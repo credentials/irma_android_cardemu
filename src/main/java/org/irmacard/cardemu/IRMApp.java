@@ -32,6 +32,7 @@ package org.irmacard.cardemu;
 
 import android.app.Application;
 import android.content.Intent;
+import android.os.Build;
 import android.os.Bundle;
 import org.acra.ACRA;
 import org.acra.ACRAConfiguration;
@@ -44,6 +45,8 @@ import org.irmacard.credentials.idemix.info.IdemixKeyStore;
 import org.irmacard.credentials.idemix.info.IdemixKeyStoreDeserializer;
 import org.irmacard.credentials.info.*;
 import org.irmacard.credentials.util.log.LogEntry;
+
+import javax.net.ssl.SSLSocketFactory;
 
 @ReportsCrashes(
         formUri = BuildConfig.acraServer,
@@ -97,7 +100,10 @@ public class IRMApp extends Application {
         FileReader reader = new AndroidFileReader(this);
         try {
             storeManager = new StoreManager(this);
-            DescriptionStore.initialize(new DescriptionStoreDeserializer(reader), storeManager, new SecureSSLSocketFactory());
+            SSLSocketFactory socketFactory = null;
+            if (Build.VERSION.SDK_INT >= 21) // 20 = 4.4 Kitkat, 21 = 5.0 Lollipop
+                socketFactory = new SecureSSLSocketFactory();
+            DescriptionStore.initialize(new DescriptionStoreDeserializer(reader), storeManager, socketFactory);
             IdemixKeyStore.initialize(new IdemixKeyStoreDeserializer(reader), storeManager);
         } catch (InfoException e) { // Can't do anything in this case
             throw new RuntimeException(e);
