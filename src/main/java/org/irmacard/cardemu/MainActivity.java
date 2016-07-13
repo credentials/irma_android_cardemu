@@ -41,6 +41,7 @@ import android.content.pm.PackageManager;
 import android.net.Uri;
 import android.os.Bundle;
 import android.os.CountDownTimer;
+import android.os.Process;
 import android.support.annotation.NonNull;
 import android.support.v4.app.ActivityCompat;
 import android.support.v4.content.ContextCompat;
@@ -64,6 +65,7 @@ import org.irmacard.cardemu.protocols.Protocol;
 import org.irmacard.cardemu.protocols.ProtocolHandler;
 import org.irmacard.cardemu.selfenrol.EnrollSelectActivity;
 import org.irmacard.credentials.Attributes;
+import org.irmacard.credentials.CredentialsException;
 import org.irmacard.credentials.info.CredentialDescription;
 import org.irmacard.credentials.util.log.LogEntry;
 
@@ -203,8 +205,12 @@ public class MainActivity extends Activity {
 	@Override
 	protected void onCreate(Bundle savedInstanceState) {
 		super.onCreate(savedInstanceState);
-
 		Log.i(TAG, "onCreate() called");
+
+		// Set to true if IRMApp did not manage to deserialize our credentials
+		// Since an Application cannot show an AlertDialog, we do it for it.
+		if (IRMApp.attributeDeserializationError)
+			showApplicationError();
 
 		// Disable screenshots in release builds
 		if (!BuildConfig.DEBUG) {
@@ -247,6 +253,32 @@ public class MainActivity extends Activity {
 		clearFeedback();
 
 		settings = getSharedPreferences(SETTINGS, 0);
+	}
+
+	private void showApplicationError() {
+		new AlertDialog.Builder(this)
+				.setIcon(R.drawable.irma_icon_missing_520px)
+				.setTitle(R.string.cantreadattributes)
+				.setMessage(R.string.cantreadattributes_long)
+				.setNeutralButton(R.string.se_continue, new DialogInterface.OnClickListener() {
+					@Override public void onClick(DialogInterface dialogInterface, int i) {
+						settings.edit().remove(CredentialManager.CREDENTIAL_STORAGE).apply();
+						try {
+							CredentialManager.init(settings);
+							updateCredentialList();
+						} catch (CredentialsException e1) {
+							// This couldn't possibly happen, but if it does, let's be safe
+							throw new RuntimeException(e1);
+						}
+					}
+				})
+				.setPositiveButton(R.string.exit, new DialogInterface.OnClickListener() {
+					@Override public void onClick(DialogInterface dialogInterface, int i) {
+						Process.killProcess(Process.myPid());
+						System.exit(1);
+					}
+				})
+				.show();
 	}
 
 	@SuppressWarnings("unused")

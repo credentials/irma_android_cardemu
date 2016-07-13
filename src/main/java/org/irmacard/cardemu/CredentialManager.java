@@ -76,13 +76,13 @@ public class CredentialManager {
 	private static IdemixKeyStore keyStore;
 
 	private static final String TAG = "CredentialManager";
-	private static final String CREDENTIAL_STORAGE = "credentials";
+	public static final String CREDENTIAL_STORAGE = "credentials";
 	private static final String LOG_STORAGE = "logs";
 
 	// Issuing state
 	private static List<CredentialBuilder> credentialBuilders;
 
-	public static void init(SharedPreferences s) {
+	public static void init(SharedPreferences s) throws CredentialsException {
 		settings = s;
 
 		descriptionStore = DescriptionStore.getInstance();
@@ -110,7 +110,7 @@ public class CredentialManager {
 	/**
 	 * Loads the credentials and logs from storage.
 	 */
-	public static void load() {
+	public static void load() throws CredentialsException {
 		Log.i(TAG, "Loading credentials");
 
 		Gson gson = GsonUtil.getGson();
@@ -121,7 +121,8 @@ public class CredentialManager {
 			try {
 				credentials = gson.fromJson(credentialsJson, credentialsType);
 			} catch (Exception e) {
-				credentials = new HashMap<>();
+				// There are serialized credentials but we can't read them? That's bad, bail out
+				throw new CredentialsException(e);
 			}
 		}
 		if (credentials == null) {

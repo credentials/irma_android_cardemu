@@ -31,9 +31,7 @@
 package org.irmacard.cardemu;
 
 import android.app.Application;
-import android.content.Intent;
 import android.os.Build;
-import android.os.Bundle;
 import org.acra.ACRA;
 import org.acra.ACRAConfiguration;
 import org.acra.ReportField;
@@ -41,9 +39,13 @@ import org.acra.annotation.ReportsCrashes;
 import org.irmacard.android.util.credentials.AndroidFileReader;
 import org.irmacard.android.util.credentials.StoreManager;
 import org.irmacard.api.common.util.GsonUtil;
+import org.irmacard.credentials.CredentialsException;
 import org.irmacard.credentials.idemix.info.IdemixKeyStore;
 import org.irmacard.credentials.idemix.info.IdemixKeyStoreDeserializer;
-import org.irmacard.credentials.info.*;
+import org.irmacard.credentials.info.DescriptionStore;
+import org.irmacard.credentials.info.DescriptionStoreDeserializer;
+import org.irmacard.credentials.info.FileReader;
+import org.irmacard.credentials.info.InfoException;
 import org.irmacard.credentials.util.log.LogEntry;
 
 import javax.net.ssl.SSLSocketFactory;
@@ -77,6 +79,8 @@ import javax.net.ssl.SSLSocketFactory;
 public class IRMApp extends Application {
     private final static long reportTimeInterval = 1000*60*60*24; // 1 day in milliseconds
     private static StoreManager storeManager;
+
+    public static boolean attributeDeserializationError = false;
 
     @Override
     public void onCreate() {
@@ -112,7 +116,15 @@ public class IRMApp extends Application {
         GsonUtil.addTypeAdapter(LogEntry.class, new LogEntrySerializer());
 
         MetricsReporter.init(this, BuildConfig.metricServer, reportTimeInterval);
-        CredentialManager.init(getSharedPreferences("cardemu", 0));
+
+        try {
+            CredentialManager.init(getSharedPreferences("cardemu", 0));
+        } catch (final CredentialsException e) {
+            ACRA.getErrorReporter().handleException(e);
+            // Since AlertDialog.Builder requires an activity as argument we can't show
+            // any error here, so we use this boolean to inform MainActivity.
+            attributeDeserializationError = true;
+        }
     }
 
     public static StoreManager getStoreManager() {

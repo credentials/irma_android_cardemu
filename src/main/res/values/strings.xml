@@ -113,4 +113,8 @@
     <string name="dismiss">Dismiss</string>
     <string name="techinfo">Technical info</string>
     <string name="lessinfo">Less info</string>
+    <string name="exit">Exit</string>
+    <string name="cantreadattributes">Could not read attributes</string>
+    <string name="cantreadattributes_long">A problem occurred when attempting to read your attributes from storage. In order to prevent your attributes from being lost, you should exit the app now. If you press continue, your attributes will be lost.
+    </string>
 </resources>
