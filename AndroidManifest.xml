@@ -71,38 +71,21 @@
 
         <activity
             android:name="org.irmacard.android.util.credentialdetails.CredentialDetailActivity"
-            android:hardwareAccelerated="false"
+            android:parentActivityName=".MainActivity"
             android:label="@string/title_credential_detail"
-            android:screenOrientation="portrait" >
-            <meta-data
-                android:name="android.support.PARENT_ACTIVITY"
-                android:value=".MainActivity" />
-            <intent-filter>
-                <action android:name="android.nfc.action.TECH_DISCOVERED" />
-            </intent-filter>
-        </activity>
+            android:screenOrientation="portrait" />
 
         <activity
             android:name="org.irmacard.android.util.cardlog.LogActivity"
-            android:hardwareAccelerated="false"
+            android:parentActivityName=".MainActivity"
             android:label="@string/title_log"
-            android:screenOrientation="portrait" >
-            <meta-data
-                android:name="android.support.PARENT_ACTIVITY"
-                android:value=".MainActivity" />
-            <intent-filter>
-                <action android:name="android.nfc.action.TECH_DISCOVERED" />
-            </intent-filter>
-        </activity>
+            android:screenOrientation="portrait" />
 
         <activity
-            android:name="org.irmacard.cardemu.preferences.IRMAPreferenceActivity"
+            android:name=".preferences.IRMAPreferenceActivity"
             android:screenOrientation="portrait"
             android:parentActivityName=".MainActivity"
             android:label="@string/preferences">
-            <meta-data
-                android:name="android.support.PARENT_ACTIVITY"
-                android:value="org.irmacard.cardemu.MainActivity" />
             <intent-filter>
                 <action android:name="android.intent.action.VIEW" />
                 <category android:name="android.intent.category.DEFAULT" />
@@ -114,10 +97,6 @@
         <activity
             android:name=".SchemeManagerDetailActivity"
             android:label="@string/title_activity_scheme_manager_detail"
-            android:parentActivityName=".preferences.IRMAPreferenceActivity">
-            <meta-data
-                android:name="android.support.PARENT_ACTIVITY"
-                android:value="org.irmacard.cardemu.MainActivity" />
-        </activity>
+            android:parentActivityName=".preferences.IRMAPreferenceActivity" />
     </application>
 </manifest>
