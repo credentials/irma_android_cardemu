@@ -2,13 +2,11 @@ package org.irmacard.cardemu;
 
 import android.app.Activity;
 import android.os.Bundle;
-import android.view.Menu;
 import android.view.MenuItem;
 import android.view.View;
 import android.widget.TextView;
 import org.irmacard.cardemu.preferences.SchemeManagersPreferenceFragment;
 import org.irmacard.credentials.info.DescriptionStore;
-import org.irmacard.credentials.info.InfoException;
 import org.irmacard.credentials.info.SchemeManager;
 
 
@@ -21,11 +19,7 @@ public class SchemeManagerDetailActivity extends Activity {
 		setContentView(R.layout.activity_scheme_manager_detail);
 
 		String managerName = getIntent().getStringExtra("manager");
-		try {
-			manager = DescriptionStore.getInstance().getSchemeManager(managerName);
-		} catch (InfoException e) {
-			throw new RuntimeException(e);
-		}
+		manager = DescriptionStore.getInstance().getSchemeManager(managerName);
 
 		setTitle(manager.getHumanReadableName());
 

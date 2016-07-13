@@ -14,7 +14,6 @@ import org.irmacard.android.util.credentials.StoreManager;
 import org.irmacard.cardemu.IRMApp;
 import org.irmacard.cardemu.R;
 import org.irmacard.credentials.info.DescriptionStore;
-import org.irmacard.credentials.info.InfoException;
 import org.irmacard.credentials.info.SchemeManager;
 
 /**
@@ -35,11 +34,7 @@ public class SchemeManagersPreferenceFragment
 		// needs to know where to find us
 		((IRMAPreferenceActivity) getActivity()).setSchemeManagersFragment(this);
 
-		try {
-			descriptionStore = DescriptionStore.getInstance();
-		} catch (InfoException e) {
-			throw new RuntimeException(e);
-		}
+		descriptionStore = DescriptionStore.getInstance();
 	}
 
 	public static void confirmAndDeleteManager(final SchemeManager manager,

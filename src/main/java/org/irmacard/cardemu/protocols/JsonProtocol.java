@@ -19,6 +19,7 @@ import org.irmacard.credentials.idemix.messages.IssueCommitmentMessage;
 import org.irmacard.credentials.idemix.messages.IssueSignatureMessage;
 import org.irmacard.credentials.idemix.proofs.ProofList;
 import org.irmacard.credentials.info.InfoException;
+import org.irmacard.credentials.info.KeyException;
 
 import java.io.IOException;
 import java.lang.reflect.Type;
@@ -177,6 +178,9 @@ public class JsonProtocol extends Protocol {
 			return;
 		} catch (CredentialsException e) {
 			fail("missing required attributes", true);
+			return;
+		} catch (KeyException e) {
+			fail("missing public key", true);
 			return;
 		}
 

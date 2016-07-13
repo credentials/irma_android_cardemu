@@ -41,7 +41,6 @@ import org.irmacard.credentials.Attributes;
 import org.irmacard.credentials.CredentialsException;
 import org.irmacard.credentials.idemix.CredentialBuilder;
 import org.irmacard.credentials.idemix.IdemixCredential;
-import org.irmacard.credentials.idemix.IdemixSystemParameters;
 import org.irmacard.credentials.idemix.IdemixSystemParameters1024;
 import org.irmacard.credentials.idemix.info.IdemixKeyStore;
 import org.irmacard.credentials.idemix.messages.IssueCommitmentMessage;
@@ -85,12 +84,10 @@ public class CredentialManager {
 
 	public static void init(SharedPreferences s) {
 		settings = s;
-		try {
-			descriptionStore = DescriptionStore.getInstance();
-			keyStore = IdemixKeyStore.getInstance();
-		} catch (InfoException e) { // Can't recover from this, crash now
-			throw new RuntimeException("Could not read DescriptionStore", e);
-		}
+
+		descriptionStore = DescriptionStore.getInstance();
+		keyStore = IdemixKeyStore.getInstance();
+
 		load();
 	}
 
@@ -443,7 +440,7 @@ public class CredentialManager {
 	 *         does not match our DescriptionStore
 	 */
 	public static IssueCommitmentMessage getIssueCommitments(IssuingRequest request)
-			throws InfoException, CredentialsException {
+			throws InfoException, CredentialsException, KeyException {
 		if (!request.credentialsMatchStore())
 			throw new InfoException("Request contains mismatching attributes");
 
