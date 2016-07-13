@@ -194,7 +194,7 @@ public class JsonHttpClient {
 			response = request.execute();
 			return gson.fromJson(DescriptionStore.inputStreamToString(response.getContent()), type);
 		} catch (HttpResponseException e) {
-			throw new HttpClientException(e.getStatusCode(), e.getMessage());
+			throw new HttpClientException(e.getStatusCode(), e.getContent());
 		} catch (IOException|JsonParseException e) {
 			throw new HttpClientException(e);
 		} finally {
