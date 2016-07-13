@@ -53,9 +53,8 @@ public abstract class Protocol implements SessionDialogFragment.SessionDialogLis
 		try {
 			qr = GsonUtil.getGson().fromJson(qrcontent, ClientQr.class);
 		} catch (Exception e) {
-			// If the contents of the QR code is not JSON, it is probably just a URL to an
-			// APDU-based IRMA server.
-			qr = new ClientQr("1.0", qrcontent);
+			handler.onFailure(ProtocolHandler.Action.UNKNOWN, "Not an IRMA session", null, "Content: " + qrcontent);
+			return;
 		}
 
 		NewSession(qr, handler);
@@ -67,7 +66,8 @@ public abstract class Protocol implements SessionDialogFragment.SessionDialogLis
 
 		// Check URL validity
 		if (!Patterns.WEB_URL.matcher(url).matches()) {
-			handler.onFailure(ProtocolHandler.Action.UNKNOWN, "Protocol not supported", null);
+			handler.onFailure(ProtocolHandler.Action.UNKNOWN, "Protocol not supported", null,
+					qr.getUrl() != null ? "URL: " + qr.getUrl() : "No URL specified.");
 			return;
 		}
 
@@ -78,7 +78,8 @@ public abstract class Protocol implements SessionDialogFragment.SessionDialogLis
 				protocol = new JsonProtocol(url, handler);
 				break;
 			default: // TODO show warning message in case "1.0"
-				handler.onFailure(ProtocolHandler.Action.UNKNOWN, "Protocol not supported", null);
+				handler.onFailure(ProtocolHandler.Action.UNKNOWN, "Protocol not supported", null,
+						qr.getVersion() != null ? "Version: " + qr.getVersion() : "No version specified.");
 				break;
 		}
 	}

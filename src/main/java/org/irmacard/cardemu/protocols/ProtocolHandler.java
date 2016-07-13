@@ -60,7 +60,7 @@ public abstract class ProtocolHandler implements SessionDialogFragment.SessionDi
 	abstract public void onStatusUpdate(Action action, Status status);
 	abstract public void onSuccess(Action action);
 	abstract public void onCancelled(Action action);
-	abstract public void onFailure(Action action, String message, ApiErrorMessage error);
+	abstract public void onFailure(Action action, String message, ApiErrorMessage error, String techInfo);
 
 	public void setProtocol(Protocol protocol) {
 		this.protocol = protocol;

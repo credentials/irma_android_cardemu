@@ -110,4 +110,7 @@
     <string name="diclosure_information">Disclosure Information</string>
     <string name="disclosure_info">For each of the categories listed below, the verifier accepts one of the following attributes. The icons indicate if you do or do not have this attribute.</string>
     <string name="disclosure_issuance_info">The issuer has requested that you disclose some attributes before the issuance can take place. For each of the categories listed below, it accepts one of the following attributes. The icons indicate if you do or do not have this attribute (and if it has the appropriate value, if applicable).</string>
+    <string name="dismiss">Dismiss</string>
+    <string name="techinfo">Technical info</string>
+    <string name="lessinfo">Less info</string>
 </resources>

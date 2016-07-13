@@ -132,7 +132,7 @@ public abstract class AbstractNFCEnrollActivity extends AbstractGUIEnrollActivit
         @Override public void onSuccess(Action action) {
             done();
         }
-        @Override public void onFailure(Action action, String message, ApiErrorMessage error) {
+        @Override public void onFailure(Action action, String message, ApiErrorMessage error, String info) {
             if (error != null)
                 fail(error);
             else

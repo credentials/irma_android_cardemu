@@ -139,20 +139,23 @@ public class MainActivity extends Activity {
 			finish(true);
 		}
 
-		@Override public void onFailure(Action action, String message, ApiErrorMessage error) {
-			String feedback;
+		@Override public void onFailure(Action action, String message, ApiErrorMessage error, final String techInfo) {
+			final String title;
 			switch (action) {
 				case DISCLOSING:
-					feedback = "Disclosure failed: "; break;
+					title = "Disclosure failed"; break;
 				case ISSUING:
-					feedback = "Issuing failed: "; break;
+					title = "Issuing failed"; break;
 				case UNKNOWN:
 				default:
-					feedback = "Failed: "; break;
+					title = "Failed"; break;
 			}
-			feedback += message;
-			setFeedback(feedback, "failure");
+
+			final String feedback = title + ": " + message;
+			setFeedback(title, "failure");
 			finish(false);
+
+			showErrorDialog(title, feedback, techInfo);
 		}
 
 		private void finish(boolean returnToBrowser) {
@@ -168,6 +171,34 @@ public class MainActivity extends Activity {
 			launchedFromBrowser = false;
 		}
 	};
+
+	private void showErrorDialog(final String title, final String message, final String techInfo) {
+		showErrorDialog(title, message, techInfo, false);
+	}
+
+	private void showErrorDialog(final String title, final String message,
+	                             final String techInfo, final boolean showingTechInfo) {
+		String m = message;
+		if (showingTechInfo && techInfo != null)
+			m += ". " + techInfo;
+
+		AlertDialog.Builder builder = new AlertDialog.Builder(MainActivity.this)
+				.setIcon(R.drawable.irma_icon_missing_520px)
+				.setTitle(title)
+				.setMessage(m)
+				.setPositiveButton(R.string.dismiss, null);
+
+		if (techInfo != null) {
+			int buttonText = showingTechInfo ? R.string.lessinfo : R.string.techinfo;
+			builder.setNeutralButton(buttonText, new DialogInterface.OnClickListener() {
+				@Override public void onClick(DialogInterface dialogInterface, int i) {
+					showErrorDialog(title, message, techInfo, !showingTechInfo);
+				}
+			});
+		}
+
+		builder.show();
+	}
 
 	@Override
 	protected void onCreate(Bundle savedInstanceState) {

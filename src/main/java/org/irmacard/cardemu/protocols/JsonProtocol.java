@@ -56,24 +56,27 @@ public class JsonProtocol extends Protocol {
 	 * Report the specified error message (if present) or the exception (if not) to the handler
 	 */
 	private void fail(HttpClientException e, ApiErrorMessage errorMessage) {
-		String feedback;
+		String feedback, techinfo;
 
 		if (errorMessage != null && errorMessage.getError() != null) {
-			feedback = "Server returned: " + errorMessage.getError().getDescription();
+			feedback = "server returned: " + errorMessage.getError().getDescription();
+			techinfo = errorMessage.getStacktrace();
 			Log.w(TAG, "API error: " + errorMessage.getError().name() + ", " + errorMessage.getDescription());
 			Log.w(TAG, errorMessage.getStacktrace());
 		} else if (e.getCause() != null) {
-			feedback = "Could not connect: " + e.getCause().toString() + "(" + e.getCause().getMessage() + ")";
+			feedback = "could not connect to server";
+			techinfo = e.getCause().getMessage();
 			Log.w(TAG, "Exception details ", e);
 		} else {
-			feedback = "Could not connect: Server returned status " + e.status;
+			feedback = "could not connect to server";
+			techinfo = "server returned status " + e.status;
 			Log.w(TAG, "Exception details ", e);
 		}
 
 		// Since we got a HttpClientException, the server is either not reachable, or it returned
 		// some error message. In the first case DELETEing the session will probably also fail;
 		// in the second case, the server already knows to delete the session itself
-		fail(feedback, false, errorMessage);
+		fail(feedback, false, errorMessage, techinfo);
 	}
 
 	/**
@@ -95,9 +98,13 @@ public class JsonProtocol extends Protocol {
 	 * @param deleteSession Whether or not we should DELETE the session
 	 */
 	private void fail(String feedback, boolean deleteSession, ApiErrorMessage error) {
+		fail(feedback, deleteSession, error, null);
+	}
+
+	private void fail(String feedback, boolean deleteSession, ApiErrorMessage error, String info) {
 		Log.w(TAG, feedback);
 
-		handler.onFailure(action, feedback, error);
+		handler.onFailure(action, feedback, error, info);
 		if (deleteSession)
 			deleteSession();
 	}
