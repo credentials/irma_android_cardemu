@@ -8,7 +8,8 @@
     <TextView
             android:id="@+id/detail_attribute_name"
             style="@style/DetailHeading"
-            android:layout_width="75dp"
+            android:layout_width="wrap_content"
+            android:maxWidth="150dp"
             android:text="name"
             android:paddingBottom="4sp"
             android:singleLine="true"
