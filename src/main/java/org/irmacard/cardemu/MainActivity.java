@@ -185,7 +185,7 @@ public class MainActivity extends Activity {
 			m += ". " + techInfo;
 
 		AlertDialog.Builder builder = new AlertDialog.Builder(MainActivity.this)
-				.setIcon(R.drawable.irma_icon_missing_520px)
+				.setIcon(R.drawable.irma_error)
 				.setTitle(title)
 				.setMessage(m)
 				.setPositiveButton(R.string.dismiss, null);
@@ -257,7 +257,7 @@ public class MainActivity extends Activity {
 
 	private void showApplicationError() {
 		new AlertDialog.Builder(this)
-				.setIcon(R.drawable.irma_icon_missing_520px)
+				.setIcon(R.drawable.irma_error)
 				.setTitle(R.string.cantreadattributes)
 				.setMessage(R.string.cantreadattributes_long)
 				.setNeutralButton(R.string.se_continue, new DialogInterface.OnClickListener() {
