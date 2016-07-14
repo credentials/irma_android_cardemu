@@ -35,12 +35,9 @@ import android.os.Bundle;
 import android.util.Log;
 import android.widget.ProgressBar;
 import android.widget.TextView;
-
-import net.sf.scuba.smartcards.CardFileInputStream;
 import net.sf.scuba.smartcards.CardService;
 import net.sf.scuba.smartcards.CardServiceException;
 import net.sf.scuba.tlv.TLVInputStream;
-
 import org.acra.ACRA;
 import org.irmacard.cardemu.MetricsReporter;
 import org.irmacard.cardemu.R;
@@ -49,12 +46,11 @@ import org.irmacard.mno.common.EnrollmentStartMessage;
 import org.irmacard.mno.common.PassportDataMessage;
 import org.jmrtd.BACKey;
 import org.jmrtd.PassportService;
+import org.jmrtd.lds.SODFile;
 import org.jmrtd.lds.icao.DG14File;
 import org.jmrtd.lds.icao.DG15File;
 import org.jmrtd.lds.icao.DG1File;
-import org.jmrtd.lds.SODFile;
 
-import java.io.DataInputStream;
 import java.io.IOException;
 import java.security.GeneralSecurityException;
 import java.security.InvalidAlgorithmParameterException;
@@ -87,6 +83,10 @@ public class PassportEnrollActivity extends AbstractNFCEnrollActivity {
 	@Override
 	protected void onCreate(Bundle savedInstanceState) {
 		super.onCreate(savedInstanceState);
+
+		// Don't update the screen if super encountered a problem
+		if (screen == SCREEN_ERROR)
+			return;
 
 		setNfcScreen(SCREEN_PASSPORT);
 

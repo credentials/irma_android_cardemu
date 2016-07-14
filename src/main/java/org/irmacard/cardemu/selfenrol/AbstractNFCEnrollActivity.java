@@ -7,6 +7,7 @@ import android.nfc.NfcAdapter;
 import android.nfc.Tag;
 import android.nfc.tech.IsoDep;
 import android.os.AsyncTask;
+import android.os.Build;
 import android.os.Bundle;
 import android.os.Handler;
 import android.support.v4.content.ContextCompat;
@@ -34,6 +35,7 @@ import org.irmacard.mno.common.PassportVerificationResult;
 import org.irmacard.mno.common.PassportVerificationResultMessage;
 import org.irmacard.mno.common.util.GsonUtil;
 
+import javax.net.ssl.SSLSocketFactory;
 import java.security.Security;
 
 
@@ -94,7 +96,10 @@ public abstract class AbstractNFCEnrollActivity extends AbstractGUIEnrollActivit
 
         settings = getSharedPreferences(SETTINGS, 0);
 
-        client = new JsonHttpClient(GsonUtil.getGson(), new SecureSSLSocketFactory(this, "ca"));
+        SSLSocketFactory factory = null;
+        if (Build.VERSION.SDK_INT >= 21) // 20 = 4.4 Kitkat, 21 = 5.0 Lollipop
+            factory = new SecureSSLSocketFactory(this, "ca");
+        client = new JsonHttpClient(GsonUtil.getGson(), factory);
 
         if (nfcA == null) {
             showErrorScreen(R.string.error_nfc_notsupported);
@@ -102,6 +107,7 @@ public abstract class AbstractNFCEnrollActivity extends AbstractGUIEnrollActivit
         }
         if (!nfcA.isEnabled()) {
             showErrorScreen(R.string.error_nfc_disabled);
+            return;
         }
 
         // Get the BasicClientMessage containing our nonce to send to the passport.

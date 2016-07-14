@@ -46,6 +46,10 @@ public class DriversLicenseEnrollActivity extends AbstractNFCEnrollActivity {
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
 
+        // Don't update the screen if super encountered a problem
+        if (screen == SCREEN_ERROR)
+            return;
+
         setNfcScreen(SCREEN_PASSPORT);
 
         // Update the UI

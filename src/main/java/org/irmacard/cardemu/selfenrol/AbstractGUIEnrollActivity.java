@@ -108,20 +108,25 @@ public abstract class AbstractGUIEnrollActivity extends Activity{
 
 
     protected void showErrorScreen(int errormsgId) {
+        String errormsg;
         ApiError[] errors = ApiError.values();
+
+        // See if it is an ApiError code
         if (errormsgId < errors.length) {
             if (errors[errormsgId] != ApiError.EXCEPTION) // Contains detailed message, show it
-                showErrorScreen("Server reported: " + errors[errormsgId].getDescription());
-            else {
-                String errormsg = getString(errormsgId);
-                if (errormsg != null && errormsg.length() > 0)
-                    showErrorScreen(errormsg);
-                else
-                    showErrorScreen(getString(R.string.error_enroll_serverdied));
+                errormsg = "Server reported: " + errors[errormsgId].getDescription();
+            else // Unspecified error, show generic message
+                errormsg = getString(R.string.error_enroll_serverdied);
+        }
+        else { // See if it is a string from strings.xml
+            try {
+                errormsg = getString(errormsgId);
+            } catch (Resources.NotFoundException e) {
+                errormsg = getString(R.string.error_enroll_serverdied);
             }
         }
-        else
-            showErrorScreen(getString(R.string.error_enroll_serverdied));
+
+        showErrorScreen(errormsg);
     }
 
     protected void showErrorScreen(String errormsg) {
