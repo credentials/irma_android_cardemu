@@ -64,10 +64,11 @@ public class DisjunctionFragment extends Fragment {
 			String text = ai.getIssuerName() + " - " + ai.getCredentialName();
 			if (ai.isCredential())
 				text += " (possession of credential)";
-			else
+			else {
 				text += " - " + ai.getAttributeName();
-			if (disjunction.hasValues())
-				text += ": " + disjunction.getValues().get(ai);
+				if (disjunction.hasValues())
+					text += ": " + disjunction.getValues().get(ai);
+			}
 
 			((TextView) view.findViewById(R.id.disjunction_title)).setText(text);
 
