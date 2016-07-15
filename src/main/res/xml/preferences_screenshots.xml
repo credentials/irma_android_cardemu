@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<PreferenceScreen xmlns:android="http://schemas.android.com/apk/res/android"
+    android:title="Screenshots">
+
+    <CheckBoxPreference
+        android:defaultValue="false"
+        android:key="allow_screenshots"
+        android:title="@string/allow_screenshots"
+        android:summary="@string/allow_screenshots_long" />
+</PreferenceScreen>

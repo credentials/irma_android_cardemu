@@ -5,4 +5,9 @@
         android:fragment="org.irmacard.cardemu.preferences.SchemeManagersPreferenceFragment"
         android:title="@string/scheme_managers"
         android:summary="@string/scheme_managers_summary" />
+
+    <header
+        android:fragment="org.irmacard.cardemu.preferences.ScreenshotPreferenceFragment"
+        android:title="@string/screenshots"
+        android:summary="@string/screenshots_long" />
 </preference-headers>

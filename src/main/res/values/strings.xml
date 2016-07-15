@@ -119,4 +119,8 @@
     </string>
     <string name="manual_session">Manual session</string>
     <string name="start">Start</string>
+    <string name="allow_screenshots">Allow screenshots</string>
+    <string name="allow_screenshots_long">Whether or not to allow screenshots to be made</string>
+    <string name="screenshots">Screenshots</string>
+    <string name="screenshots_long">Allow or disallow screenshots</string>
 </resources>

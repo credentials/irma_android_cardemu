@@ -42,6 +42,7 @@ import android.net.Uri;
 import android.os.Bundle;
 import android.os.CountDownTimer;
 import android.os.Process;
+import android.preference.PreferenceManager;
 import android.support.annotation.NonNull;
 import android.support.v4.app.ActivityCompat;
 import android.support.v4.content.ContextCompat;
@@ -209,10 +210,9 @@ public class MainActivity extends Activity {
 		if (IRMApp.attributeDeserializationError)
 			showApplicationError();
 
-		// Disable screenshots in release builds
-		if (!BuildConfig.DEBUG) {
+		// Disable screenshots if we should
+		if (!PreferenceManager.getDefaultSharedPreferences(this).getBoolean("allow_screenshots", false))
 			getWindow().setFlags(WindowManager.LayoutParams.FLAG_SECURE, WindowManager.LayoutParams.FLAG_SECURE);
-		}
 
 		setContentView(R.layout.activity_main);
 
@@ -598,6 +598,13 @@ public class MainActivity extends Activity {
 			tryDeleteCredential(cd);
 
 		}
+		else if (requestCode == IRMAPreferenceActivity.ACTIVITY_CODE) {
+			if (PreferenceManager.getDefaultSharedPreferences(this).getBoolean("allow_screenshots", false))
+				getWindow().clearFlags(WindowManager.LayoutParams.FLAG_SECURE);
+			else
+				getWindow().setFlags(
+						WindowManager.LayoutParams.FLAG_SECURE, WindowManager.LayoutParams.FLAG_SECURE);
+		}
 		else {
 			MetricsReporter.getInstance().reportAggregrateMeasurement("qr_scan_time", System.currentTimeMillis() - qrScanStartTime);
 
@@ -659,7 +666,7 @@ public class MainActivity extends Activity {
 			case R.id.preferences:
 				Intent intent = new Intent();
 				intent.setClassName(this, IRMAPreferenceActivity.class.getName());
-				startActivity(intent);
+				startActivityForResult(intent, IRMAPreferenceActivity.ACTIVITY_CODE);
 				return true;
 			case R.id.enroll:
 				Log.d(TAG, "enroll menu item pressed");
