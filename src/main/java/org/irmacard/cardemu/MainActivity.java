@@ -46,10 +46,7 @@ import android.support.annotation.NonNull;
 import android.support.v4.app.ActivityCompat;
 import android.support.v4.content.ContextCompat;
 import android.util.Log;
-import android.view.Menu;
-import android.view.MenuItem;
-import android.view.View;
-import android.view.WindowManager;
+import android.view.*;
 import android.widget.*;
 import com.google.zxing.integration.android.IntentIntegrator;
 import com.google.zxing.integration.android.IntentResult;
@@ -649,6 +646,12 @@ public class MainActivity extends Activity {
 	}
 
 	@Override
+	public boolean onPrepareOptionsMenu(Menu menu) {
+		menu.findItem(R.id.menu_manual_session).setVisible(BuildConfig.DEBUG);
+		return true;
+	}
+
+	@Override
 	public boolean onOptionsItemSelected(MenuItem item) {
 		Log.d(TAG, "menu press registered");
 		// Handle item selection
@@ -680,8 +683,27 @@ public class MainActivity extends Activity {
 					updateCredentialList();
 				}
 				return true;
+			case R.id.menu_manual_session:
+				startManualSession();
+				return true;
 			default:
 				return super.onOptionsItemSelected(item);
 		}
+	}
+
+	private void startManualSession() {
+		final EditText inputbox = new EditText(this);
+		inputbox.setHint("QR code contents");
+
+		new AlertDialog.Builder(this)
+				.setTitle("Manually start IRMA session")
+				.setView(inputbox)
+				.setPositiveButton(R.string.start, new DialogInterface.OnClickListener() {
+					@Override public void onClick(DialogInterface dialog, int whichButton) {
+						Protocol.NewSession(inputbox.getText().toString(), protocolHandler);
+					}
+				})
+				.setNegativeButton(android.R.string.cancel, null)
+				.show();
 	}
 }
