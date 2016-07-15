@@ -46,7 +46,7 @@
     <string name="se_connected_mijnoverheid">Connected to server</string>
     <string name="feedback_issueing">Issuing credentials…</string>
     <string name="done">Done.</string>
-    <string name="clear_card">Clear card</string>
+    <string name="clear_card">Delete all attributes</string>
     <string name="enroll_url_menu_item">Set enroll server</string>
     <string name="enroll_url_dialog_hint">Enroll server URL</string>
     <string name="enroll_url_dialog_title">Enter the enrollment server URL</string>
