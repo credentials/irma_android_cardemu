@@ -31,48 +31,35 @@
 package org.irmacard.cardemu;
 
 import android.content.Context;
-import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
 import android.widget.BaseExpandableListAdapter;
-import android.widget.ExpandableListAdapter;
 import android.widget.TextView;
-
+import org.irmacard.cardemu.identifiers.IdemixCredentialIdentifier;
+import org.irmacard.cardemu.identifiers.IdemixIdentifierList;
 import org.irmacard.credentials.Attributes;
 import org.irmacard.credentials.info.AttributeDescription;
-import org.irmacard.credentials.info.CredentialDescription;
+import org.irmacard.credentials.info.CredentialIdentifier;
 
 import java.text.DateFormat;
-import java.util.ArrayList;
-import java.util.Calendar;
-import java.util.HashMap;
-import java.util.List;
+import java.util.*;
 
-/**
- * Created by wouter on 2/13/15.
- */
 public class ExpandableCredentialsAdapter extends BaseExpandableListAdapter {
     private Context context;
-    private List<CredentialDescription> credentials;
-    private HashMap<CredentialDescription,Attributes> credentialAttributes;
-    private String TAG = "ECA";
+    private IdemixIdentifierList<CredentialIdentifier> credentials;
+    private HashMap<IdemixCredentialIdentifier,Attributes> credentialAttributes;
 
     public ExpandableCredentialsAdapter(Context context) {
         this.context = context;
-        this.credentials = new ArrayList<CredentialDescription>();
+        this.credentials = new IdemixIdentifierList<>();
         this.credentialAttributes = null;
     }
 
-    public ExpandableCredentialsAdapter(Context context, List<CredentialDescription> credentials, HashMap<CredentialDescription,Attributes> credentialAttributes) {
-        this.context = context;
-        this.credentials = credentials;
+    public void updateData(HashMap<IdemixCredentialIdentifier, Attributes> credentialAttributes) {
         this.credentialAttributes = credentialAttributes;
-    }
+        this.credentials = new IdemixIdentifierList<>(credentialAttributes.keySet());
 
-    public void updateData(List<CredentialDescription> credentials, HashMap<CredentialDescription,Attributes> credentialAttributes) {
-        this.credentials = credentials;
-        this.credentialAttributes = credentialAttributes;
         this.notifyDataSetChanged();
     }
 
@@ -83,7 +70,7 @@ public class ExpandableCredentialsAdapter extends BaseExpandableListAdapter {
 
     @Override
     public int getChildrenCount(int i) {
-        return credentials.get(i).getAttributes().size() + 1;
+        return credentials.get(i).getIdentifier().getCredentialDescription().getAttributes().size() + 1;
     }
 
     @Override
@@ -98,12 +85,14 @@ public class ExpandableCredentialsAdapter extends BaseExpandableListAdapter {
             return new AttributeDescription("Validity", "Valid until");
         else
             // Attribute i gets shown at position i + 1
-            return credentials.get(credential_idx).getAttributes().get(attribute_idx - 1);
+            return credentials.get(credential_idx).getIdentifier()
+                    .getCredentialDescription().getAttributes().get(attribute_idx - 1);
     }
 
     @Override
     public long getGroupId(int credential_idx) {
-        return credentials.get(credential_idx).getIdentifier().hashCode();
+        return credentials.get(credential_idx).getIdentifier()
+                .getCredentialDescription().getIdentifier().hashCode();
     }
 
     @Override
@@ -112,8 +101,8 @@ public class ExpandableCredentialsAdapter extends BaseExpandableListAdapter {
     }
 
 
-    public Attributes getAttributes(CredentialDescription cd) {
-        return credentialAttributes.get(cd);
+    public Attributes getAttributes(IdemixCredentialIdentifier ici) {
+        return credentialAttributes.get(ici);
     }
 
     @Override
@@ -121,15 +110,10 @@ public class ExpandableCredentialsAdapter extends BaseExpandableListAdapter {
         return true;
     }
 
-    public static String getListTitle(CredentialDescription cd) {
-        return cd.getIssuerDescription().getID() + " - " + cd.getName();
-    }
-
     @Override
     public View getGroupView(int credential_idx, boolean isExpanded, View convertView, ViewGroup parent) {
-        CredentialDescription cd = credentials.get(credential_idx);
-        String credential_name = getListTitle(cd);
-        Attributes attrs = credentialAttributes.get(cd);
+        IdemixCredentialIdentifier ici = credentials.getIdentifer(credential_idx);
+        Attributes attrs = credentialAttributes.get(ici);
 
         if (convertView == null) {
             LayoutInflater inflater = (LayoutInflater) this.context.getSystemService(Context.LAYOUT_INFLATER_SERVICE);
@@ -137,7 +121,7 @@ public class ExpandableCredentialsAdapter extends BaseExpandableListAdapter {
         }
 
         TextView credential_name_field = (TextView) convertView.findViewById(R.id.credential_item_name);
-        credential_name_field.setText(credential_name);
+        credential_name_field.setText(credentials.getUiTitle(ici));
         if (!attrs.isExpired()) // Since the convertView gets reused, the TextView might be grey from a previous usage
             credential_name_field.setTextColor(convertView.getResources().getColor(R.color.irmadarkblue));
         else
@@ -156,8 +140,8 @@ public class ExpandableCredentialsAdapter extends BaseExpandableListAdapter {
         TextView attribute_name_field = (TextView) convertView.findViewById(R.id.credential_attribute_name);
         TextView attribute_value_field = (TextView) convertView.findViewById(R.id.credential_attribute_value);
 
-        CredentialDescription cd = credentials.get(credential_idx);
-        Attributes attrs = credentialAttributes.get(cd);
+        IdemixCredentialIdentifier ici = credentials.getIdentifer(credential_idx);
+        Attributes attrs = credentialAttributes.get(ici);
 
         if (attribute_idx == 0) {
             String validDate = DateFormat.getDateInstance().format(attrs.getExpiryDate());
@@ -171,8 +155,8 @@ public class ExpandableCredentialsAdapter extends BaseExpandableListAdapter {
                 attribute_value_field.setTextColor(convertView.getResources().getColor(R.color.irmared));
             }
         } else {
-            AttributeDescription ad = cd.getAttributes().get(attribute_idx - 1);
-            String attribute_name = ad.getName();
+            String attribute_name = ici.getIdentifier()
+                    .getCredentialDescription().getAttributes().get(attribute_idx - 1).getName();
             String attribute_value = new String(attrs.get(attribute_name));
             attribute_name_field.setText(attribute_name);
             attribute_value_field.setText(attribute_value);

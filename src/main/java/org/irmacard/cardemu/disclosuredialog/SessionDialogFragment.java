@@ -40,14 +40,17 @@ import android.content.res.Resources;
 import android.os.Bundle;
 import android.view.LayoutInflater;
 import android.view.View;
-import android.widget.*;
+import android.widget.AdapterView;
+import android.widget.LinearLayout;
+import android.widget.Spinner;
+import android.widget.TextView;
 import org.irmacard.api.common.*;
-import org.irmacard.mno.common.util.GsonUtil;
 import org.irmacard.cardemu.R;
+import org.irmacard.cardemu.DisclosureChoice;
+import org.irmacard.cardemu.identifiers.IdemixAttributeIdentifier;
 import org.irmacard.credentials.info.CredentialDescription;
 import org.irmacard.credentials.info.InfoException;
-
-import java.util.Map;
+import org.irmacard.mno.common.util.GsonUtil;
 
 /**
  * DialogFragment for asking permission of a user to disclose specified attributes, issue new credentials, or both.
@@ -57,14 +60,15 @@ import java.util.Map;
 public class SessionDialogFragment extends DialogFragment {
 	private DisclosureProofRequest proofRequest;
 	private IssuingRequest issuingRequest;
+	private DisclosureChoice choice;
 	private boolean issuing;
 	private boolean dislosing;
 	private static SessionDialogListener listener;
 
 	public interface SessionDialogListener {
-		void onDiscloseOK(DisclosureProofRequest request);
+		void onDiscloseOK(DisclosureProofRequest request, DisclosureChoice disclosureChoice);
 		void onDiscloseCancel();
-		void onIssueOK(IssuingRequest request);
+		void onIssueOK(IssuingRequest request, DisclosureChoice disclosureChoice);
 		void onIssueCancel();
 	}
 
@@ -76,8 +80,13 @@ public class SessionDialogFragment extends DialogFragment {
 		SessionDialogFragment.listener = listener;
 		SessionDialogFragment dialog = new SessionDialogFragment();
 
+		DisclosureChoice choice = new DisclosureChoice(request);
+		for (AttributeDisjunction disjunction : request.getContent())
+			choice.getAttributes().add(null);
+
 		Bundle args = new Bundle();
 		args.putSerializable("proofRequest", request);
+		args.putSerializable("choice", choice);
 		dialog.setArguments(args);
 
 		return dialog;
@@ -91,8 +100,13 @@ public class SessionDialogFragment extends DialogFragment {
 		SessionDialogFragment.listener = listener;
 		SessionDialogFragment dialog = new SessionDialogFragment();
 
+		DisclosureChoice choice = new DisclosureChoice(request);
+		for (AttributeDisjunction disjunction : request.getRequiredAttributes())
+			choice.getAttributes().add(null);
+
 		Bundle args = new Bundle();
 		args.putSerializable("issuingRequest", request);
+		args.putSerializable("choice", choice);
 		dialog.setArguments(args);
 
 		return dialog;
@@ -105,12 +119,13 @@ public class SessionDialogFragment extends DialogFragment {
 
 		proofRequest = (DisclosureProofRequest) getArguments().getSerializable("proofRequest");
 		issuingRequest = (IssuingRequest) getArguments().getSerializable("issuingRequest");
+		choice = (DisclosureChoice) getArguments().getSerializable("choice");
 
 		issuing = issuingRequest != null;
 		dislosing = issuingRequest == null || !issuingRequest.getRequiredAttributes().isEmpty();
 	}
 
-	private static void populateDisclosurePart(Activity activity, View view, final DisclosureProofRequest request) {
+	private void populateDisclosurePart(Activity activity, View view, final DisclosureProofRequest request) {
 		LayoutInflater inflater = activity.getLayoutInflater();
 		Resources resources = activity.getResources();
 		LinearLayout list = (LinearLayout) view.findViewById(R.id.attributes_container);
@@ -124,11 +139,11 @@ public class SessionDialogFragment extends DialogFragment {
 		AdapterView.OnItemSelectedListener spinnerListener = new AdapterView.OnItemSelectedListener() {
 			@Override public void onItemSelected(AdapterView<?> parent, View view, int position, long id) {
 				AttributesPickerAdapter adapter = (AttributesPickerAdapter) parent.getAdapter();
-				AttributeDisjunction disjunction = adapter.setSelected(position);
-				request.getContent().set(adapter.getIndex(), disjunction);
+				IdemixAttributeIdentifier iai = adapter.findAndSelect(position);
+				choice.getAttributes().set(adapter.getIndex(), iai);
 			}
 			@Override public void onNothingSelected(AdapterView<?> parent) {
-				((AttributesPickerAdapter) parent.getAdapter()).setSelected(-1);
+				((AttributesPickerAdapter) parent.getAdapter()).findAndSelect(-1);
 			}
 		};
 
@@ -229,9 +244,9 @@ public class SessionDialogFragment extends DialogFragment {
 					@Override
 					public void onClick(DialogInterface dialog, int which) {
 						if (!issuing)
-							listener.onDiscloseOK(proofRequest);
+							listener.onDiscloseOK(proofRequest, choice);
 						else
-							listener.onIssueOK(issuingRequest);
+							listener.onIssueOK(issuingRequest, choice);
 					}
 				})
 				.setNegativeButton("No", new DialogInterface.OnClickListener() {

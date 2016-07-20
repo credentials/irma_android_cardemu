@@ -47,7 +47,10 @@ import android.support.annotation.NonNull;
 import android.support.v4.app.ActivityCompat;
 import android.support.v4.content.ContextCompat;
 import android.util.Log;
-import android.view.*;
+import android.view.Menu;
+import android.view.MenuItem;
+import android.view.View;
+import android.view.WindowManager;
 import android.widget.*;
 import com.google.zxing.integration.android.IntentIntegrator;
 import com.google.zxing.integration.android.IntentResult;
@@ -55,19 +58,19 @@ import org.irmacard.android.util.cardlog.LogActivity;
 import org.irmacard.android.util.cardlog.LogFragment;
 import org.irmacard.android.util.credentialdetails.CredentialDetailActivity;
 import org.irmacard.android.util.credentialdetails.CredentialDetailFragment;
-import org.irmacard.android.util.credentials.CredentialPackage;
 import org.irmacard.android.util.credentials.StoreManager;
 import org.irmacard.api.common.exceptions.ApiErrorMessage;
+import org.irmacard.cardemu.identifiers.IdemixCredentialIdentifier;
 import org.irmacard.cardemu.preferences.IRMAPreferenceActivity;
 import org.irmacard.cardemu.protocols.Protocol;
 import org.irmacard.cardemu.protocols.ProtocolHandler;
 import org.irmacard.cardemu.selfenrol.EnrollSelectActivity;
 import org.irmacard.credentials.Attributes;
 import org.irmacard.credentials.CredentialsException;
-import org.irmacard.credentials.info.CredentialDescription;
 import org.irmacard.credentials.util.log.LogEntry;
 
-import java.util.*;
+import java.util.ArrayList;
+import java.util.HashMap;
 
 public class MainActivity extends Activity {
 	private static final int DETAIL_REQUEST = 101;
@@ -230,13 +233,15 @@ public class MainActivity extends Activity {
 			@Override
 			public boolean onItemLongClick(AdapterView<?> adapterView, View view, int i, long id) {
 				try {
-					CredentialDescription cd = (CredentialDescription) adapterView.getItemAtPosition(i);
+					IdemixCredentialIdentifier ici = (IdemixCredentialIdentifier) adapterView.getItemAtPosition(i);
 					Log.i(TAG, "Credential with index " + i + " containing credential "
-							+ cd.getIdentifier().toString() + " was " + "longclicked");
+							+ ici.getIdentifier() + " was " + "longclicked");
 
-					CredentialPackage credential = new CredentialPackage(cd, credentialListAdapter.getAttributes(cd));
+
 					Intent detailIntent = new Intent(MainActivity.this, CredentialDetailActivity.class);
-					detailIntent.putExtra(CredentialDetailFragment.ARG_ITEM, credential);
+					detailIntent.putExtra(CredentialDetailFragment.ATTRIBUTES,
+							credentialListAdapter.getAttributes(ici));
+					detailIntent.putExtra(CredentialDetailFragment.HASHCODE, ici.getHashCode());
 					startActivityForResult(detailIntent, DETAIL_REQUEST);
 				} catch (ClassCastException e) {
 					Log.e(TAG, "Item " + i + " longclicked but was not a CredentialDescription");
@@ -402,35 +407,20 @@ public class MainActivity extends Activity {
 
 	}
 
-	protected void tryDeleteCredential(final CredentialDescription cd) {
+	protected void tryDeleteCredential(int hashCode) {
 		if (activityState != STATE_IDLE) {
 			Log.i(TAG, "Delete long-click ignored in non-idle mode");
 			return;
 		}
 
-		AlertDialog.Builder builder = new AlertDialog.Builder(this);
-		builder.setTitle("Deleting credential")
-				.setMessage("Are you sure you want to delete " + cd.getName() + "?")
-				.setPositiveButton("Delete", new DialogInterface.OnClickListener() {
-					public void onClick(DialogInterface dialog, int id) {
-						Log.i(TAG, "We're idle, attempting removal of credential " + cd.getName());
+		IdemixCredentialIdentifier ici = CredentialManager.findCredential(hashCode);
+		if (ici == null)
+			return;
 
-						CredentialManager.delete(cd);
-
-						Log.i(TAG, "Updating credential list");
-						updateCredentialList();
-					}
-				})
-				.setNegativeButton("Cancel", new DialogInterface.OnClickListener() {
-					public void onClick(DialogInterface dialog, int id) {
-						// Cancelled
-					}
-				});
-		AlertDialog dialog = builder.create();
-		dialog.show();
+		Log.w(TAG, "Deleting credential " + ici.toString());
+		CredentialManager.delete(ici);
+		updateCredentialList();
 	}
-
-
 
 	protected void updateCredentialList() {
 		updateCredentialList(true);
@@ -454,23 +444,13 @@ public class MainActivity extends Activity {
 			});
 		}
 
-		HashMap<CredentialDescription, Attributes> credentials = CredentialManager.getAllAttributes();
-		List<CredentialDescription> cds = new ArrayList<>(credentials.keySet());
-
-		Collections.sort(cds, new Comparator<CredentialDescription>() {
-			@Override
-			public int compare(CredentialDescription lhs, CredentialDescription rhs) {
-				return ExpandableCredentialsAdapter.getListTitle(lhs)
-						.compareTo(ExpandableCredentialsAdapter.getListTitle(rhs));
-			}
-		});
-
-		credentialListAdapter.updateData(cds, credentials);
+		HashMap<IdemixCredentialIdentifier, Attributes> credentials = CredentialManager.getAllAttributes();
+		credentialListAdapter.updateData(credentials);
 
 		TextView noCredsText = (TextView) findViewById(R.id.no_credentials_text);
 		Button enrollButton = (Button) findViewById(R.id.enroll_button);
 		Button onlineEnrollButton = (Button) findViewById(R.id.online_enroll_button);
-		int visibility = cds.isEmpty() ? View.VISIBLE : View.INVISIBLE;
+		int visibility = credentials.isEmpty() ? View.VISIBLE : View.INVISIBLE;
 
 		if (noCredsText != null && enrollButton != null) {
 			noCredsText.setVisibility(visibility);
@@ -593,10 +573,9 @@ public class MainActivity extends Activity {
 			updateCredentialList();
 		}
 		else if (requestCode == DETAIL_REQUEST && resultCode == CredentialDetailActivity.RESULT_DELETE) {
-			CredentialDescription cd = (CredentialDescription) data
-					.getSerializableExtra(CredentialDetailActivity.ARG_RESULT_DELETE);
-			tryDeleteCredential(cd);
-
+			int hashCode = data.getIntExtra(CredentialDetailActivity.ARG_RESULT_DELETE, 0);
+			if (hashCode != 0)
+				tryDeleteCredential(hashCode);
 		}
 		else if (requestCode == IRMAPreferenceActivity.ACTIVITY_CODE) {
 			if (PreferenceManager.getDefaultSharedPreferences(this).getBoolean("allow_screenshots", false))

@@ -11,6 +11,7 @@ import org.irmacard.api.common.IssuingRequest;
 import org.irmacard.api.common.exceptions.ApiErrorMessage;
 import org.irmacard.api.common.util.GsonUtil;
 import org.irmacard.cardemu.CredentialManager;
+import org.irmacard.cardemu.DisclosureChoice;
 import org.irmacard.cardemu.httpclient.JsonHttpClient;
 import org.irmacard.cardemu.httpclient.HttpClientException;
 import org.irmacard.cardemu.httpclient.HttpResultHandler;
@@ -160,7 +161,7 @@ public class JsonProtocol extends Protocol {
 	 * construct and save the new Idemix credentials.
 	 */
 	@Override
-	protected void finishIssuance(final IssuingRequest request) {
+	protected void finishIssuance(final IssuingRequest request, final DisclosureChoice disclosureChoice) {
 		handler.onStatusUpdate(ProtocolHandler.Action.ISSUING, ProtocolHandler.Status.COMMUNICATING);
 		Log.i(TAG, "Posting issuing commitments");
 
@@ -171,7 +172,7 @@ public class JsonProtocol extends Protocol {
 
 		IssueCommitmentMessage msg;
 		try {
-			msg = CredentialManager.getIssueCommitments(request);
+			msg = CredentialManager.getIssueCommitments(request, disclosureChoice);
 		} catch (InfoException e) {
 			e.printStackTrace();
 			fail("wrong credential type", true);
@@ -236,13 +237,13 @@ public class JsonProtocol extends Protocol {
 	 * Given a {@link DisclosureProofRequest} with selected attributes, perform the disclosure.
 	 */
 	@Override
-	public void disclose(final DisclosureProofRequest request) {
+	public void disclose(final DisclosureProofRequest request, DisclosureChoice disclosureChoice) {
 		handler.onStatusUpdate(ProtocolHandler.Action.DISCLOSING, ProtocolHandler.Status.COMMUNICATING);
 		Log.i(TAG, "Sending disclosure proofs to " + server);
 
 		ProofList proofs;
 		try {
-			proofs = CredentialManager.getProofs(request);
+			proofs = CredentialManager.getProofs(disclosureChoice);
 		} catch (CredentialsException e) {
 			e.printStackTrace();
 			cancelSession();

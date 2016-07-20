@@ -37,6 +37,8 @@ import com.google.gson.reflect.TypeToken;
 import org.irmacard.android.util.credentials.StoreManager;
 import org.irmacard.api.common.*;
 import org.irmacard.api.common.util.GsonUtil;
+import org.irmacard.cardemu.identifiers.IdemixAttributeIdentifier;
+import org.irmacard.cardemu.identifiers.IdemixCredentialIdentifier;
 import org.irmacard.credentials.Attributes;
 import org.irmacard.credentials.CredentialsException;
 import org.irmacard.credentials.idemix.CredentialBuilder;
@@ -63,12 +65,15 @@ import java.util.*;
  * serialization of credentials and log entries from/to storage.
  */
 public class CredentialManager {
-	private static HashMap<CredentialIdentifier, IdemixCredential> credentials = new HashMap<>();
+	private static HashMap<CredentialIdentifier, ArrayList<IdemixCredential>> credentials = new HashMap<>();
 	private static List<LogEntry> logs = new LinkedList<>();
 	private static BigInteger secretKey;
 
 	// Type tokens for Gson (de)serialization
-	private static Type credentialsType = new TypeToken<HashMap<CredentialIdentifier, IdemixCredential>>() {}.getType();
+	private static Type oldCredentialsType
+			= new TypeToken<HashMap<CredentialIdentifier, IdemixCredential>>() {}.getType();
+	private static Type credentialsType
+			= new TypeToken<HashMap<CredentialIdentifier, ArrayList<IdemixCredential>>>() {}.getType();
 	private static Type logsType = new TypeToken<List<LogEntry>>() {}.getType();
 
 	private static SharedPreferences settings;
@@ -121,8 +126,10 @@ public class CredentialManager {
 			try {
 				credentials = gson.fromJson(credentialsJson, credentialsType);
 			} catch (Exception e) {
-				// There are serialized credentials but we can't read them? That's bad, bail out
-				throw new CredentialsException(e);
+				// See if the JSON is of the old serialization format. If it is not,
+				// i.e., if the function below also fails, then it throws a CredentialException
+				// for our caller to deal with.
+				tryParseOldCredentials(credentialsJson);
 			}
 		}
 		if (credentials == null) {
@@ -142,61 +149,100 @@ public class CredentialManager {
 	}
 
 	/**
-	 * Given a credential identifier, return the corresponding credential if we have it.
-	 * @return The credential, or null if we do not have it
-	 * @throws CredentialsException if this credential identifier was not found in the DescriptionStore
+	 * Try to parse the given JSON as credentials serialized in the old format.
+	 * @throws CredentialsException if deserialization fails
 	 */
-	public static Attributes getAttributes(CredentialIdentifier identifier) throws CredentialsException {
-		CredentialDescription cd = getCredentialDescription(identifier);
+	private static void tryParseOldCredentials(String json) throws CredentialsException {
+		HashMap<CredentialIdentifier, IdemixCredential> map;
 
-		IdemixCredential credential = credentials.get(identifier);
-		if (credential == null)
-			return null;
-
-		Attributes attributes = new Attributes();
-		attributes.add(Attributes.META_DATA_FIELD, credential.getAttribute(1).toByteArray());
-		for (int i = 0; i < cd.getAttributeNames().size(); i++) {
-			String name = cd.getAttributeNames().get(i);
-			BigInteger value = credential.getAttribute(i + 2); // + 2: skip secret key and metadata
-			attributes.add(name, value.toByteArray());
+		try {
+			map = GsonUtil.getGson().fromJson(json, oldCredentialsType);
+		} catch (Exception e) {
+			throw new CredentialsException(e);
 		}
 
-		return attributes;
+		credentials = new HashMap<>(map.size());
+		for (CredentialIdentifier ci : map.keySet()) {
+			ArrayList<IdemixCredential> list = new ArrayList<>(1);
+			list.add(map.get(ci));
+			credentials.put(ci, list);
+		}
 	}
 
 	/**
-	 * Get a map containing all credential descriptions and attributes we currently have
+	 * Get a map containing all credential descriptions and attributes we currently have.
 	 */
-	public static HashMap<CredentialDescription, Attributes> getAllAttributes() {
-		HashMap<CredentialDescription, Attributes> map = new HashMap<>();
+	public static LinkedHashMap<IdemixCredentialIdentifier, Attributes> getAllAttributes() {
+		LinkedHashMap<IdemixCredentialIdentifier, Attributes> map = new LinkedHashMap<>();
 
 		for (CredentialIdentifier id : credentials.keySet()) {
-			try {
-				map.put(getCredentialDescription(id), getAttributes(id));
-			} catch (CredentialsException e) { /** Ignore absent descriptions, might be downloaded later */ }
+			ArrayList<IdemixCredential> list = credentials.get(id);
+			for (IdemixCredential cred : list)
+				map.put(new IdemixCredentialIdentifier(id, cred.hashCode()), cred.getAllAttributes());
 		}
 
 		return map;
 	}
 
-	private static void delete(CredentialDescription cd, boolean shouldSave) {
-		if (cd == null)
+	/**
+	 * Gets the identifier of the {@link IdemixCredential} that has the specified hashCode,
+	 * (null if we don't have such a credential).
+	 */
+	public static IdemixCredentialIdentifier findCredential(int hashCode) {
+		for (CredentialIdentifier ci : credentials.keySet()) {
+			ArrayList<IdemixCredential> list = credentials.get(ci);
+			for (IdemixCredential credential : list) {
+				if (credential.hashCode() == hashCode)
+					return new IdemixCredentialIdentifier(ci, hashCode);
+			}
+		}
+
+		return null;
+	}
+
+	/**
+	 * Get the specified credential.
+	 * @return The credential, or null if we don't have it
+	 */
+	private static IdemixCredential get(IdemixCredentialIdentifier identifier) {
+		ArrayList<IdemixCredential> list = credentials.get(identifier.getIdentifier());
+		if (list == null || list.size() == 0)
+			return null;
+
+		for (IdemixCredential cred : list)
+			if (cred.hashCode() == identifier.getHashCode())
+				return cred;
+
+		return null;
+	}
+
+	/**
+	 * Delete the specified credential, saving our changes to storage if neccesary
+	 */
+	private static void delete(IdemixCredentialIdentifier identifier, boolean shouldSave) {
+		if (identifier == null)
 			return;
 
-		IdemixCredential cred = credentials.remove(cd.getIdentifier());
+		ArrayList<IdemixCredential> list = credentials.get(identifier.getIdentifier());
+		if (list == null)
+			return;
 
-		if (cred != null) {
+		if (list.remove(get(identifier))) {
+			CredentialDescription cd = identifier.getIdentifier().getCredentialDescription();
 			logs.add(0, new RemoveLogEntry(Calendar.getInstance().getTime(), cd));
 			if (shouldSave)
 				save();
 		}
+
+		if (list.size() == 0)
+			credentials.remove(identifier.getIdentifier());
 	}
 
 	/**
-	 * Delete the credential with this description if we have it
+	 * Delete the specified credential
 	 */
-	public static void delete(CredentialDescription cd) {
-		delete(cd, true);
+	public static void delete(IdemixCredentialIdentifier identifier) {
+		delete(identifier, true);
 	}
 
 	/**
@@ -207,7 +253,8 @@ public class CredentialManager {
 			CredentialDescription cd = descriptionStore.getCredentialDescription(id);
 			if (cd == null)
 				continue;
-			logs.add(0, new RemoveLogEntry(Calendar.getInstance().getTime(), cd));
+			for (int i=0; i<credentials.get(id).size(); ++i)
+				logs.add(0, new RemoveLogEntry(Calendar.getInstance().getTime(), cd));
 		}
 
 		credentials = new HashMap<>();
@@ -226,25 +273,25 @@ public class CredentialManager {
 	 * credential of this identifier.
 	 * @throws CredentialsException if something goes wrong
 	 */
-	public static ProofList getProofs(DisclosureProofRequest request) throws CredentialsException {
+	public static ProofList getProofs(DisclosureChoice disclosureChoice) throws CredentialsException {
+		SessionRequest request = disclosureChoice.getRequest();
 		ProofListBuilder builder = new ProofListBuilder(request.getContext(), request.getNonce());
-		return getProofs(request.getContent(), builder).build();
+		return getProofs(disclosureChoice, builder).build();
 	}
 
 	/**
 	 * For the selected attribute of each disjunction, add a disclosure proof-commitment to the specified
 	 * proof builder.
 	 */
-	private static ProofListBuilder getProofs(AttributeDisjunctionList attributes, ProofListBuilder builder)
-			throws CredentialsException {
-		if (!attributes.haveSelected())
-			throw new CredentialsException("Select an attribute in each disjunction first");
+	private static ProofListBuilder getProofs(DisclosureChoice disclosureChoice, ProofListBuilder builder)
+	throws CredentialsException {
+		Map<IdemixCredentialIdentifier, List<Integer>> toDisclose = groupAttributesById(disclosureChoice);
 
-		Map<CredentialIdentifier, List<Integer>> toDisclose = groupAttributesById(attributes);
-
-		for (CredentialIdentifier id : toDisclose.keySet()) {
+		for (IdemixCredentialIdentifier id : toDisclose.keySet()) {
 			List<Integer> attrs = toDisclose.get(id);
-			IdemixCredential credential = credentials.get(id);
+			IdemixCredential credential = get(id);
+			if (credential == null)
+				throw new CredentialsException("Credential not found");
 			builder.addProofD(credential, attrs);
 		}
 
@@ -254,31 +301,32 @@ public class CredentialManager {
 	}
 
 	/**
-	 * Helper function that, given a list of {@link AttributeDisjunction} that each have a selected member (as in,
-	 * {@link AttributeDisjunction#getSelected()} returns non-null), groups all selected attributes by credential ID.
+	 * Helper function that, given a list of attributes to be disclosed in the form of a
+	 * {@link DisclosureChoice}, groups all selected attributes by credential ID.
 	 */
-	private static Map<CredentialIdentifier, List<Integer>> groupAttributesById(List<AttributeDisjunction> content)
-	throws CredentialsException {
-		Map<CredentialIdentifier, List<Integer>> toDisclose = new HashMap<>();
+	private static Map<IdemixCredentialIdentifier, List<Integer>> groupAttributesById(
+			DisclosureChoice disclosureChoice) throws CredentialsException {
+		Map<IdemixCredentialIdentifier, List<Integer>> toDisclose = new HashMap<>();
 
 		// Group the chosen attribute identifiers by their credential ID in the toDisclose map
-		for (AttributeDisjunction disjunction : content) {
-			AttributeIdentifier identifier = disjunction.getSelected();
-			CredentialIdentifier id = identifier.getCredentialIdentifier();
-			CredentialDescription cd = getCredentialDescription(id);
+		for (IdemixAttributeIdentifier attribute : disclosureChoice.getAttributes()) {
+			AttributeIdentifier identifier = attribute.getIdentifier();
+			IdemixCredentialIdentifier ici = attribute.getIdemixCredentialIdentifier();
 
 			List<Integer> attributes;
-			if (toDisclose.get(id) == null) {
+			if (toDisclose.get(ici) == null) {
 				attributes = new ArrayList<>(5);
 				attributes.add(1); // Always disclose metadata
-				toDisclose.put(id, attributes);
+				toDisclose.put(ici, attributes);
 			} else
-				attributes = toDisclose.get(id);
+				attributes = toDisclose.get(ici);
 
 			if (identifier.isCredential())
 				continue;
 
-			int j = cd.getAttributeNames().indexOf(identifier.getAttributeName());
+
+			int j = identifier.getCredentialIdentifier().getCredentialDescription()
+					.getAttributeNames().indexOf(identifier.getAttributeName());
 			if (j == -1) // our CredentialDescription does not contain the asked-for attribute
 				throw new CredentialsException("Attribute \"" + identifier.getAttributeName() + "\" not found");
 
@@ -291,13 +339,13 @@ public class CredentialManager {
 	/**
 	 * Log that we disclosed the specified attributes.
 	 */
-	private static List<LogEntry> generateLogEntries(Map<CredentialIdentifier, List<Integer>> toDisclose) {
+	private static List<LogEntry> generateLogEntries(Map<IdemixCredentialIdentifier, List<Integer>> toDisclose) {
 		List<LogEntry> logs = new ArrayList<>(toDisclose.size());
 
-		for (CredentialIdentifier id : toDisclose.keySet()) {
+		for (IdemixCredentialIdentifier id : toDisclose.keySet()) {
 			List<Integer> attributes = toDisclose.get(id);
 
-			CredentialDescription cd = descriptionStore.getCredentialDescription(id);
+			CredentialDescription cd = descriptionStore.getCredentialDescription(id.getIdentifier());
 			if (cd == null)
 				continue;
 			HashMap<String, Boolean> booleans = new HashMap<>(cd.getAttributeNames().size());
@@ -332,9 +380,12 @@ public class CredentialManager {
 			if (descriptionStore.getIssuerDescription(issuer) == null)
 				issuers.add(issuer);
 
-			int counter = credentials.get(credential).getKeyCounter();
-			if (!keyStore.containsPublicKey(issuer, counter))
-				keys.put(issuer, counter);
+			ArrayList<IdemixCredential> list = credentials.get(credential);
+			for (IdemixCredential cred : list) {
+				int counter = cred.getKeyCounter();
+				if (!keyStore.containsPublicKey(issuer, counter))
+					keys.put(issuer, counter);
+			}
 		}
 
 		if (issuers.size() == 0 && creds.size() == 0 && keys.size() == 0)
@@ -345,47 +396,37 @@ public class CredentialManager {
 	}
 
 	/**
-	 * Helper function that either returns a non-null CredentialDescription or throws an exception
-	 */
-	private static CredentialDescription getCredentialDescription(CredentialIdentifier identifier)
-	throws CredentialsException {
-		// Find the corresponding CredentialDescription
-		CredentialDescription cd = descriptionStore.getCredentialDescription(identifier);
-		if (cd == null)
-			throw new CredentialsException("Unknown issuer or credential");
-
-		return cd;
-	}
-
-	/**
 	 * Given an {@link AttributeDisjunction}, return attributes (and their values) that we have and that are
 	 * contained in the disjunction. If the disjunction has values for each identifier, then this returns
 	 * only those attributes matching those values.
 	 */
-	public static LinkedHashMap<AttributeIdentifier, String> getCandidates(AttributeDisjunction disjunction) {
-		LinkedHashMap<AttributeIdentifier, String> map = new LinkedHashMap<>();
+	public static LinkedHashMap<IdemixAttributeIdentifier, String> getCandidates(AttributeDisjunction disjunction) {
+		LinkedHashMap<IdemixAttributeIdentifier, String> map = new LinkedHashMap<>();
 
 		for (AttributeIdentifier attribute : disjunction) {
-			Attributes foundAttrs;
-			CredentialDescription cd;
-			try {
-				foundAttrs = getAttributes(attribute.getCredentialIdentifier());
-				cd = getCredentialDescription(attribute.getCredentialIdentifier());
-			} catch (CredentialsException e) {
-				e.printStackTrace();
+			CredentialDescription cd = attribute.getCredentialIdentifier().getCredentialDescription();
+			if (cd == null)
 				continue; // Can't disclose unknown attributes
-			}
 
-			if (foundAttrs != null) {
-				if (attribute.isCredential()) {
-					map.put(attribute, cd.getIssuerID() + " - " + cd.getShortName());
-				}
-				if (!attribute.isCredential() && foundAttrs.get(attribute.getAttributeName()) != null) {
-					String requiredValue = disjunction.getValues().get(attribute);
-					String value = new String(foundAttrs.get(attribute.getAttributeName()));
+			for (CredentialIdentifier credId : credentials.keySet()) {
+				if (!attribute.getCredentialIdentifier().equals(credId))
+					continue;
 
-					if (requiredValue == null || requiredValue.equals(value))
-						map.put(attribute, value);
+				for (IdemixCredential cred : credentials.get(credId)) {
+					if (attribute.isCredential()) {
+						map.put(new IdemixAttributeIdentifier(attribute, cred.hashCode()),
+								cd.getIssuerID() + " - " + cd.getShortName());
+					}
+					else {
+						Attributes attrs = cred.getAllAttributes();
+						if (attrs.get(attribute.getAttributeName()) == null)
+							continue;
+
+						String requiredValue = disjunction.getValues().get(attribute);
+						String value = new String(attrs.get(attribute.getAttributeName()));
+						if (requiredValue == null || requiredValue.equals(value))
+							map.put(new IdemixAttributeIdentifier(attribute, cred.hashCode()), value);
+					}
 				}
 			}
 		}
@@ -404,18 +445,6 @@ public class CredentialManager {
 	}
 
 	/**
-	 * Check if we have the specified attribute.
-	 */
-	public static boolean contains(AttributeIdentifier identifier) {
-		try {
-			Attributes attrs = getAttributes(identifier.getCredentialIdentifier());
-			return attrs != null && (identifier.isCredential() || attrs.get(identifier.getAttributeName()) != null);
-		} catch (CredentialsException e) {
-			return false;
-		}
-	}
-
-	/**
 	 * Returns the secret key from one of our credentials; or, if we do not yet have any credentials,
 	 * a new secret key.
 	 */
@@ -426,7 +455,7 @@ public class CredentialManager {
 				// so we should have it be as large as the smallest maximum attribute size.
 				secretKey = new BigInteger(new IdemixSystemParameters1024().get_l_m(), new SecureRandom());
 			else
-				secretKey = credentials.values().iterator().next().getAttribute(0);
+				secretKey = credentials.values().iterator().next().get(0).getAttribute(0);
 		}
 
 		return secretKey;
@@ -440,8 +469,9 @@ public class CredentialManager {
 	 * @throws InfoException If one of the credentials in the request or its attributes is not contained or
 	 *         does not match our DescriptionStore
 	 */
-	public static IssueCommitmentMessage getIssueCommitments(IssuingRequest request)
-			throws InfoException, CredentialsException, KeyException {
+	public static IssueCommitmentMessage getIssueCommitments(
+			IssuingRequest request, DisclosureChoice disclosureChoice)
+	throws InfoException, CredentialsException, KeyException {
 		if (!request.credentialsMatchStore())
 			throw new InfoException("Request contains mismatching attributes");
 
@@ -462,8 +492,8 @@ public class CredentialManager {
 		}
 
 		// Add disclosures, if any
-		if (!request.getRequiredAttributes().isEmpty())
-			getProofs(request.getRequiredAttributes(), proofsBuilder);
+		if (!request.getRequiredAttributes().isEmpty() && disclosureChoice != null)
+			getProofs(disclosureChoice, proofsBuilder);
 
 		return new IssueCommitmentMessage(proofsBuilder.build(), nonce2);
 	}
@@ -472,7 +502,7 @@ public class CredentialManager {
 	 * Given the issuer's reply to our {@link IssueCommitmentMessage}, compute the new Idemix credentials and save them
 	 * @param sigs The message from the issuer containing the CL signatures and proofs of correctness
 	 * @throws InfoException If one of the credential types is unknown (this should already have happened in
-	 *         {@link #getIssueCommitments(IssuingRequest)})
+	 *         {@link #getIssueCommitments(IssuingRequest, DisclosureChoice)} )})
 	 * @throws CredentialsException If one of the credentials could not be reconstructed (e.g., because of an incorrect
 	 *         issuer proof)
 	 */
@@ -488,7 +518,13 @@ public class CredentialManager {
 			if (cd == null)
 				throw new InfoException("Unknown credential");
 
-			credentials.put(cd.getIdentifier(), cred);
+			ArrayList<IdemixCredential> list = credentials.get(cd.getIdentifier());
+			if (list == null) {
+				list = new ArrayList<>(1);
+				credentials.put(cd.getIdentifier(), list);
+			}
+
+			list.add(cred);
 			logs.add(0, new IssueLogEntry(Calendar.getInstance().getTime(), cd));
 		}
 

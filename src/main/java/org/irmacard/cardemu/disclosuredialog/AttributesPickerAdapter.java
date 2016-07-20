@@ -38,15 +38,15 @@ import android.view.ViewGroup;
 import android.widget.BaseAdapter;
 import android.widget.CheckedTextView;
 import android.widget.TextView;
-import org.irmacard.cardemu.CredentialManager;
-import org.irmacard.cardemu.R;
 import org.irmacard.api.common.AttributeDisjunction;
 import org.irmacard.api.common.DisclosureProofRequest;
+import org.irmacard.cardemu.CredentialManager;
+import org.irmacard.cardemu.R;
+import org.irmacard.cardemu.identifiers.IdemixAttributeIdentifier;
+import org.irmacard.cardemu.identifiers.IdemixIdentifierList;
 import org.irmacard.credentials.info.AttributeIdentifier;
 
-import java.util.ArrayList;
-import java.util.LinkedHashMap;
-import java.util.List;
+import java.util.*;
 
 /**
  * Adapter for picking an attribute from a {@link AttributeDisjunction}, for use in a {@link SessionDialogFragment}.
@@ -55,8 +55,8 @@ public class AttributesPickerAdapter extends BaseAdapter {
 	Context context;
 	LayoutInflater inflater;
 	AttributeDisjunction disjunction;
-	LinkedHashMap<AttributeIdentifier, String> objects;
-	List<AttributeIdentifier> identifiers;
+	HashMap<IdemixAttributeIdentifier, String> candidates;
+	IdemixIdentifierList<AttributeIdentifier> identifiers;
 	int selected;
 	int index;
 
@@ -71,19 +71,20 @@ public class AttributesPickerAdapter extends BaseAdapter {
 		this.context = context;
 		this.disjunction = disjunction;
 		this.index = index;
-		objects = CredentialManager.getCandidates(disjunction);
-		identifiers = new ArrayList<>(objects.keySet()); // TODO does this preserve order?
+		candidates = CredentialManager.getCandidates(disjunction);
+		identifiers = new IdemixIdentifierList<>(candidates.keySet());
 		inflater = (LayoutInflater) context.getSystemService(Context.LAYOUT_INFLATER_SERVICE);
 	}
 
 	@Override
 	public int getCount() {
-		return objects.size();
+		return candidates.size();
 	}
 
 	@Override
 	public Object getItem(int position) {
-		return objects.get(identifiers.get(position));
+		IdemixAttributeIdentifier iai = identifiers.getIdentifer(position);
+		return candidates.get(iai);
 	}
 
 	@Override
@@ -93,7 +94,7 @@ public class AttributesPickerAdapter extends BaseAdapter {
 
 	@Override
 	public View getView(int position, View convertView, ViewGroup parent) {
-		AttributeIdentifier ai = identifiers.get(position);
+		IdemixAttributeIdentifier ai = identifiers.getIdentifer(position);
 
 		TextView view;
 		if (convertView == null)
@@ -101,7 +102,7 @@ public class AttributesPickerAdapter extends BaseAdapter {
 		else
 			view = (TextView) convertView;
 
-		view.setText(objects.get(ai));
+		view.setText(candidates.get(ai));
 
 		return view;
 	}
@@ -111,19 +112,17 @@ public class AttributesPickerAdapter extends BaseAdapter {
 		// TODO reuse convertView?
 
 		View view = inflater.inflate(R.layout.attribute_picker_item, parent, false);
-		AttributeIdentifier ai = identifiers.get(position);
+		IdemixAttributeIdentifier iai = identifiers.getIdentifer(position);
+		AttributeIdentifier ai = iai.getIdentifier();
 
 		final CheckedTextView value = (CheckedTextView) view.findViewById(R.id.detail_attribute_value);
 
+		String attrVal = ai.isCredential() ? "(possession of credential)" : candidates.get(iai);
+
 		// The spaces (&nbsp;) push the radio button a bit to the right. Not very pretty but I can see no other way
 		// to do it. (We have to add them to both lines because we do not know which one will be longest.)
-		String html;
-		if (ai.isCredential())
-			html = "<b>" + objects.get(ai)
-					+ "&nbsp;&nbsp;&nbsp;</b><br/>(possession of credential)&nbsp;&nbsp;&nbsp;";
-		else
-			html = "<b>" + ai.getIssuerName() + " - " + ai.getAttributeName()
-					+ "&nbsp;&nbsp;&nbsp;</b><br/>" + objects.get(ai) + "&nbsp;&nbsp;&nbsp;";
+		String html ="<b>" + identifiers.getUiTitle(iai) + "&nbsp;&nbsp;&nbsp;</b><br/>"
+				+ attrVal + "&nbsp;&nbsp;&nbsp;";
 		value.setText(Html.fromHtml(html));
 		value.setChecked(position == selected);
 
@@ -135,10 +134,9 @@ public class AttributesPickerAdapter extends BaseAdapter {
 	 * @param position Zero-based number specifying the selected attribute
 	 * @return The {@link AttributeDisjunction} that contained the attribute, with the selected member set
 	 */
-	public AttributeDisjunction setSelected(int position) {
+	public IdemixAttributeIdentifier findAndSelect(int position) {
 		selected = position;
-		disjunction.setSelected(identifiers.get(selected));
-		return disjunction;
+		return identifiers.getIdentifer(position);
 	}
 
 	/**

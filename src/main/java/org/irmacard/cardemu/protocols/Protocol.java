@@ -1,11 +1,11 @@
 package org.irmacard.cardemu.protocols;
 
-import android.app.Activity;
 import android.util.Patterns;
 import org.irmacard.api.common.ClientQr;
 import org.irmacard.api.common.DisclosureProofRequest;
 import org.irmacard.api.common.IssuingRequest;
 import org.irmacard.api.common.util.GsonUtil;
+import org.irmacard.cardemu.DisclosureChoice;
 import org.irmacard.cardemu.disclosuredialog.SessionDialogFragment;
 
 public abstract class Protocol implements SessionDialogFragment.SessionDialogListener {
@@ -22,7 +22,7 @@ public abstract class Protocol implements SessionDialogFragment.SessionDialogLis
 	 * @param request The request containing the attributes to show (each of its disjunctions should have
 	 *                a selected attribute).
 	 */
-	abstract public void disclose(final DisclosureProofRequest request);
+	public abstract void disclose(DisclosureProofRequest request, DisclosureChoice disclosureChoice);
 
 	/**
 	 * Informs the session that this session is to be deleted.
@@ -33,7 +33,7 @@ public abstract class Protocol implements SessionDialogFragment.SessionDialogLis
 	 * Perform an issuing session.
 	 * @param request The request containing which attributes we will receive, and which we have to disclose
 	 */
-	abstract protected void finishIssuance(final IssuingRequest request);
+	abstract protected void finishIssuance(IssuingRequest request, DisclosureChoice disclosureChoice);
 
 	/**
 	 * Cancel the current session.
@@ -85,8 +85,8 @@ public abstract class Protocol implements SessionDialogFragment.SessionDialogLis
 	}
 
 	@Override
-	public void onDiscloseOK(final DisclosureProofRequest request) {
-		disclose(request);
+	public void onDiscloseOK(final DisclosureProofRequest request, DisclosureChoice disclosureChoice) {
+		disclose(request, disclosureChoice);
 	}
 
 	@Override
@@ -95,8 +95,8 @@ public abstract class Protocol implements SessionDialogFragment.SessionDialogLis
 	}
 
 	@Override
-	public void onIssueOK(IssuingRequest request) {
-		finishIssuance(request);
+	public void onIssueOK(IssuingRequest request, DisclosureChoice disclosureChoice) {
+		finishIssuance(request, disclosureChoice);
 	}
 
 	@Override

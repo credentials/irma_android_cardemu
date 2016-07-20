@@ -13,6 +13,7 @@ import org.irmacard.api.common.IssuingRequest;
 import org.irmacard.api.common.exceptions.ApiErrorMessage;
 import org.irmacard.api.common.util.GsonUtil;
 import org.irmacard.cardemu.CredentialManager;
+import org.irmacard.cardemu.DisclosureChoice;
 import org.irmacard.cardemu.disclosuredialog.DisclosureInformationActivity;
 import org.irmacard.cardemu.disclosuredialog.SessionDialogFragment;
 
@@ -74,7 +75,7 @@ public abstract class ProtocolHandler implements SessionDialogFragment.SessionDi
 	 */
 	public void askForVerificationPermission(final DisclosureProofRequest request) {
 		if (activity == null) { // Can't show dialogs in this case
-			onDiscloseOK(request);
+			onDiscloseOK(request, null);
 			return;
 		}
 
@@ -95,7 +96,7 @@ public abstract class ProtocolHandler implements SessionDialogFragment.SessionDi
 	 */
 	public void askForIssuancePermission(final IssuingRequest request) {
 		if (activity == null) { // Can't show dialogs in this case
-			onIssueOK(request);
+			onIssueOK(request, null);
 			return;
 		}
 
@@ -163,16 +164,16 @@ public abstract class ProtocolHandler implements SessionDialogFragment.SessionDi
 		dialog.show();
 	}
 
-	@Override public void onDiscloseOK(DisclosureProofRequest request) {
-		protocol.onDiscloseOK(request);
+	@Override public void onDiscloseOK(DisclosureProofRequest request, DisclosureChoice disclosureChoice) {
+		protocol.onDiscloseOK(request, disclosureChoice);
 	}
 
 	@Override public void onDiscloseCancel() {
 		protocol.onDiscloseCancel();
 	}
 
-	@Override public void onIssueOK(IssuingRequest request) {
-		protocol.onIssueOK(request);
+	@Override public void onIssueOK(IssuingRequest request, DisclosureChoice disclosureChoice) {
+		protocol.onIssueOK(request, disclosureChoice);
 	}
 
 	@Override public void onIssueCancel() {
