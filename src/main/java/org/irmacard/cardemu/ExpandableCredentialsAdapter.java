@@ -37,6 +37,7 @@ import android.view.ViewGroup;
 import android.widget.BaseExpandableListAdapter;
 import android.widget.TextView;
 import org.irmacard.cardemu.identifiers.IdemixCredentialIdentifier;
+import org.irmacard.cardemu.identifiers.IdemixIdentifier;
 import org.irmacard.cardemu.identifiers.IdemixIdentifierList;
 import org.irmacard.credentials.Attributes;
 import org.irmacard.credentials.info.AttributeDescription;
@@ -59,6 +60,15 @@ public class ExpandableCredentialsAdapter extends BaseExpandableListAdapter {
     public void updateData(HashMap<IdemixCredentialIdentifier, Attributes> credentialAttributes) {
         this.credentialAttributes = credentialAttributes;
         this.credentials = new IdemixIdentifierList<>(credentialAttributes.keySet());
+
+        Collections.sort(credentials, new Comparator<IdemixIdentifier<CredentialIdentifier>>() {
+            @Override public int compare(IdemixIdentifier<CredentialIdentifier> i1,
+                                         IdemixIdentifier<CredentialIdentifier> i2) {
+                /* Compare them by their title without index suffix, so that if they identify
+                 * the same credential type, then their ordering remains unchanged. */
+                return i1.getUiTitle().compareTo(i2.getUiTitle());
+            }
+        });
 
         this.notifyDataSetChanged();
     }
