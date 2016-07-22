@@ -15,6 +15,6 @@ public class IdemixCredentialIdentifier extends IdemixIdentifier<CredentialIdent
 
 	@Override
 	public String getUiTitle() {
-		return identifier.getIssuerName() + " - " + identifier.getCredentialName();
+		return identifier.getIssuerName() + " - " + identifier.getCredentialDescription().getName();
 	}
 }
