@@ -43,10 +43,10 @@ import org.irmacard.api.common.DisclosureProofRequest;
 import org.irmacard.cardemu.CredentialManager;
 import org.irmacard.cardemu.R;
 import org.irmacard.cardemu.identifiers.IdemixAttributeIdentifier;
-import org.irmacard.cardemu.identifiers.IdemixIdentifierList;
 import org.irmacard.credentials.info.AttributeIdentifier;
 
-import java.util.*;
+import java.util.ArrayList;
+import java.util.HashMap;
 
 /**
  * Adapter for picking an attribute from a {@link AttributeDisjunction}, for use in a {@link SessionDialogFragment}.
@@ -56,7 +56,7 @@ public class AttributesPickerAdapter extends BaseAdapter {
 	LayoutInflater inflater;
 	AttributeDisjunction disjunction;
 	HashMap<IdemixAttributeIdentifier, String> candidates;
-	IdemixIdentifierList<AttributeIdentifier> identifiers;
+	ArrayList<IdemixAttributeIdentifier> identifiers;
 	int selected;
 	int index;
 
@@ -72,7 +72,7 @@ public class AttributesPickerAdapter extends BaseAdapter {
 		this.disjunction = disjunction;
 		this.index = index;
 		candidates = CredentialManager.getCandidates(disjunction);
-		identifiers = new IdemixIdentifierList<>(candidates.keySet());
+		identifiers = new ArrayList<>(candidates.keySet());
 		inflater = (LayoutInflater) context.getSystemService(Context.LAYOUT_INFLATER_SERVICE);
 	}
 
@@ -83,7 +83,7 @@ public class AttributesPickerAdapter extends BaseAdapter {
 
 	@Override
 	public Object getItem(int position) {
-		IdemixAttributeIdentifier iai = identifiers.getIdentifer(position);
+		IdemixAttributeIdentifier iai = identifiers.get(position);
 		return candidates.get(iai);
 	}
 
@@ -94,7 +94,7 @@ public class AttributesPickerAdapter extends BaseAdapter {
 
 	@Override
 	public View getView(int position, View convertView, ViewGroup parent) {
-		IdemixAttributeIdentifier ai = identifiers.getIdentifer(position);
+		IdemixAttributeIdentifier ai = identifiers.get(position);
 
 		TextView view;
 		if (convertView == null)
@@ -112,7 +112,7 @@ public class AttributesPickerAdapter extends BaseAdapter {
 		// TODO reuse convertView?
 
 		View view = inflater.inflate(R.layout.attribute_picker_item, parent, false);
-		IdemixAttributeIdentifier iai = identifiers.getIdentifer(position);
+		IdemixAttributeIdentifier iai = identifiers.get(position);
 		AttributeIdentifier ai = iai.getIdentifier();
 
 		final CheckedTextView value = (CheckedTextView) view.findViewById(R.id.detail_attribute_value);
@@ -121,7 +121,7 @@ public class AttributesPickerAdapter extends BaseAdapter {
 
 		// The spaces (&nbsp;) push the radio button a bit to the right. Not very pretty but I can see no other way
 		// to do it. (We have to add them to both lines because we do not know which one will be longest.)
-		String html ="<b>" + identifiers.getUiTitle(iai) + "&nbsp;&nbsp;&nbsp;</b><br/>"
+		String html ="<b>" + iai.getUiTitle() + "&nbsp;&nbsp;&nbsp;</b><br/>"
 				+ attrVal + "&nbsp;&nbsp;&nbsp;";
 		value.setText(Html.fromHtml(html));
 		value.setChecked(position == selected);
@@ -136,7 +136,7 @@ public class AttributesPickerAdapter extends BaseAdapter {
 	 */
 	public IdemixAttributeIdentifier findAndSelect(int position) {
 		selected = position;
-		return identifiers.getIdentifer(position);
+		return identifiers.get(position);
 	}
 
 	/**

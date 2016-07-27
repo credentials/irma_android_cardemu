@@ -1,14 +1,11 @@
 package org.irmacard.cardemu.identifiers;
 
 import org.irmacard.credentials.info.ObjectIdentifier;
-import org.irmacard.credentials.idemix.IdemixCredential;
 
 import java.io.Serializable;
 
 /**
- * Identifies an instance of an {@link ObjectIdentifier} T, by an {@link ObjectIdentifier}
- * and a hash code, see {@link #getHashCode()}. The hash code can be anything but currently only
- * {@link IdemixCredential#hashCode()} is used.
+ * Identifies an instance of an {@link ObjectIdentifier} T.
  * Se also {@link IdemixAttributeIdentifier} and {@link IdemixCredentialIdentifier}
  * @param <T> A type extending {@link ObjectIdentifier}
  */
@@ -16,39 +13,39 @@ public abstract class IdemixIdentifier<T extends ObjectIdentifier> implements Se
 	private static final long serialVersionUID = -6152302145335181746L;
 
 	protected T identifier;
-	protected int hashCode;
+	protected int index;
+	protected int count;
 
-	public IdemixIdentifier(T identifier, int hashCode) {
+	public IdemixIdentifier(T identifier, int index, int count) {
 		this.identifier = identifier;
-		this.hashCode = hashCode;
+		this.index = index;
+		this.count = count;
 	}
 
 	public T getIdentifier() {
 		return identifier;
 	}
 
-	public int getHashCode() {
-		return hashCode;
+	public int getIndex() {
+		return index;
+	}
+
+	public int getCount() {
+		return count;
 	}
 
 	/**
 	 * Get the title of this instance as it should be displayed in the UI
-	 * (without a count appended of how many there are of this type, as in
-	 * {@link #getUiTitle(int, boolean)})
 	 */
-	public abstract String getUiTitle();
+	public String getUiTitle() {
+		return getUiTitle(true);
+	}
 
 	/**
-	 * Get the title of this instance as it should be displayed in the UI
-	 * @param index Position in the list
-	 * @param multiple If the position should be appended between brackets
+	 * Get the title of this instance as it should be displayed in the UI,
+	 * optionally appending the index suffix.
 	 */
-	public String getUiTitle(int index, boolean multiple) {
-		String title = getUiTitle();
-		if (multiple)
-			title += " (" + index + ")";
-		return title;
-	}
+	public abstract String getUiTitle(boolean includeIndex);
 
 	@Override
 	public boolean equals(Object o) {
@@ -57,14 +54,15 @@ public abstract class IdemixIdentifier<T extends ObjectIdentifier> implements Se
 
 		IdemixIdentifier<?> that = (IdemixIdentifier<?>) o;
 
-		if (hashCode != that.hashCode) return false;
+		if (index != that.index) return false;
 		return identifier.equals(that.identifier);
+
 	}
 
 	@Override
 	public int hashCode() {
 		int result = identifier.hashCode();
-		result = 31 * result + hashCode;
+		result = 31 * result + index;
 		return result;
 	}
 }

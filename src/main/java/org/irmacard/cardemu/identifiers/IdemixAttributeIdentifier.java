@@ -8,20 +8,22 @@ import org.irmacard.credentials.info.AttributeIdentifier;
  */
 public class IdemixAttributeIdentifier extends IdemixIdentifier<AttributeIdentifier> {
 	private static final long serialVersionUID = 2217867985330335002L;
+	private transient IdemixCredentialIdentifier ici;
 
-	public IdemixAttributeIdentifier(AttributeIdentifier identifier, int hashCode) {
-		super(identifier, hashCode);
+	public IdemixAttributeIdentifier(AttributeIdentifier identifier, int index, int count) {
+		super(identifier, index, count);
+		ici = new IdemixCredentialIdentifier(identifier.getCredentialIdentifier(), index, count);
 	}
 
 	public IdemixCredentialIdentifier getIdemixCredentialIdentifier() {
-		return new IdemixCredentialIdentifier(identifier.getCredentialIdentifier(), hashCode);
+		return ici;
 	}
 
 	@Override
-	public String getUiTitle() {
+	public String getUiTitle(boolean includeIndex) {
 		if (identifier.isCredential())
-			return identifier.getIssuerName() + " - " + identifier.getCredentialName();
+			return ici.getUiTitle(includeIndex);
 		else
-			return identifier.getIssuerName() + " - " + identifier.getAttributeName();
+			return ici.getUiTitle(includeIndex) + " - " + identifier.getAttributeName();
 	}
 }

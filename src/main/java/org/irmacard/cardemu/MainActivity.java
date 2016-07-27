@@ -70,7 +70,7 @@ import org.irmacard.credentials.CredentialsException;
 import org.irmacard.credentials.util.log.LogEntry;
 
 import java.util.ArrayList;
-import java.util.HashMap;
+import java.util.LinkedHashMap;
 
 public class MainActivity extends Activity {
 	private static final int DETAIL_REQUEST = 101;
@@ -241,7 +241,7 @@ public class MainActivity extends Activity {
 					Intent detailIntent = new Intent(MainActivity.this, CredentialDetailActivity.class);
 					detailIntent.putExtra(CredentialDetailFragment.ATTRIBUTES,
 							credentialListAdapter.getAttributes(ici));
-					detailIntent.putExtra(CredentialDetailFragment.HASHCODE, ici.getHashCode());
+					detailIntent.putExtra(CredentialDetailFragment.HASHCODE, CredentialManager.getHashCode(ici));
 					startActivityForResult(detailIntent, DETAIL_REQUEST);
 				} catch (ClassCastException e) {
 					Log.e(TAG, "Item " + i + " longclicked but was not a CredentialDescription");
@@ -444,7 +444,7 @@ public class MainActivity extends Activity {
 			});
 		}
 
-		HashMap<IdemixCredentialIdentifier, Attributes> credentials = CredentialManager.getAllAttributes();
+		LinkedHashMap<IdemixCredentialIdentifier, Attributes> credentials = CredentialManager.getAllAttributes();
 		credentialListAdapter.updateData(credentials);
 
 		TextView noCredsText = (TextView) findViewById(R.id.no_credentials_text);

@@ -38,7 +38,6 @@ import android.widget.BaseExpandableListAdapter;
 import android.widget.TextView;
 import org.irmacard.cardemu.identifiers.IdemixCredentialIdentifier;
 import org.irmacard.cardemu.identifiers.IdemixIdentifier;
-import org.irmacard.cardemu.identifiers.IdemixIdentifierList;
 import org.irmacard.credentials.Attributes;
 import org.irmacard.credentials.info.AttributeDescription;
 import org.irmacard.credentials.info.CredentialIdentifier;
@@ -48,25 +47,25 @@ import java.util.*;
 
 public class ExpandableCredentialsAdapter extends BaseExpandableListAdapter {
     private Context context;
-    private IdemixIdentifierList<CredentialIdentifier> credentials;
-    private HashMap<IdemixCredentialIdentifier,Attributes> credentialAttributes;
+    private ArrayList<IdemixCredentialIdentifier> credentials;
+    private LinkedHashMap<IdemixCredentialIdentifier,Attributes> credentialAttributes;
 
     public ExpandableCredentialsAdapter(Context context) {
         this.context = context;
-        this.credentials = new IdemixIdentifierList<>();
+        this.credentials = new ArrayList<>();
         this.credentialAttributes = null;
     }
 
-    public void updateData(HashMap<IdemixCredentialIdentifier, Attributes> credentialAttributes) {
+    public void updateData(LinkedHashMap<IdemixCredentialIdentifier, Attributes> credentialAttributes) {
         this.credentialAttributes = credentialAttributes;
-        this.credentials = new IdemixIdentifierList<>(credentialAttributes.keySet());
+        this.credentials = new ArrayList<>(credentialAttributes.keySet());
 
         Collections.sort(credentials, new Comparator<IdemixIdentifier<CredentialIdentifier>>() {
             @Override public int compare(IdemixIdentifier<CredentialIdentifier> i1,
                                          IdemixIdentifier<CredentialIdentifier> i2) {
                 /* Compare them by their title without index suffix, so that if they identify
                  * the same credential type, then their ordering remains unchanged. */
-                return i1.getUiTitle().compareTo(i2.getUiTitle());
+                return i1.getUiTitle(false).compareTo(i2.getUiTitle(false));
             }
         });
 
@@ -122,7 +121,7 @@ public class ExpandableCredentialsAdapter extends BaseExpandableListAdapter {
 
     @Override
     public View getGroupView(int credential_idx, boolean isExpanded, View convertView, ViewGroup parent) {
-        IdemixCredentialIdentifier ici = credentials.getIdentifer(credential_idx);
+        IdemixCredentialIdentifier ici = credentials.get(credential_idx);
         Attributes attrs = credentialAttributes.get(ici);
 
         if (convertView == null) {
@@ -131,7 +130,7 @@ public class ExpandableCredentialsAdapter extends BaseExpandableListAdapter {
         }
 
         TextView credential_name_field = (TextView) convertView.findViewById(R.id.credential_item_name);
-        credential_name_field.setText(credentials.getUiTitle(ici));
+        credential_name_field.setText(ici.getUiTitle());
         if (!attrs.isExpired()) // Since the convertView gets reused, the TextView might be grey from a previous usage
             credential_name_field.setTextColor(convertView.getResources().getColor(R.color.irmadarkblue));
         else
@@ -150,7 +149,7 @@ public class ExpandableCredentialsAdapter extends BaseExpandableListAdapter {
         TextView attribute_name_field = (TextView) convertView.findViewById(R.id.credential_attribute_name);
         TextView attribute_value_field = (TextView) convertView.findViewById(R.id.credential_attribute_value);
 
-        IdemixCredentialIdentifier ici = credentials.getIdentifer(credential_idx);
+        IdemixCredentialIdentifier ici = credentials.get(credential_idx);
         Attributes attrs = credentialAttributes.get(ici);
 
         if (attribute_idx == 0) {

@@ -38,24 +38,31 @@ import android.view.ViewGroup;
 import android.widget.ImageView;
 import android.widget.LinearLayout;
 import android.widget.TextView;
+import org.irmacard.api.common.AttributeDisjunction;
 import org.irmacard.cardemu.CredentialManager;
 import org.irmacard.cardemu.R;
-import org.irmacard.api.common.AttributeDisjunction;
 import org.irmacard.cardemu.identifiers.IdemixAttributeIdentifier;
-import org.irmacard.cardemu.identifiers.IdemixIdentifierList;
 import org.irmacard.credentials.info.AttributeIdentifier;
 
+import java.util.Collection;
 import java.util.LinkedHashMap;
 
 public class DisjunctionFragment extends Fragment {
 	AttributeDisjunction disjunction;
+
+	public static boolean containsCandidates(Collection<IdemixAttributeIdentifier> attributes, AttributeIdentifier identifier) {
+		for (IdemixAttributeIdentifier iai : attributes)
+			if (iai.getIdentifier().equals(identifier))
+				return true;
+
+		return false;
+	}
 
 	@Override
 	public View onCreateView(LayoutInflater inflater, ViewGroup container, Bundle savedInstanceState) {
 		this.disjunction = (AttributeDisjunction) getArguments().getSerializable("disjunction");
 		LinearLayout list = (LinearLayout) inflater.inflate(R.layout.disjunction_fragment, container, false);
 		LinkedHashMap<IdemixAttributeIdentifier, String> candidates = CredentialManager.getCandidates(disjunction);
-		IdemixIdentifierList<AttributeIdentifier> identifiers = new IdemixIdentifierList<>(candidates.keySet());
 
 		TextView title = (TextView) list.findViewById(R.id.disjunction_title);
 		title.setText(disjunction.getLabel());
@@ -78,7 +85,7 @@ public class DisjunctionFragment extends Fragment {
 
 			((TextView) view.findViewById(R.id.disjunction_title)).setText(text);
 
-			if (identifiers.count(ai) == 0) {
+			if (!containsCandidates(candidates.keySet(), ai)) {
 				ImageView image = (ImageView) view.findViewById(R.id.disjunction_icon);
 				image.setImageResource(R.drawable.irma_icon_missing_064px);
 			}

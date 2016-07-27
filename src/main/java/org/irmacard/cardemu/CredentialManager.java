@@ -177,8 +177,9 @@ public class CredentialManager {
 
 		for (CredentialIdentifier id : credentials.keySet()) {
 			ArrayList<IdemixCredential> list = credentials.get(id);
-			for (IdemixCredential cred : list)
-				map.put(new IdemixCredentialIdentifier(id, cred.hashCode()), cred.getAllAttributes());
+			int count = list.size();
+			for (int i=0; i<count; ++i)
+				map.put(new IdemixCredentialIdentifier(id, i, count), list.get(i).getAllAttributes());
 		}
 
 		return map;
@@ -191,13 +192,21 @@ public class CredentialManager {
 	public static IdemixCredentialIdentifier findCredential(int hashCode) {
 		for (CredentialIdentifier ci : credentials.keySet()) {
 			ArrayList<IdemixCredential> list = credentials.get(ci);
-			for (IdemixCredential credential : list) {
-				if (credential.hashCode() == hashCode)
-					return new IdemixCredentialIdentifier(ci, hashCode);
-			}
+			int count = list.size();
+			for (int i=0; i<count; ++i)
+				if (list.get(i).hashCode() == hashCode)
+					return new IdemixCredentialIdentifier(ci, i, count);
 		}
 
 		return null;
+	}
+
+	public static int getHashCode(IdemixCredentialIdentifier ici) {
+		IdemixCredential cred = get(ici);
+		if (cred != null)
+			return cred.hashCode();
+		else
+			throw new IllegalArgumentException("Specified credential not found: " + ici.getUiTitle());
 	}
 
 	/**
@@ -206,14 +215,10 @@ public class CredentialManager {
 	 */
 	private static IdemixCredential get(IdemixCredentialIdentifier identifier) {
 		ArrayList<IdemixCredential> list = credentials.get(identifier.getIdentifier());
-		if (list == null || list.size() == 0)
+		if (list == null || identifier.getIndex() >= list.size())
 			return null;
 
-		for (IdemixCredential cred : list)
-			if (cred.hashCode() == identifier.getHashCode())
-				return cred;
-
-		return null;
+		return list.get(identifier.getIndex());
 	}
 
 	/**
@@ -412,10 +417,13 @@ public class CredentialManager {
 				if (!attribute.getCredentialIdentifier().equals(credId))
 					continue;
 
-				for (IdemixCredential cred : credentials.get(credId)) {
+				ArrayList<IdemixCredential> list = credentials.get(credId);
+				int count = list.size();
+				for (int i=0; i<list.size(); ++i) {
+					IdemixCredential cred = list.get(i);
+					IdemixAttributeIdentifier iai = new IdemixAttributeIdentifier(attribute, i, count);
 					if (attribute.isCredential()) {
-						map.put(new IdemixAttributeIdentifier(attribute, cred.hashCode()),
-								cd.getIssuerID() + " - " + cd.getShortName());
+						map.put(iai, iai.getUiTitle());
 					}
 					else {
 						Attributes attrs = cred.getAllAttributes();
@@ -425,7 +433,7 @@ public class CredentialManager {
 						String requiredValue = disjunction.getValues().get(attribute);
 						String value = new String(attrs.get(attribute.getAttributeName()));
 						if (requiredValue == null || requiredValue.equals(value))
-							map.put(new IdemixAttributeIdentifier(attribute, cred.hashCode()), value);
+							map.put(iai, value);
 					}
 				}
 			}
