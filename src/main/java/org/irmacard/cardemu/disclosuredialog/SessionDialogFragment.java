@@ -45,12 +45,14 @@ import android.widget.LinearLayout;
 import android.widget.Spinner;
 import android.widget.TextView;
 import org.irmacard.api.common.*;
-import org.irmacard.cardemu.R;
 import org.irmacard.cardemu.DisclosureChoice;
+import org.irmacard.cardemu.R;
 import org.irmacard.cardemu.identifiers.IdemixAttributeIdentifier;
 import org.irmacard.credentials.info.CredentialDescription;
 import org.irmacard.credentials.info.InfoException;
 import org.irmacard.mno.common.util.GsonUtil;
+
+import java.util.ArrayList;
 
 /**
  * DialogFragment for asking permission of a user to disclose specified attributes, issue new credentials, or both.
@@ -81,7 +83,7 @@ public class SessionDialogFragment extends DialogFragment {
 		SessionDialogFragment dialog = new SessionDialogFragment();
 
 		DisclosureChoice choice = new DisclosureChoice(request);
-		for (AttributeDisjunction disjunction : request.getContent())
+		for (int i=0; i<request.getContent().size(); ++i)
 			choice.getAttributes().add(null);
 
 		Bundle args = new Bundle();
@@ -101,7 +103,7 @@ public class SessionDialogFragment extends DialogFragment {
 		SessionDialogFragment dialog = new SessionDialogFragment();
 
 		DisclosureChoice choice = new DisclosureChoice(request);
-		for (AttributeDisjunction disjunction : request.getRequiredAttributes())
+		for (int i=0; i<request.getRequiredAttributes().size(); ++i)
 			choice.getAttributes().add(null);
 
 		Bundle args = new Bundle();
@@ -130,22 +132,15 @@ public class SessionDialogFragment extends DialogFragment {
 		Resources resources = activity.getResources();
 		LinearLayout list = (LinearLayout) view.findViewById(R.id.attributes_container);
 
+		final ArrayList<Spinner> spinners = new ArrayList<>(request.getContent().size());
+
 		if (list == null)
 			throw new IllegalArgumentException("Can't populate view: of incorrect type" +
 					" (should be R.layout.dialog_disclosure)");
 
 		// When a user chooses an item in the spinner, this listener notifies the adapter of the spinner which item
 		// was selected
-		AdapterView.OnItemSelectedListener spinnerListener = new AdapterView.OnItemSelectedListener() {
-			@Override public void onItemSelected(AdapterView<?> parent, View view, int position, long id) {
-				AttributesPickerAdapter adapter = (AttributesPickerAdapter) parent.getAdapter();
-				IdemixAttributeIdentifier iai = adapter.findAndSelect(position);
-				choice.getAttributes().set(adapter.getIndex(), iai);
-			}
-			@Override public void onNothingSelected(AdapterView<?> parent) {
-				((AttributesPickerAdapter) parent.getAdapter()).findAndSelect(-1);
-			}
-		};
+		AdapterView.OnItemSelectedListener spinnerListener = new AttributeSelectedListener(spinners, choice);
 
 		for (int i = 0; i < request.getContent().size(); ++i) {
 			AttributeDisjunction disjunction = request.getContent().get(i);
@@ -156,8 +151,8 @@ public class SessionDialogFragment extends DialogFragment {
 
 			Spinner spinner = (Spinner) attributeView.findViewById(R.id.attribute_spinner);
 			spinner.setAdapter(new AttributesPickerAdapter(activity, disjunction, i));
-
 			spinner.setOnItemSelectedListener(spinnerListener);
+			spinners.add(spinner);
 
 			list.addView(attributeView);
 		}
@@ -289,5 +284,50 @@ public class SessionDialogFragment extends DialogFragment {
 		}
 
 		return d;
+	}
+}
+
+class AttributeSelectedListener implements AdapterView.OnItemSelectedListener {
+	ArrayList<Spinner> spinners;
+	DisclosureChoice choice;
+
+	public AttributeSelectedListener(ArrayList<Spinner> spinners, DisclosureChoice choice) {
+		this.spinners = spinners;
+		this.choice = choice;
+	}
+
+	private IdemixAttributeIdentifier select(AttributesPickerAdapter adapter, int position) {
+		IdemixAttributeIdentifier iai = adapter.findAndSelect(position);
+		choice.getAttributes().set(adapter.getIndex(), iai);
+		return iai;
+	}
+
+	@Override
+	public void onItemSelected(AdapterView<?> parent, View view, int position, long id) {
+		AttributesPickerAdapter adapter = (AttributesPickerAdapter) parent.getAdapter();
+		IdemixAttributeIdentifier iai = select(adapter, position);
+
+		// Make the values of the other spinners consistent with this one
+		for (Spinner spinner : spinners) {
+			adapter = (AttributesPickerAdapter) spinner.getAdapter();
+			IdemixAttributeIdentifier selected = adapter.getSelected();
+
+			// If the selected attributes are in the same credential TYPE, but not
+			// the same credential INSTANCE
+			if (selected.getIdentifier().getCredentialIdentifier()
+					.equals(iai.getIdentifier().getCredentialIdentifier())
+					&& !selected.getIdemixCredentialIdentifier()
+					.equals(iai.getIdemixCredentialIdentifier())) {
+				// Find this attribute in the other credential instance
+				int index = adapter.find(iai.getIdemixCredentialIdentifier(), selected.getIdentifier());
+				if (index >= 0)
+					spinner.setSelection(index);
+			}
+		}
+	}
+
+	@Override
+	public void onNothingSelected(AdapterView<?> parent) {
+		((AttributesPickerAdapter) parent.getAdapter()).findAndSelect(-1);
 	}
 }

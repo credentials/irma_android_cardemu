@@ -43,6 +43,7 @@ import org.irmacard.api.common.DisclosureProofRequest;
 import org.irmacard.cardemu.CredentialManager;
 import org.irmacard.cardemu.R;
 import org.irmacard.cardemu.identifiers.IdemixAttributeIdentifier;
+import org.irmacard.cardemu.identifiers.IdemixCredentialIdentifier;
 import org.irmacard.credentials.info.AttributeIdentifier;
 
 import java.util.ArrayList;
@@ -83,8 +84,7 @@ public class AttributesPickerAdapter extends BaseAdapter {
 
 	@Override
 	public Object getItem(int position) {
-		IdemixAttributeIdentifier iai = identifiers.get(position);
-		return candidates.get(iai);
+		return candidates.get(identifiers.get(position));
 	}
 
 	@Override
@@ -136,7 +136,23 @@ public class AttributesPickerAdapter extends BaseAdapter {
 	 */
 	public IdemixAttributeIdentifier findAndSelect(int position) {
 		selected = position;
-		return identifiers.get(position);
+		return getSelected();
+	}
+
+	public IdemixAttributeIdentifier getSelected() {
+		return identifiers.get(selected);
+	}
+
+	/**
+	 * Returns the index of the specified attribute from the specified credential.
+	 * @param ici The credential instance
+	 * @param attribute The attribute
+	 * @return The index if we have it, -1 otherwise
+	 */
+	public int find(IdemixCredentialIdentifier ici, AttributeIdentifier attribute) {
+		if (!attribute.getCredentialIdentifier().equals(ici.getIdentifier()))
+			return -1;
+		return identifiers.indexOf(new IdemixAttributeIdentifier(attribute, ici.getIndex(), ici.getCount()));
 	}
 
 	/**
