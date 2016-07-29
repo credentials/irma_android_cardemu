@@ -53,13 +53,11 @@ import java.util.HashMap;
  * Adapter for picking an attribute from a {@link AttributeDisjunction}, for use in a {@link SessionDialogFragment}.
  */
 public class AttributesPickerAdapter extends BaseAdapter {
-	Context context;
-	LayoutInflater inflater;
-	AttributeDisjunction disjunction;
-	HashMap<IdemixAttributeIdentifier, String> candidates;
-	ArrayList<IdemixAttributeIdentifier> identifiers;
-	int selected;
-	int index;
+	private LayoutInflater inflater;
+	private HashMap<IdemixAttributeIdentifier, String> candidates;
+	private ArrayList<IdemixAttributeIdentifier> identifiers;
+	private int selected;
+	private int index;
 
 	/**
 	 * Constructs a new adapter.
@@ -69,12 +67,10 @@ public class AttributesPickerAdapter extends BaseAdapter {
 	 * {@link #getIndex()})
 	 */
 	public AttributesPickerAdapter(Context context, AttributeDisjunction disjunction, int index) {
-		this.context = context;
-		this.disjunction = disjunction;
 		this.index = index;
-		candidates = CredentialManager.getCandidates(disjunction);
-		identifiers = new ArrayList<>(candidates.keySet());
-		inflater = (LayoutInflater) context.getSystemService(Context.LAYOUT_INFLATER_SERVICE);
+		this.candidates = CredentialManager.getCandidates(disjunction);
+		this.identifiers = new ArrayList<>(candidates.keySet());
+		this.inflater = (LayoutInflater) context.getSystemService(Context.LAYOUT_INFLATER_SERVICE);
 	}
 
 	@Override
