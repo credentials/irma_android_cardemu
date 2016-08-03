@@ -16,6 +16,8 @@ import org.irmacard.cardemu.CredentialManager;
 import org.irmacard.cardemu.DisclosureChoice;
 import org.irmacard.cardemu.disclosuredialog.DisclosureInformationActivity;
 import org.irmacard.cardemu.disclosuredialog.SessionDialogFragment;
+import org.irmacard.cardemu.protocols.IrmaClient.Action;
+import org.irmacard.cardemu.protocols.IrmaClient.Status;
 
 import java.util.List;
 
@@ -29,16 +31,6 @@ import java.util.List;
  * {@link #askForIssuancePermission(IssuingRequest)}.
  */
 public abstract class IrmaClientHandler implements SessionDialogFragment.SessionDialogListener {
-	/** Specifies the current state of the irmaClient. */
-	public enum Status {
-		CONNECTED, COMMUNICATING, DONE
-	}
-
-	/** Specifies what action the irmaClient is performing. */
-	public enum Action {
-		DISCLOSING, ISSUING, UNKNOWN
-	}
-
 	private Activity activity;
 	private IrmaClient irmaClient;
 

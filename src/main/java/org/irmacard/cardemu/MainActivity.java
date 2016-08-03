@@ -111,7 +111,7 @@ public class MainActivity extends Activity {
 	private boolean onlineEnrolling;
 
 	private IrmaClientHandler irmaClientHandler = new IrmaClientHandler(this) {
-		@Override public void onStatusUpdate(Action action, Status status) {
+		@Override public void onStatusUpdate(IrmaClient.Action action, IrmaClient.Status status) {
 			switch (status) {
 				case COMMUNICATING:
 					setState(STATE_COMMUNICATING); break;
@@ -122,7 +122,7 @@ public class MainActivity extends Activity {
 			}
 		}
 
-		@Override public void onSuccess(Action action) {
+		@Override public void onSuccess(IrmaClient.Action action) {
 			switch (action) {
 				case DISCLOSING:
 					setFeedback("Successfully disclosed attributes", "success"); break;
@@ -132,7 +132,7 @@ public class MainActivity extends Activity {
 			finish(true);
 		}
 
-		@Override public void onCancelled(Action action) {
+		@Override public void onCancelled(IrmaClient.Action action) {
 			switch (action) {
 				case DISCLOSING:
 					setFeedback("Cancelled disclosure", "warning"); break;
@@ -142,7 +142,7 @@ public class MainActivity extends Activity {
 			finish(true);
 		}
 
-		@Override public void onFailure(Action action, String message, ApiErrorMessage error, final String techInfo) {
+		@Override public void onFailure(IrmaClient.Action action, String message, ApiErrorMessage error, final String techInfo) {
 			final String title;
 			switch (action) {
 				case DISCLOSING:

@@ -45,11 +45,11 @@ public class JsonIrmaClient extends IrmaClient {
 
 	private void connect() {
 		if (Pattern.matches(".*/verification/[^/]+/$", server)) {
-			action = IrmaClientHandler.Action.DISCLOSING;
+			action = Action.DISCLOSING;
 			startDisclosure();
 		}
 		else if (Pattern.matches(".*/issue/[^/]+/$", server)) {
-			action = IrmaClientHandler.Action.ISSUING;
+			action = Action.ISSUING;
 			startIssuance();
 		}
 	}
@@ -129,7 +129,7 @@ public class JsonIrmaClient extends IrmaClient {
 	public void startIssuance() {
 		Log.i(TAG, "Retrieving issuing request: " + server);
 
-		handler.onStatusUpdate(IrmaClientHandler.Action.ISSUING, IrmaClientHandler.Status.COMMUNICATING);
+		handler.onStatusUpdate(Action.ISSUING, Status.COMMUNICATING);
 		final String server = this.server;
 		final JsonHttpClient client = new JsonHttpClient(GsonUtil.getGson());
 
@@ -141,7 +141,7 @@ public class JsonIrmaClient extends IrmaClient {
 				// If necessary, update the stores; afterwards, ask the user for permission to continue
 				StoreManager.download(request, new StoreManager.DownloadHandler() {
 					@Override public void onSuccess() {
-						handler.onStatusUpdate(IrmaClientHandler.Action.ISSUING, IrmaClientHandler.Status.CONNECTED);
+						handler.onStatusUpdate(Action.ISSUING, Status.CONNECTED);
 						handler.askForIssuancePermission(request);
 					}
 					@Override public void onError(Exception e) {
@@ -162,7 +162,7 @@ public class JsonIrmaClient extends IrmaClient {
 	 */
 	@Override
 	protected void finishIssuance(final IssuingRequest request, final DisclosureChoice disclosureChoice) {
-		handler.onStatusUpdate(IrmaClientHandler.Action.ISSUING, IrmaClientHandler.Status.COMMUNICATING);
+		handler.onStatusUpdate(Action.ISSUING, Status.COMMUNICATING);
 		Log.i(TAG, "Posting issuing commitments");
 
 		final JsonHttpClient client = new JsonHttpClient(GsonUtil.getGson());
@@ -190,7 +190,7 @@ public class JsonIrmaClient extends IrmaClient {
 			@Override public void onSuccess(ArrayList<IssueSignatureMessage> result) {
 				try {
 					CredentialManager.constructCredentials(result);
-					handler.onSuccess(IrmaClientHandler.Action.ISSUING);
+					handler.onSuccess(Action.ISSUING);
 				} catch (InfoException|CredentialsException e) {
 					fail(e, false); // No need to inform the server if this failed
 				}
@@ -203,7 +203,7 @@ public class JsonIrmaClient extends IrmaClient {
 	 * ask the user which attributes she wants to disclose.
 	 */
 	private void startDisclosure() {
-		handler.onStatusUpdate(IrmaClientHandler.Action.DISCLOSING, IrmaClientHandler.Status.COMMUNICATING);
+		handler.onStatusUpdate(Action.DISCLOSING, Status.COMMUNICATING);
 		Log.i(TAG, "Retrieving disclosure request: " + server);
 
 		JsonHttpClient client = new JsonHttpClient(GsonUtil.getGson());
@@ -219,7 +219,7 @@ public class JsonIrmaClient extends IrmaClient {
 				// If necessary, update the stores; afterwards, ask the user for permission to continue
 				StoreManager.download(request, new StoreManager.DownloadHandler() {
 					@Override public void onSuccess() {
-						handler.onStatusUpdate(IrmaClientHandler.Action.DISCLOSING, IrmaClientHandler.Status.CONNECTED);
+						handler.onStatusUpdate(Action.DISCLOSING, Status.CONNECTED);
 						handler.askForVerificationPermission(request);
 					}
 					@Override public void onError(Exception e) {
@@ -238,7 +238,7 @@ public class JsonIrmaClient extends IrmaClient {
 	 */
 	@Override
 	public void disclose(final DisclosureProofRequest request, DisclosureChoice disclosureChoice) {
-		handler.onStatusUpdate(IrmaClientHandler.Action.DISCLOSING, IrmaClientHandler.Status.COMMUNICATING);
+		handler.onStatusUpdate(Action.DISCLOSING, Status.COMMUNICATING);
 		Log.i(TAG, "Sending disclosure proofs to " + server);
 
 		ProofList proofs;
@@ -256,7 +256,7 @@ public class JsonIrmaClient extends IrmaClient {
 			new JsonResultHandler<DisclosureProofResult.Status>() {
 			@Override public void onSuccess(DisclosureProofResult.Status result) {
 				if (result == DisclosureProofResult.Status.VALID) {
-					handler.onSuccess(IrmaClientHandler.Action.DISCLOSING);
+					handler.onSuccess(Action.DISCLOSING);
 				} else { // We successfully computed a proof but server rejects it? That's fishy, report it
 					String feedback = "Server rejected proof: " + result.name().toLowerCase();
 					ACRA.getErrorReporter().handleException(new Exception(feedback));

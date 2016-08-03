@@ -131,14 +131,14 @@ public abstract class AbstractNFCEnrollActivity extends AbstractGUIEnrollActivit
     }
 
     private IrmaClientHandler irmaClientHandler = new IrmaClientHandler(this) {
-        @Override public void onStatusUpdate(Action action, Status status) {} // Not interested
-        @Override public void onCancelled(Action action) {
+        @Override public void onStatusUpdate(IrmaClient.Action action, IrmaClient.Status status) {} // Not interested
+        @Override public void onCancelled(IrmaClient.Action action) {
             finish();
         }
-        @Override public void onSuccess(Action action) {
+        @Override public void onSuccess(IrmaClient.Action action) {
             done();
         }
-        @Override public void onFailure(Action action, String message, ApiErrorMessage error, String info) {
+        @Override public void onFailure(IrmaClient.Action action, String message, ApiErrorMessage error, String info) {
             if (error != null)
                 fail(error);
             else

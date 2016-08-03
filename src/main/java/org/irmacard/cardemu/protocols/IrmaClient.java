@@ -9,7 +9,17 @@ import org.irmacard.cardemu.DisclosureChoice;
 import org.irmacard.cardemu.disclosuredialog.SessionDialogFragment;
 
 public abstract class IrmaClient implements SessionDialogFragment.SessionDialogListener {
-	protected IrmaClientHandler.Action action = IrmaClientHandler.Action.UNKNOWN;
+	/** Specifies the current state of the instance. */
+	public enum Status {
+		CONNECTED, COMMUNICATING, DONE
+	}
+
+	/** Specifies what action the instance is performing. */
+	public enum Action {
+		DISCLOSING, ISSUING, UNKNOWN
+	}
+
+	protected Action action = Action.UNKNOWN;
 	protected IrmaClientHandler handler;
 
 	protected IrmaClient(IrmaClientHandler handler) {
@@ -53,7 +63,7 @@ public abstract class IrmaClient implements SessionDialogFragment.SessionDialogL
 		try {
 			qr = GsonUtil.getGson().fromJson(qrcontent, ClientQr.class);
 		} catch (Exception e) {
-			handler.onFailure(IrmaClientHandler.Action.UNKNOWN, "Not an IRMA session", null, "Content: " + qrcontent);
+			handler.onFailure(Action.UNKNOWN, "Not an IRMA session", null, "Content: " + qrcontent);
 			return;
 		}
 
@@ -66,7 +76,7 @@ public abstract class IrmaClient implements SessionDialogFragment.SessionDialogL
 
 		// Check URL validity
 		if (!Patterns.WEB_URL.matcher(url).matches()) {
-			handler.onFailure(IrmaClientHandler.Action.UNKNOWN, "Protocol not supported", null,
+			handler.onFailure(Action.UNKNOWN, "Protocol not supported", null,
 					qr.getUrl() != null ? "URL: " + qr.getUrl() : "No URL specified.");
 			return;
 		}
@@ -78,7 +88,7 @@ public abstract class IrmaClient implements SessionDialogFragment.SessionDialogL
 				irmaClient = new JsonIrmaClient(url, handler);
 				break;
 			default: // TODO show warning message in case "1.0"
-				handler.onFailure(IrmaClientHandler.Action.UNKNOWN, "Protocol not supported", null,
+				handler.onFailure(Action.UNKNOWN, "Protocol not supported", null,
 						qr.getVersion() != null ? "Version: " + qr.getVersion() : "No version specified.");
 				break;
 		}
