@@ -62,8 +62,8 @@ import org.irmacard.android.util.credentials.StoreManager;
 import org.irmacard.api.common.exceptions.ApiErrorMessage;
 import org.irmacard.cardemu.identifiers.IdemixCredentialIdentifier;
 import org.irmacard.cardemu.preferences.IRMAPreferenceActivity;
-import org.irmacard.cardemu.protocols.Protocol;
-import org.irmacard.cardemu.protocols.ProtocolHandler;
+import org.irmacard.cardemu.protocols.IrmaClient;
+import org.irmacard.cardemu.protocols.IrmaClientHandler;
 import org.irmacard.cardemu.selfenrol.EnrollSelectActivity;
 import org.irmacard.credentials.Attributes;
 import org.irmacard.credentials.CredentialsException;
@@ -110,7 +110,7 @@ public class MainActivity extends Activity {
 	private boolean launchedFromBrowser;
 	private boolean onlineEnrolling;
 
-	private ProtocolHandler protocolHandler = new ProtocolHandler(this) {
+	private IrmaClientHandler irmaClientHandler = new IrmaClientHandler(this) {
 		@Override public void onStatusUpdate(Action action, Status status) {
 			switch (status) {
 				case COMMUNICATING:
@@ -522,7 +522,7 @@ public class MainActivity extends Activity {
 
 		currentSessionUrl = qr;
 		launchedFromBrowser = true;
-		Protocol.NewSession(qr, protocolHandler);
+		IrmaClient.NewSession(qr, irmaClientHandler);
 	}
 
 	public void onMainShapeTouch(View v) {
@@ -596,7 +596,7 @@ public class MainActivity extends Activity {
 				if (contents != null) {
 					launchedFromBrowser = false;
 					onlineEnrolling = false;
-					Protocol.NewSession(contents, protocolHandler);
+					IrmaClient.NewSession(contents, irmaClientHandler);
 				}
 			}
 		}
@@ -686,7 +686,7 @@ public class MainActivity extends Activity {
 				.setView(inputbox)
 				.setPositiveButton(R.string.start, new DialogInterface.OnClickListener() {
 					@Override public void onClick(DialogInterface dialog, int whichButton) {
-						Protocol.NewSession(inputbox.getText().toString(), protocolHandler);
+						IrmaClient.NewSession(inputbox.getText().toString(), irmaClientHandler);
 					}
 				})
 				.setNegativeButton(android.R.string.cancel, null)

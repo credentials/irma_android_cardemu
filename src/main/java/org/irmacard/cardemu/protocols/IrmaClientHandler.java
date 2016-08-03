@@ -20,33 +20,33 @@ import org.irmacard.cardemu.disclosuredialog.SessionDialogFragment;
 import java.util.List;
 
 /**
- * Glue between {@link Protocol} instances and their users, allowing them to specify the
- * behaviour of the Protocol instance. At minimum, inheritors must
+ * Glue between {@link IrmaClient} instances and their users, allowing them to specify the
+ * behaviour of the IrmaClient instance. At minimum, inheritors must
  * implement the on-methods, specifying what to do when the status changes, or when the
  * session is successful, cancelled or failed. If it is given an activity in its constructor,
  * it will also ask permission of the user before disclosing or issuing (see
  * {@link #askForVerificationPermission(DisclosureProofRequest)} and
  * {@link #askForIssuancePermission(IssuingRequest)}.
  */
-public abstract class ProtocolHandler implements SessionDialogFragment.SessionDialogListener {
-	/** Specifies the current state of the protocol. */
+public abstract class IrmaClientHandler implements SessionDialogFragment.SessionDialogListener {
+	/** Specifies the current state of the irmaClient. */
 	public enum Status {
 		CONNECTED, COMMUNICATING, DONE
 	}
 
-	/** Specifies what action the protocol is performing. */
+	/** Specifies what action the irmaClient is performing. */
 	public enum Action {
 		DISCLOSING, ISSUING, UNKNOWN
 	}
 
 	private Activity activity;
-	private Protocol protocol;
+	private IrmaClient irmaClient;
 
 	/**
 	 * Construct a new handler. No permission will be asked of the user before disclosing or
-	 * issuing (use {@link #ProtocolHandler(Activity)} if this is necessary).
+	 * issuing (use {@link #IrmaClientHandler(Activity)} if this is necessary).
 	 */
-	public ProtocolHandler() {}
+	public IrmaClientHandler() {}
 
 	/**
 	 * Construct a new handler. Before disclosing or issuing, a dialog will ask the user for permission
@@ -54,7 +54,7 @@ public abstract class ProtocolHandler implements SessionDialogFragment.SessionDi
 	 * {@link #askForIssuancePermission(IssuingRequest)}).
 	 * @param activity The activity to use for creation of the dialogs
 	 */
-	public ProtocolHandler(Activity activity) {
+	public IrmaClientHandler(Activity activity) {
 		this.activity = activity;
 	}
 
@@ -63,8 +63,8 @@ public abstract class ProtocolHandler implements SessionDialogFragment.SessionDi
 	abstract public void onCancelled(Action action);
 	abstract public void onFailure(Action action, String message, ApiErrorMessage error, String techInfo);
 
-	public void setProtocol(Protocol protocol) {
-		this.protocol = protocol;
+	public void setIrmaClient(IrmaClient irmaClient) {
+		this.irmaClient = irmaClient;
 	}
 
 	/**
@@ -137,7 +137,7 @@ public abstract class ProtocolHandler implements SessionDialogFragment.SessionDi
 				.setPositiveButton("OK", new DialogInterface.OnClickListener() {
 					@Override
 					public void onClick(DialogInterface dialog, int which) {
-						protocol.deleteSession();
+						irmaClient.deleteSession();
 						onCancelled(action);
 					}
 				})
@@ -165,18 +165,18 @@ public abstract class ProtocolHandler implements SessionDialogFragment.SessionDi
 	}
 
 	@Override public void onDiscloseOK(DisclosureProofRequest request, DisclosureChoice disclosureChoice) {
-		protocol.onDiscloseOK(request, disclosureChoice);
+		irmaClient.onDiscloseOK(request, disclosureChoice);
 	}
 
 	@Override public void onDiscloseCancel() {
-		protocol.onDiscloseCancel();
+		irmaClient.onDiscloseCancel();
 	}
 
 	@Override public void onIssueOK(IssuingRequest request, DisclosureChoice disclosureChoice) {
-		protocol.onIssueOK(request, disclosureChoice);
+		irmaClient.onIssueOK(request, disclosureChoice);
 	}
 
 	@Override public void onIssueCancel() {
-		protocol.onIssueCancel();
+		irmaClient.onIssueCancel();
 	}
 }

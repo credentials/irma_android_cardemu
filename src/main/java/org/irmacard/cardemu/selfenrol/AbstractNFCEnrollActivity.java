@@ -27,8 +27,8 @@ import org.irmacard.cardemu.SecureSSLSocketFactory;
 import org.irmacard.cardemu.httpclient.HttpClientException;
 import org.irmacard.cardemu.httpclient.HttpResultHandler;
 import org.irmacard.cardemu.httpclient.JsonHttpClient;
-import org.irmacard.cardemu.protocols.Protocol;
-import org.irmacard.cardemu.protocols.ProtocolHandler;
+import org.irmacard.cardemu.protocols.IrmaClient;
+import org.irmacard.cardemu.protocols.IrmaClientHandler;
 import org.irmacard.mno.common.DocumentDataMessage;
 import org.irmacard.mno.common.EnrollmentStartMessage;
 import org.irmacard.mno.common.PassportVerificationResult;
@@ -130,7 +130,7 @@ public abstract class AbstractNFCEnrollActivity extends AbstractGUIEnrollActivit
         }, MAX_TAG_READ_TIME);
     }
 
-    private ProtocolHandler protocolHandler = new ProtocolHandler(this) {
+    private IrmaClientHandler irmaClientHandler = new IrmaClientHandler(this) {
         @Override public void onStatusUpdate(Action action, Status status) {} // Not interested
         @Override public void onCancelled(Action action) {
             finish();
@@ -191,7 +191,7 @@ public abstract class AbstractNFCEnrollActivity extends AbstractGUIEnrollActivit
                         }
 
                         advanceScreen();
-                        Protocol.NewSession(result.getIssueQr(), protocolHandler);
+                        IrmaClient.NewSession(result.getIssueQr(), irmaClientHandler);
                     }
                 });
     }

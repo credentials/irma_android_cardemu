@@ -8,13 +8,13 @@ import org.irmacard.api.common.util.GsonUtil;
 import org.irmacard.cardemu.DisclosureChoice;
 import org.irmacard.cardemu.disclosuredialog.SessionDialogFragment;
 
-public abstract class Protocol implements SessionDialogFragment.SessionDialogListener {
-	protected ProtocolHandler.Action action = ProtocolHandler.Action.UNKNOWN;
-	protected ProtocolHandler handler;
+public abstract class IrmaClient implements SessionDialogFragment.SessionDialogListener {
+	protected IrmaClientHandler.Action action = IrmaClientHandler.Action.UNKNOWN;
+	protected IrmaClientHandler handler;
 
-	protected Protocol(ProtocolHandler handler) {
+	protected IrmaClient(IrmaClientHandler handler) {
 		this.handler = handler;
-		this.handler.setProtocol(this);
+		this.handler.setIrmaClient(this);
 	}
 
 	/**
@@ -47,38 +47,38 @@ public abstract class Protocol implements SessionDialogFragment.SessionDialogLis
 	 * @param qrcontent Contents of the QR code, containing the server to connect to and protocol version number
 	 * @param handler The handler to report feedback to
 	 */
-	public static void NewSession(String qrcontent, ProtocolHandler handler) {
+	public static void NewSession(String qrcontent, IrmaClientHandler handler) {
 		// Decide on the protocol version and the URL to connect to
 		ClientQr qr;
 		try {
 			qr = GsonUtil.getGson().fromJson(qrcontent, ClientQr.class);
 		} catch (Exception e) {
-			handler.onFailure(ProtocolHandler.Action.UNKNOWN, "Not an IRMA session", null, "Content: " + qrcontent);
+			handler.onFailure(IrmaClientHandler.Action.UNKNOWN, "Not an IRMA session", null, "Content: " + qrcontent);
 			return;
 		}
 
 		NewSession(qr, handler);
 	}
 
-	public static void NewSession(ClientQr qr, ProtocolHandler handler) {
+	public static void NewSession(ClientQr qr, IrmaClientHandler handler) {
 		String protocolVersion = qr.getVersion();
 		String url = qr.getUrl();
 
 		// Check URL validity
 		if (!Patterns.WEB_URL.matcher(url).matches()) {
-			handler.onFailure(ProtocolHandler.Action.UNKNOWN, "Protocol not supported", null,
+			handler.onFailure(IrmaClientHandler.Action.UNKNOWN, "Protocol not supported", null,
 					qr.getUrl() != null ? "URL: " + qr.getUrl() : "No URL specified.");
 			return;
 		}
 
 		// We have a valid URL: let's go!
-		Protocol protocol;
+		IrmaClient irmaClient;
 		switch (protocolVersion) {
 			case "2.0":
-				protocol = new JsonProtocol(url, handler);
+				irmaClient = new JsonIrmaClient(url, handler);
 				break;
 			default: // TODO show warning message in case "1.0"
-				handler.onFailure(ProtocolHandler.Action.UNKNOWN, "Protocol not supported", null,
+				handler.onFailure(IrmaClientHandler.Action.UNKNOWN, "Protocol not supported", null,
 						qr.getVersion() != null ? "Version: " + qr.getVersion() : "No version specified.");
 				break;
 		}
