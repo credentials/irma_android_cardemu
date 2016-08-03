@@ -31,4 +31,8 @@
         <item name="android:textColor">?android:textColorPrimary</item>
     </style>
 
+    <style name="MyDialogTheme" parent="android:Theme.Material.Light.Dialog">
+        <item name="android:datePickerStyle">@style/MyDatePicker</item>
+    </style>
+
 </resources>

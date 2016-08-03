@@ -15,9 +15,18 @@
     <!-- Application theme. -->
     <style name="AppTheme" parent="AppBaseTheme">
         <!-- All customizations that are NOT specific to a particular API-level can go here. -->
+        <item name="android:dialogTheme">@style/MyDialogTheme</item>
+        <item name="android:datePickerStyle">@style/MyDatePicker</item>
     </style>
 
     <style name="Irma.Button" parent="@android:style/Widget.Button">
+    </style>
+
+    <style name="MyDialogTheme" parent="Theme.AppCompat.Light.NoActionBar">
+        <item name="android:datePickerStyle">@style/MyDatePicker</item>
+    </style>
+
+    <style name="MyDatePicker" parent="android:Widget.Holo.DatePicker">
     </style>
 
 </resources>
