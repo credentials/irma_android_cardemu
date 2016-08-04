@@ -1,4 +1,4 @@
-package org.irmacard.cardemu.protocols;
+package org.irmacard.cardemu.irmaclient;
 
 import android.app.Activity;
 import android.app.AlertDialog;
@@ -16,8 +16,8 @@ import org.irmacard.cardemu.CredentialManager;
 import org.irmacard.cardemu.DisclosureChoice;
 import org.irmacard.cardemu.disclosuredialog.DisclosureInformationActivity;
 import org.irmacard.cardemu.disclosuredialog.SessionDialogFragment;
-import org.irmacard.cardemu.protocols.IrmaClient.Action;
-import org.irmacard.cardemu.protocols.IrmaClient.Status;
+import org.irmacard.cardemu.irmaclient.IrmaClient.Action;
+import org.irmacard.cardemu.irmaclient.IrmaClient.Status;
 
 import java.util.List;
 

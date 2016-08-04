@@ -1,4 +1,4 @@
-package org.irmacard.cardemu.protocols;
+package org.irmacard.cardemu.irmaclient;
 
 import android.os.AsyncTask;
 import android.util.Log;
