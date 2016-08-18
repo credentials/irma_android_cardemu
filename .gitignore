@@ -14,3 +14,4 @@ acra.gradle
 schememanagers.gradle
 signingkeys.gradle
 enroll.gradle
+local.properties
