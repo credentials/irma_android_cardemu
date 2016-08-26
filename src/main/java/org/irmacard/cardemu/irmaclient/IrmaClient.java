@@ -1,12 +1,16 @@
 package org.irmacard.cardemu.irmaclient;
 
 import android.util.Patterns;
+
 import org.irmacard.api.common.ClientQr;
 import org.irmacard.api.common.DisclosureProofRequest;
 import org.irmacard.api.common.IssuingRequest;
 import org.irmacard.api.common.util.GsonUtil;
 import org.irmacard.cardemu.DisclosureChoice;
 import org.irmacard.cardemu.disclosuredialog.SessionDialogFragment;
+
+import java.util.Arrays;
+import java.util.List;
 
 public abstract class IrmaClient implements SessionDialogFragment.SessionDialogListener {
 	/** Specifies the current state of the instance. */
@@ -71,8 +75,21 @@ public abstract class IrmaClient implements SessionDialogFragment.SessionDialogL
 	}
 
 	public static void NewSession(ClientQr qr, IrmaClientHandler handler) {
-		String protocolVersion = qr.getVersion();
+		List<String> supportedVersions = Arrays.asList("2.0", "2.1");
+
 		String url = qr.getUrl();
+		String protocolVersion = null;
+
+		if (supportedVersions.contains(qr.getVersion()))
+			protocolVersion = qr.getVersion();
+		if (supportedVersions.contains(qr.getMaxVersion()))
+			protocolVersion = qr.getMaxVersion();
+
+		if (protocolVersion == null) {
+			handler.onFailure(Action.UNKNOWN, "Protocol not supported", null,
+					qr.getVersion() != null ? "Version: " + qr.getVersion() : "No version specified.");
+			return;
+		}
 
 		// Check URL validity
 		if (!Patterns.WEB_URL.matcher(url).matches()) {
@@ -82,16 +99,7 @@ public abstract class IrmaClient implements SessionDialogFragment.SessionDialogL
 		}
 
 		// We have a valid URL: let's go!
-		IrmaClient irmaClient;
-		switch (protocolVersion) {
-			case "2.0":
-				irmaClient = new JsonIrmaClient(url, handler);
-				break;
-			default: // TODO show warning message in case "1.0"
-				handler.onFailure(Action.UNKNOWN, "Protocol not supported", null,
-						qr.getVersion() != null ? "Version: " + qr.getVersion() : "No version specified.");
-				break;
-		}
+		new JsonIrmaClient(url, handler, protocolVersion);
 	}
 
 	@Override

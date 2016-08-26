@@ -63,6 +63,7 @@ public class SessionDialogFragment extends DialogFragment {
 	private DisclosureProofRequest proofRequest;
 	private IssuingRequest issuingRequest;
 	private DisclosureChoice choice;
+	private String requesterName;
 	private boolean issuing;
 	private boolean dislosing;
 	private static SessionDialogListener listener;
@@ -78,7 +79,8 @@ public class SessionDialogFragment extends DialogFragment {
 	 * Constructs and returns a new SessionDialogFragment for disclosing. Users must implement the SessionDialogListener
 	 * interface.
 	 */
-	public static SessionDialogFragment newDiscloseDialog(DisclosureProofRequest request, SessionDialogListener listener) {
+	public static SessionDialogFragment newDiscloseDialog(DisclosureProofRequest request, String requesterName,
+	                                                      SessionDialogListener listener) {
 		SessionDialogFragment.listener = listener;
 		SessionDialogFragment dialog = new SessionDialogFragment();
 
@@ -89,6 +91,7 @@ public class SessionDialogFragment extends DialogFragment {
 		Bundle args = new Bundle();
 		args.putSerializable("proofRequest", request);
 		args.putSerializable("choice", choice);
+		args.putString("requesterName", requesterName);
 		dialog.setArguments(args);
 
 		return dialog;
@@ -98,7 +101,8 @@ public class SessionDialogFragment extends DialogFragment {
 	 * Constructs and returns a new SessionDialogFragment for issuing. Users must implement the SessionDialogListener
 	 * interface.
 	 */
-	public static SessionDialogFragment newIssueDialog(IssuingRequest request, SessionDialogListener listener) {
+	public static SessionDialogFragment newIssueDialog(IssuingRequest request, String requesterName,
+	                                                   SessionDialogListener listener) {
 		SessionDialogFragment.listener = listener;
 		SessionDialogFragment dialog = new SessionDialogFragment();
 
@@ -109,6 +113,7 @@ public class SessionDialogFragment extends DialogFragment {
 		Bundle args = new Bundle();
 		args.putSerializable("issuingRequest", request);
 		args.putSerializable("choice", choice);
+		args.putString("requesterName", requesterName);
 		dialog.setArguments(args);
 
 		return dialog;
@@ -122,6 +127,7 @@ public class SessionDialogFragment extends DialogFragment {
 		proofRequest = (DisclosureProofRequest) getArguments().getSerializable("proofRequest");
 		issuingRequest = (IssuingRequest) getArguments().getSerializable("issuingRequest");
 		choice = (DisclosureChoice) getArguments().getSerializable("choice");
+		requesterName = getArguments().getString("requesterName");
 
 		issuing = issuingRequest != null;
 		dislosing = issuingRequest == null || !issuingRequest.getRequiredAttributes().isEmpty();
@@ -157,8 +163,12 @@ public class SessionDialogFragment extends DialogFragment {
 			list.addView(attributeView);
 		}
 
-		String question1 = resources
-				.getQuantityString(R.plurals.disclose_question_1, request.getContent().size());
+		String question1;
+		if (requesterName == null)
+			question1 = resources.getQuantityString(R.plurals.disclose_question_1, request.getContent().size());
+		else
+			question1 = resources.getQuantityString(R.plurals.disclose_question_named,
+					request.getContent().size(), requesterName);
 		((TextView) view.findViewById(R.id.disclosure_question_1)).setText(question1);
 	}
 
@@ -200,6 +210,13 @@ public class SessionDialogFragment extends DialogFragment {
 
 			list.addView(credContainer);
 		}
+
+		String question;
+		if (requesterName == null)
+			question = getResources().getString(R.string.issuer_question);
+		else
+			question = getResources().getString(R.string.issuer_named_question, requesterName);
+		((TextView) view.findViewById(R.id.issuance_question)).setText(question);
 	}
 
 	@Override
@@ -217,7 +234,7 @@ public class SessionDialogFragment extends DialogFragment {
 
 			AttributeDisjunctionList requiredAttrs = issuingRequest.getRequiredAttributes();
 			if (requiredAttrs.isEmpty()) {
-				((TextView) view.findViewById(R.id.disclosure_question_2)).setText("Continue issuance?");
+				((TextView) view.findViewById(R.id.disclosure_question_2)).setText(R.string.continue_issuance);
 				view.findViewById(R.id.attributes_container).setVisibility(View.GONE);
 				view.findViewById(R.id.disclosure_question_1).setVisibility(View.GONE);
 			} else {
@@ -226,9 +243,9 @@ public class SessionDialogFragment extends DialogFragment {
 				populateDisclosurePart(getActivity(), view, disclosureRequest);
 
 				((TextView) view.findViewById(R.id.disclosure_question_1))
-						.setText("However, the following attributes will be sent to the issuer during issuance.");
+						.setText(R.string.issue_question_attributes);
 				((TextView) view.findViewById(R.id.disclosure_question_2))
-						.setText("Disclose these attributes and continue issuance?");
+						.setText(R.string.issue_question_attributes_2);
 			}
 		}
 

@@ -2,19 +2,28 @@ package org.irmacard.cardemu.irmaclient;
 
 import android.os.AsyncTask;
 import android.util.Log;
+
 import com.google.gson.reflect.TypeToken;
+
 import org.acra.ACRA;
 import org.irmacard.android.util.credentials.StoreManager;
+import org.irmacard.api.common.ClientRequest;
 import org.irmacard.api.common.DisclosureProofRequest;
 import org.irmacard.api.common.DisclosureProofResult;
+import org.irmacard.api.common.IdentityProviderRequest;
 import org.irmacard.api.common.IssuingRequest;
+import org.irmacard.api.common.JwtParser;
+import org.irmacard.api.common.JwtSessionRequest;
+import org.irmacard.api.common.ServiceProviderRequest;
+import org.irmacard.api.common.SessionRequest;
 import org.irmacard.api.common.exceptions.ApiErrorMessage;
+import org.irmacard.api.common.exceptions.ApiException;
 import org.irmacard.api.common.util.GsonUtil;
 import org.irmacard.cardemu.CredentialManager;
 import org.irmacard.cardemu.DisclosureChoice;
-import org.irmacard.cardemu.httpclient.JsonHttpClient;
 import org.irmacard.cardemu.httpclient.HttpClientException;
 import org.irmacard.cardemu.httpclient.HttpResultHandler;
+import org.irmacard.cardemu.httpclient.JsonHttpClient;
 import org.irmacard.credentials.CredentialsException;
 import org.irmacard.credentials.idemix.messages.IssueCommitmentMessage;
 import org.irmacard.credentials.idemix.messages.IssueSignatureMessage;
@@ -28,12 +37,15 @@ import java.util.ArrayList;
 import java.util.regex.Pattern;
 
 public class JsonIrmaClient extends IrmaClient {
-	private static String TAG = "CardEmuJson";
+	private static final String TAG = "CardEmuJson";
+	private static final int maxJwtAge = 10 * 60 * 1000; // 10 minutes in milliseconds
 
 	private String server;
+	private String protocolVersion;
 
-	public JsonIrmaClient(String server, IrmaClientHandler handler) {
+	public JsonIrmaClient(String server, IrmaClientHandler handler, String protocolVersion) {
 		super(handler);
+		this.protocolVersion = protocolVersion;
 
 		if (server.endsWith("/"))
 			this.server = server;
@@ -133,26 +145,25 @@ public class JsonIrmaClient extends IrmaClient {
 		final String server = this.server;
 		final JsonHttpClient client = new JsonHttpClient(GsonUtil.getGson());
 
-		// Get the issuance request
-		client.get(IssuingRequest.class, server, new JsonResultHandler<IssuingRequest>() {
-			@Override public void onSuccess(final IssuingRequest request) {
-				Log.i(TAG, request.toString());
-
-				// If necessary, update the stores; afterwards, ask the user for permission to continue
-				StoreManager.download(request, new StoreManager.DownloadHandler() {
-					@Override public void onSuccess() {
-						handler.onStatusUpdate(Action.ISSUING, Status.CONNECTED);
-						handler.askForIssuancePermission(request);
-					}
-					@Override public void onError(Exception e) {
-						if (e instanceof InfoException)
-							fail("Unknown scheme manager", true);
-						if (e instanceof IOException)
-							fail("Could not download credential or issuer information", true);
+		switch (protocolVersion) {
+			case "2.0":
+				client.get(IssuingRequest.class, server, new JsonResultHandler<IssuingRequest>() {
+					@Override public void onSuccess(final IssuingRequest request) {
+						continueSession(request, Action.ISSUING);
 					}
 				});
-			}
-		});
+				break;
+			case "2.1":
+				client.get(JwtSessionRequest.class, server + "jwt", new JsonResultHandler<JwtSessionRequest>() {
+					@Override public void onSuccess(final JwtSessionRequest jwt) {
+						continueSession(jwt, IdentityProviderRequest.class, Action.ISSUING);
+					}
+				});
+				break;
+			default:
+				throw new RuntimeException("Unsupported protocol version: " + protocolVersion);
+		}
+
 	}
 
 	/**
@@ -209,26 +220,65 @@ public class JsonIrmaClient extends IrmaClient {
 		JsonHttpClient client = new JsonHttpClient(GsonUtil.getGson());
 
 		// Get the disclosure request
-		client.get(DisclosureProofRequest.class, server, new JsonResultHandler<DisclosureProofRequest>() {
-			@Override public void onSuccess(final DisclosureProofRequest request) {
-				if (request.getContent().size() == 0 || request.getNonce() == null || request.getContext() == null) {
-					fail("Got malformed disclosure request", true);
-					return;
-				}
-
-				// If necessary, update the stores; afterwards, ask the user for permission to continue
-				StoreManager.download(request, new StoreManager.DownloadHandler() {
-					@Override public void onSuccess() {
-						handler.onStatusUpdate(Action.DISCLOSING, Status.CONNECTED);
-						handler.askForVerificationPermission(request);
-					}
-					@Override public void onError(Exception e) {
-						if (e instanceof InfoException)
-							fail("Unknown scheme manager", true);
-						if (e instanceof IOException)
-							fail("Could not download credential or issuer information", true);
+		switch (protocolVersion) {
+			case "2.0":
+				client.get(DisclosureProofRequest.class, server, new JsonResultHandler<DisclosureProofRequest>() {
+					@Override public void onSuccess(final DisclosureProofRequest request) {
+						continueSession(request, Action.DISCLOSING);
 					}
 				});
+				break;
+			case "2.1":
+				client.get(JwtSessionRequest.class, server + "jwt", new JsonResultHandler<JwtSessionRequest>() {
+					@Override public void onSuccess(final JwtSessionRequest jwt) {
+						continueSession(jwt, ServiceProviderRequest.class, action);
+					}
+				});
+				break;
+			default:
+				throw new RuntimeException("Unsupported protocol version: " + protocolVersion);
+		}
+	}
+
+	// These templates are getting a little crazy, could also create separate functions for
+	// issuing and disclosing
+	private <T extends ClientRequest<S>, S extends SessionRequest> void continueSession(
+		JwtSessionRequest sessionRequest, Class<T> clazz, final Action action) {
+		try {
+			JwtParser<T> jwtParser = new JwtParser<>(clazz, true, maxJwtAge);
+			jwtParser.parseJwt(sessionRequest.getJwt());
+			S request = jwtParser.getPayload().getRequest();
+
+			request.setNonce(sessionRequest.getNonce());
+			request.setContext(sessionRequest.getContext());
+			continueSession(request, action, jwtParser.getJwtIssuer());
+		} catch (ApiException e) {
+			fail(e, true);
+		}
+	}
+
+	private <T extends SessionRequest> void continueSession(T request, Action action) {
+		continueSession(request, action, null);
+	}
+
+	private <T extends SessionRequest> void continueSession(final T request, final Action action,
+	                                                        final String requesterName) {
+		if (request.isEmpty() || request.getNonce() == null || request.getContext() == null) {
+			fail("Got malformed disclosure request", true);
+			return;
+		}
+
+		// If necessary, update the stores; afterwards, ask the user for permission to continue
+		StoreManager.download(request, new StoreManager.DownloadHandler() {
+			@Override public void onSuccess() {
+				handler.onStatusUpdate(action, Status.CONNECTED);
+				handler.askForPermission(request, requesterName);
+			}
+			@Override public void onError(Exception e) {
+				if (e instanceof InfoException)
+					fail("Unknown scheme manager", true);
+				if (e instanceof IOException)
+					fail("Could not download credential or issuer information", true);
 			}
 		});
 	}

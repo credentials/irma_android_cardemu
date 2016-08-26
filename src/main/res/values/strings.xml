@@ -84,6 +84,10 @@
 		<item quantity="one">The following attribute will be sent to the verifier.</item>
 		<item quantity="other">The following attributes will be sent to the verifier.</item>
     </plurals>
+    <plurals name="disclose_question_named">
+        <item quantity="one">The following attribute will be sent to the verifier %s.</item>
+        <item quantity="other">The following attributes will be sent to the verifier %s.</item>
+    </plurals>
     <string name="disclose_question_2">Are you sure you want to disclose these attributes?</string>
     <string name="or">or enter</string>
     <string name="feedback_communicating_driverslicense">Communicating with drivers license</string>
@@ -123,4 +127,9 @@
     <string name="allow_screenshots_long">Whether or not to allow screenshots to be made</string>
     <string name="screenshots">Screenshots</string>
     <string name="screenshots_long">Allow or disallow screenshots</string>
+    <string name="issuer_question">An issuer wants to issue the following attributes to you.</string>
+    <string name="issuer_named_question">Issuer %s wants to issue the following attributes to you.</string>
+    <string name="issue_question_attributes">However, the following attributes will be sent to the issuer during issuance.</string>
+    <string name="issue_question_attributes_2">Disclose these attributes and continue issuance?</string>
+    <string name="continue_issuance">Continue issuance?</string>
 </resources>

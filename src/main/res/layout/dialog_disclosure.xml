@@ -14,7 +14,7 @@
                 android:layout_height="wrap_content"
                 android:textSize="14sp"
                 android:textColor="#000"
-                android:text="An issuer wants to issue the following attributes to you."
+                android:text="@string/issuer_question"
                 android:id="@+id/issuance_question"
                 android:paddingBottom="@dimen/detail_small_vspace"/>
 

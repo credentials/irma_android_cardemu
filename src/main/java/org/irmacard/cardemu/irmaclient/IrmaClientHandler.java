@@ -6,10 +6,12 @@ import android.content.DialogInterface;
 import android.content.Intent;
 import android.text.Html;
 import android.view.View;
+
 import org.irmacard.api.common.AttributeDisjunction;
 import org.irmacard.api.common.AttributeDisjunctionList;
 import org.irmacard.api.common.DisclosureProofRequest;
 import org.irmacard.api.common.IssuingRequest;
+import org.irmacard.api.common.SessionRequest;
 import org.irmacard.api.common.exceptions.ApiErrorMessage;
 import org.irmacard.api.common.util.GsonUtil;
 import org.irmacard.cardemu.CredentialManager;
@@ -27,8 +29,8 @@ import java.util.List;
  * implement the on-methods, specifying what to do when the status changes, or when the
  * session is successful, cancelled or failed. If it is given an activity in its constructor,
  * it will also ask permission of the user before disclosing or issuing (see
- * {@link #askForVerificationPermission(DisclosureProofRequest)} and
- * {@link #askForIssuancePermission(IssuingRequest)}.
+ * {@link #askForVerificationPermission(DisclosureProofRequest, String)} and
+ * {@link #askForIssuancePermission(IssuingRequest, String)}.
  */
 public abstract class IrmaClientHandler implements SessionDialogFragment.SessionDialogListener {
 	private Activity activity;
@@ -42,8 +44,8 @@ public abstract class IrmaClientHandler implements SessionDialogFragment.Session
 
 	/**
 	 * Construct a new handler. Before disclosing or issuing, a dialog will ask the user for permission
-	 * (see {@link #askForVerificationPermission(DisclosureProofRequest)} and
-	 * {@link #askForIssuancePermission(IssuingRequest)}).
+	 * (see {@link #askForVerificationPermission(DisclosureProofRequest, String)} and
+	 * {@link #askForIssuancePermission(IssuingRequest, String)}).
 	 * @param activity The activity to use for creation of the dialogs
 	 */
 	public IrmaClientHandler(Activity activity) {
@@ -59,13 +61,20 @@ public abstract class IrmaClientHandler implements SessionDialogFragment.Session
 		this.irmaClient = irmaClient;
 	}
 
+	public void askForPermission(SessionRequest request, String requesterName) {
+		if (request instanceof DisclosureProofRequest)
+			askForVerificationPermission((DisclosureProofRequest) request, requesterName);
+		if (request instanceof IssuingRequest)
+			askForIssuancePermission((IssuingRequest) request, requesterName);
+	}
+
 	/**
 	 * If this handler was given an activity in its constructor, ask the user if he is OK with disclosing
 	 * the attributes specified in the request. If she agrees then they are disclosed immediately; if she
 	 * does not, or the request cannot be satisfied, then the connection is aborted after closing the dialog.
 	 * @param request The disclosure request
 	 */
-	public void askForVerificationPermission(final DisclosureProofRequest request) {
+	public void askForVerificationPermission(final DisclosureProofRequest request, final String requesterName) {
 		if (activity == null) { // Can't show dialogs in this case
 			onDiscloseOK(request, null);
 			return;
@@ -74,7 +83,7 @@ public abstract class IrmaClientHandler implements SessionDialogFragment.Session
 		List<AttributeDisjunction> missing = CredentialManager.getUnsatisfiableDisjunctions(request.getContent());
 
 		if (missing.isEmpty()) {
-			SessionDialogFragment dialog = SessionDialogFragment.newDiscloseDialog(request, this);
+			SessionDialogFragment dialog = SessionDialogFragment.newDiscloseDialog(request, requesterName, this);
 			dialog.show(activity.getFragmentManager(), "disclosuredialog");
 		}
 		else {
@@ -86,7 +95,7 @@ public abstract class IrmaClientHandler implements SessionDialogFragment.Session
 	 * If this handler was given an activity in its constructor, ask the user if he is OK with issuance
 	 * @param request The issuance request
 	 */
-	public void askForIssuancePermission(final IssuingRequest request) {
+	public void askForIssuancePermission(final IssuingRequest request, final String requesterName) {
 		if (activity == null) { // Can't show dialogs in this case
 			onIssueOK(request, null);
 			return;
@@ -104,7 +113,7 @@ public abstract class IrmaClientHandler implements SessionDialogFragment.Session
 			}
 		}
 
-		SessionDialogFragment dialog = SessionDialogFragment.newIssueDialog(request, this);
+		SessionDialogFragment dialog = SessionDialogFragment.newIssueDialog(request, requesterName, this);
 		dialog.show(activity.getFragmentManager(), "issuingdialog");
 	}
 
