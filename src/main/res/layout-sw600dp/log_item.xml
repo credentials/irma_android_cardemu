@@ -1,0 +1,50 @@
+<?xml version="1.0" encoding="utf-8"?>
+<RelativeLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:paddingTop="15dp"
+    android:paddingBottom="15dp"
+    android:paddingRight="10dp">
+
+    <ImageView android:id="@+id/log_item_action_image"
+        android:layout_alignParentLeft="true"
+        android:layout_alignParentTop="true"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginRight="15dp"
+        android:layout_marginLeft="10dp"
+        android:contentDescription="@string/actionimage"/>
+
+    <TextView 
+        android:id="@+id/log_item_header"
+        android:layout_width="fill_parent"
+        android:layout_height="fill_parent"
+        android:textSize="16sp"
+        android:textStyle="bold"
+        android:layout_alignTop="@id/log_item_action_image"
+        android:layout_toRightOf="@id/log_item_action_image"
+        android:textIsSelectable="false" />
+    
+    <TextView
+        android:id="@+id/log_item_datetime"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:textSize="16sp"
+        android:layout_below="@id/log_item_header"
+        android:layout_alignLeft="@id/log_item_header"
+        android:textIsSelectable="false" />
+    
+    <ImageView android:id="@+id/log_item_actor_logo"
+        android:layout_alignParentRight="true"
+        android:layout_below="@id/log_item_header"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="5dp"
+        android:contentDescription="@string/actorlogo"/>
+    
+    <LinearLayout android:id="@+id/log_item_list_disclosure"
+        android:layout_alignLeft="@id/log_item_header"
+        android:orientation="vertical"
+        android:layout_below="@id/log_item_action_image"
+        android:layout_toLeftOf="@id/log_item_actor_logo"
+        android:layout_height="wrap_content"
+        android:layout_width="wrap_content"/>
+</RelativeLayout>

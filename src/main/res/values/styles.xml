@@ -29,4 +29,15 @@
     <style name="MyDatePicker" parent="android:Widget.Holo.DatePicker">
     </style>
 
+    <style name="DetailHeading" parent="AppTheme">
+        <item name="android:textSize">14sp</item>
+        <item name="android:textStyle">bold</item>
+        <item name="android:layout_height">wrap_content</item>
+        <item name="android:layout_width">wrap_content</item>
+    </style>
+
+    <style name="DetailHeading.Table" parent="DetailHeading">
+        <item name="android:layout_width">@dimen/detail_label_width</item>
+    </style>
+
 </resources>

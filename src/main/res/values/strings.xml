@@ -132,4 +132,23 @@
     <string name="issue_question_attributes">However, the following attributes will be sent to the issuer during issuance.</string>
     <string name="issue_question_attributes_2">Disclose these attributes and continue issuance?</string>
     <string name="continue_issuance">Continue issuance?</string>
+
+    <!-- Copied from irma_android_library -->
+    <string name="verifierlogo">Verifier Logo</string>
+    <string name="actorlogo">Actor Logo</string>
+    <string name="actionimage">Action Image</string>
+    <string name="irmashape">GUI artifact</string>
+    <string name="issuerlogo">Issuer Logo</string>
+    <string name="validtill">Valid until:</string>
+    <string name="issuer">Issuer</string>
+    <string name="credentialdescription">Credential Description</string>
+    <string name="deletetext">Delete</string>
+    <string name="credential_no_longer_valid">No longer valid</string>
+    <string name="no_logs_available">no log items found</string>
+    <string name="error_logs_not_read">log could not be read</string>
+    <string name="schememanager">Scheme Manager</string>
+    <string name="confirm_delete_question">Are you sure you want to delete this credential? This cannot be undone.</string>
+    <string name="confirm_delete_title">Deleting credential</string>
+    <string name="delete">Delete</string>
+    <string name="cancel">Cancel</string>
 </resources>

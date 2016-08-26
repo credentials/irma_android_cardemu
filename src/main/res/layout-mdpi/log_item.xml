@@ -1,0 +1,67 @@
+<?xml version="1.0" encoding="utf-8"?>
+<RelativeLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:paddingBottom="15dp"
+    android:paddingRight="10dp"
+    android:paddingTop="15dp" >
+
+    <ImageView
+        android:id="@+id/log_item_action_image"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_alignParentLeft="true"
+        android:layout_alignParentTop="true"
+        android:layout_marginLeft="10dp"
+        android:layout_marginRight="15dp"
+        android:contentDescription="@string/actionimage" />
+
+    <RelativeLayout
+        android:id="@+id/log_heading_box"
+        android:layout_width="fill_parent"
+        android:layout_height="wrap_content"
+        android:layout_alignParentRight="true"
+        android:layout_alignParentTop="true"
+        android:layout_toRightOf="@id/log_item_action_image" >
+
+        <ImageView
+            android:id="@+id/log_item_actor_logo"
+            android:layout_width="50dp"
+            android:layout_height="wrap_content"
+            android:layout_alignParentRight="true"
+            android:layout_alignParentTop="true"
+            android:layout_marginLeft="10dp"
+            android:layout_marginRight="5dp"
+            android:adjustViewBounds="true"
+            android:contentDescription="@string/actorlogo" />
+
+        <TextView
+            android:id="@+id/log_item_header"
+            android:layout_width="fill_parent"
+            android:layout_height="fill_parent"
+            android:layout_alignParentTop="true"
+            android:layout_toLeftOf="@id/log_item_actor_logo"
+            android:textIsSelectable="false"
+            android:textSize="16sp"
+            android:textStyle="bold" />
+    </RelativeLayout>
+
+    <TextView
+        android:id="@+id/log_item_datetime"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_alignLeft="@id/log_heading_box"
+        android:layout_below="@id/log_heading_box"
+        android:textIsSelectable="false"
+        android:textSize="16sp" />
+
+    <LinearLayout
+        android:id="@+id/log_item_list_disclosure"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_alignLeft="@id/log_heading_box"
+        android:layout_below="@id/log_item_datetime"
+        android:layout_marginTop="5dp"
+        android:orientation="vertical" />
+
+</RelativeLayout>

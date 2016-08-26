@@ -1,0 +1,6 @@
+<resources>
+    <dimen name="detail_label_width">125sp</dimen>
+    <dimen name="detail_small_vspace">12dp</dimen>
+    <dimen name="detail_medium_vspace">24dp</dimen>
+    <dimen name="detail_large_vspace">48dp</dimen>
+</resources>

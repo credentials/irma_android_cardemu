@@ -70,13 +70,13 @@
             android:label="@string/diclosure_information" />
 
         <activity
-            android:name="org.irmacard.android.util.credentialdetails.CredentialDetailActivity"
+            android:name="org.irmacard.cardemu.credentialdetails.CredentialDetailActivity"
             android:parentActivityName=".MainActivity"
             android:label="@string/title_credential_detail"
             android:screenOrientation="portrait" />
 
         <activity
-            android:name="org.irmacard.android.util.cardlog.LogActivity"
+            android:name="org.irmacard.cardemu.cardlog.LogActivity"
             android:parentActivityName=".MainActivity"
             android:label="@string/title_log"
             android:screenOrientation="portrait" />

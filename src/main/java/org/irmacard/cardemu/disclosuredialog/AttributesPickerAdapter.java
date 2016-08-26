@@ -38,6 +38,7 @@ import android.view.ViewGroup;
 import android.widget.BaseAdapter;
 import android.widget.CheckedTextView;
 import android.widget.TextView;
+
 import org.irmacard.api.common.AttributeDisjunction;
 import org.irmacard.api.common.DisclosureProofRequest;
 import org.irmacard.cardemu.CredentialManager;

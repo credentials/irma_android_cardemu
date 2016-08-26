@@ -6,6 +6,7 @@ import android.preference.PreferenceActivity;
 import android.support.annotation.NonNull;
 import android.view.MenuItem;
 import android.webkit.URLUtil;
+
 import org.irmacard.cardemu.R;
 
 import java.util.List;

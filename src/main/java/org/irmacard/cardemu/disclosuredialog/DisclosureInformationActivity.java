@@ -35,8 +35,9 @@ import android.app.FragmentTransaction;
 import android.os.Bundle;
 import android.view.View;
 import android.widget.TextView;
-import org.irmacard.mno.common.util.GsonUtil;
+
 import org.irmacard.cardemu.R;
+import org.irmacard.mno.common.util.GsonUtil;
 import org.irmacard.api.common.AttributeDisjunction;
 import org.irmacard.api.common.AttributeDisjunctionList;
 

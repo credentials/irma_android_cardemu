@@ -10,9 +10,10 @@ import android.preference.Preference;
 import android.preference.PreferenceFragment;
 import android.preference.PreferenceScreen;
 import android.util.Log;
-import org.irmacard.android.util.credentials.StoreManager;
-import org.irmacard.cardemu.IRMApp;
+
 import org.irmacard.cardemu.R;
+import org.irmacard.cardemu.credentials.StoreManager;
+import org.irmacard.cardemu.IRMApp;
 import org.irmacard.credentials.info.DescriptionStore;
 import org.irmacard.credentials.info.SchemeManager;
 
