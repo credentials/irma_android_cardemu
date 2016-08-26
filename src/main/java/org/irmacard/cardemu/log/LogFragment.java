@@ -28,7 +28,7 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-package org.irmacard.cardemu.cardlog;
+package org.irmacard.cardemu.log;
 
 import android.os.AsyncTask;
 import android.os.Bundle;

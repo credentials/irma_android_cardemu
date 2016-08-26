@@ -28,7 +28,7 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-package org.irmacard.cardemu.credentials;
+package org.irmacard.cardemu.store;
 
 import android.content.Context;
 import android.os.AsyncTask;

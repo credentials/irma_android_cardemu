@@ -34,7 +34,7 @@ import android.content.SharedPreferences;
 import android.util.Log;
 import com.google.gson.Gson;
 import com.google.gson.reflect.TypeToken;
-import org.irmacard.cardemu.credentials.StoreManager;
+import org.irmacard.cardemu.store.StoreManager;
 import org.irmacard.api.common.*;
 import org.irmacard.api.common.util.GsonUtil;
 import org.irmacard.cardemu.identifiers.IdemixAttributeIdentifier;

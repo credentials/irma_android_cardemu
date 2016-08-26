@@ -12,7 +12,7 @@ import android.preference.PreferenceScreen;
 import android.util.Log;
 
 import org.irmacard.cardemu.R;
-import org.irmacard.cardemu.credentials.StoreManager;
+import org.irmacard.cardemu.store.StoreManager;
 import org.irmacard.cardemu.IRMApp;
 import org.irmacard.credentials.info.DescriptionStore;
 import org.irmacard.credentials.info.SchemeManager;

@@ -28,7 +28,7 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-package org.irmacard.cardemu.cardlog;
+package org.irmacard.cardemu.log;
 
 import android.os.Bundle;
 import android.support.v4.app.FragmentActivity;
@@ -36,7 +36,6 @@ import android.util.Log;
 import android.view.MenuItem;
 
 import org.irmacard.cardemu.R;
-import org.irmacard.cardemu.cardlog.LogFragment;
 
 /**
  * An activity representing a single Credential detail screen. This activity is
@@ -71,7 +70,7 @@ public class LogActivity extends FragmentActivity {
 			// using a fragment transaction.
 			Bundle arguments = new Bundle();
 			arguments.putSerializable(
-					org.irmacard.cardemu.cardlog.LogFragment.ARG_LOG,
+					org.irmacard.cardemu.log.LogFragment.ARG_LOG,
 					getIntent().getSerializableExtra(LogFragment.ARG_LOG));
 			LogFragment fragment = new LogFragment();
 			fragment.setArguments(arguments);

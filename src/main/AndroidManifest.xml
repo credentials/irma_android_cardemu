@@ -76,7 +76,7 @@
             android:screenOrientation="portrait" />
 
         <activity
-            android:name="org.irmacard.cardemu.cardlog.LogActivity"
+            android:name="org.irmacard.cardemu.log.LogActivity"
             android:parentActivityName=".MainActivity"
             android:label="@string/title_log"
             android:screenOrientation="portrait" />

@@ -28,7 +28,7 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-package org.irmacard.cardemu.cardlog;
+package org.irmacard.cardemu.log;
 
 import android.app.Activity;
 import android.content.Context;
@@ -43,7 +43,7 @@ import android.widget.TextView;
 import com.paging.listview.PagingBaseAdapter;
 
 import org.irmacard.cardemu.R;
-import org.irmacard.cardemu.credentials.AndroidFileReader;
+import org.irmacard.cardemu.store.AndroidFileReader;
 import org.irmacard.credentials.util.log.IssueLogEntry;
 import org.irmacard.credentials.util.log.LogEntry;
 import org.irmacard.credentials.util.log.RemoveLogEntry;

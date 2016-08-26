@@ -6,7 +6,7 @@ import android.util.Log;
 import com.google.gson.reflect.TypeToken;
 
 import org.acra.ACRA;
-import org.irmacard.cardemu.credentials.StoreManager;
+import org.irmacard.cardemu.store.StoreManager;
 import org.irmacard.api.common.ClientRequest;
 import org.irmacard.api.common.DisclosureProofRequest;
 import org.irmacard.api.common.DisclosureProofResult;

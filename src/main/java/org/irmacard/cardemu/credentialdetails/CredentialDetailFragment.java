@@ -46,7 +46,7 @@ import android.widget.LinearLayout;
 import android.widget.TextView;
 
 import org.irmacard.cardemu.R;
-import org.irmacard.cardemu.credentials.AndroidFileReader;
+import org.irmacard.cardemu.store.AndroidFileReader;
 import org.irmacard.credentials.Attributes;
 import org.irmacard.credentials.info.CredentialDescription;
 import org.irmacard.credentials.info.IssuerDescription;
