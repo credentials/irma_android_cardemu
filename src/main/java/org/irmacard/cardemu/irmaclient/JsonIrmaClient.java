@@ -34,6 +34,7 @@ import org.irmacard.credentials.info.KeyException;
 import java.io.IOException;
 import java.lang.reflect.Type;
 import java.util.ArrayList;
+import java.util.Locale;
 import java.util.regex.Pattern;
 
 public class JsonIrmaClient extends IrmaClient {
@@ -52,15 +53,12 @@ public class JsonIrmaClient extends IrmaClient {
 		else
 			this.server = server + "/";
 
-		connect();
-	}
-
-	private void connect() {
-		if (Pattern.matches(".*/verification/[^/]+/$", server)) {
+		if (Pattern.matches(".*/verification/[^/]+/?$", this.server)) {
 			action = Action.DISCLOSING;
 			startDisclosure();
 		}
-		else if (Pattern.matches(".*/issue/[^/]+/$", server)) {
+
+		else if (Pattern.matches(".*/issue/[^/]+/?$", this.server)) {
 			action = Action.ISSUING;
 			startIssuance();
 		}
@@ -83,14 +81,14 @@ public class JsonIrmaClient extends IrmaClient {
 			Log.w(TAG, "Exception details ", e);
 		} else {
 			feedback = "could not connect to server";
-			techinfo = String.format("server returned status %d", e.status);
+			techinfo = String.format(Locale.ENGLISH, "server returned status %d", e.status);
 			Log.w(TAG, "Exception details ", e);
 		}
 
 		// Since we got a HttpClientException, the server is either not reachable, or it returned
 		// some error message. In the first case DELETEing the session will probably also fail;
 		// in the second case, the server already knows to delete the session itself
-		fail(feedback, false, errorMessage, techinfo);
+		failSession(feedback, false, errorMessage, techinfo);
 	}
 
 	/**
@@ -99,46 +97,17 @@ public class JsonIrmaClient extends IrmaClient {
 	 * @param deleteSession Whether or not we should DELETE the session
 	 */
 	private void fail(Exception e, boolean deleteSession) {
-		fail(e.getMessage(), deleteSession, null);
+		failSession(e.getMessage(), deleteSession, null, null);
 	}
 
 	private void fail(String feedback, boolean deleteSession) {
-		fail(feedback, deleteSession, null);
-	}
-
-	/**
-	 * Report the specified feedback as a failure to the handler.
-	 * @param feedback The feedback
-	 * @param deleteSession Whether or not we should DELETE the session
-	 */
-	private void fail(String feedback, boolean deleteSession, ApiErrorMessage error) {
-		fail(feedback, deleteSession, error, null);
-	}
-
-	private void fail(String feedback, boolean deleteSession, ApiErrorMessage error, String info) {
-		Log.w(TAG, feedback);
-
-		handler.onFailure(action, feedback, error, info);
-		if (deleteSession)
-			deleteSession();
-	}
-
-	@Override
-	public void onIssueCancel() {
-		deleteSession();
-		super.onIssueCancel();
-	}
-
-	@Override
-	public void onDiscloseCancel() {
-		deleteSession();
-		super.onDiscloseCancel();
+		failSession(feedback, deleteSession, null, null);
 	}
 
 	/**
 	 * Retrieve an {@link IssuingRequest} from the server
 	 */
-	public void startIssuance() {
+	private void startIssuance() {
 		Log.i(TAG, "Retrieving issuing request: " + server);
 
 		handler.onStatusUpdate(Action.ISSUING, Status.COMMUNICATING);
@@ -172,9 +141,9 @@ public class JsonIrmaClient extends IrmaClient {
 	 * construct and save the new Idemix credentials.
 	 */
 	@Override
-	protected void finishIssuance(final IssuingRequest request, final DisclosureChoice disclosureChoice) {
+	public void finishIssuance(final IssuingRequest request, final DisclosureChoice disclosureChoice) {
 		handler.onStatusUpdate(Action.ISSUING, Status.COMMUNICATING);
-		Log.i(TAG, "Posting issuing commitments");
+		Log.i(TAG, "Posting issuing commitments to " + server);
 
 		final JsonHttpClient client = new JsonHttpClient(GsonUtil.getGson());
 
@@ -296,7 +265,6 @@ public class JsonIrmaClient extends IrmaClient {
 			proofs = CredentialManager.getProofs(disclosureChoice);
 		} catch (CredentialsException e) {
 			e.printStackTrace();
-			cancelSession();
 			fail(e, true);
 			return;
 		}

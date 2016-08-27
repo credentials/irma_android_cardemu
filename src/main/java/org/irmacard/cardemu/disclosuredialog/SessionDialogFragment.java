@@ -48,6 +48,7 @@ import org.irmacard.api.common.*;
 import org.irmacard.cardemu.DisclosureChoice;
 import org.irmacard.cardemu.R;
 import org.irmacard.cardemu.identifiers.IdemixAttributeIdentifier;
+import org.irmacard.cardemu.irmaclient.IrmaClient;
 import org.irmacard.credentials.info.CredentialDescription;
 import org.irmacard.credentials.info.InfoException;
 import org.irmacard.mno.common.util.GsonUtil;
@@ -66,22 +67,15 @@ public class SessionDialogFragment extends DialogFragment {
 	private String requesterName;
 	private boolean issuing;
 	private boolean dislosing;
-	private static SessionDialogListener listener;
-
-	public interface SessionDialogListener {
-		void onDiscloseOK(DisclosureProofRequest request, DisclosureChoice disclosureChoice);
-		void onDiscloseCancel();
-		void onIssueOK(IssuingRequest request, DisclosureChoice disclosureChoice);
-		void onIssueCancel();
-	}
+	private static IrmaClient irmaClient;
 
 	/**
 	 * Constructs and returns a new SessionDialogFragment for disclosing. Users must implement the SessionDialogListener
 	 * interface.
 	 */
 	public static SessionDialogFragment newDiscloseDialog(DisclosureProofRequest request, String requesterName,
-	                                                      SessionDialogListener listener) {
-		SessionDialogFragment.listener = listener;
+	                                                      IrmaClient irmaClient) {
+		SessionDialogFragment.irmaClient = irmaClient;
 		SessionDialogFragment dialog = new SessionDialogFragment();
 
 		DisclosureChoice choice = new DisclosureChoice(request);
@@ -102,8 +96,8 @@ public class SessionDialogFragment extends DialogFragment {
 	 * interface.
 	 */
 	public static SessionDialogFragment newIssueDialog(IssuingRequest request, String requesterName,
-	                                                   SessionDialogListener listener) {
-		SessionDialogFragment.listener = listener;
+	                                                   IrmaClient irmaClient) {
+		SessionDialogFragment.irmaClient = irmaClient;
 		SessionDialogFragment dialog = new SessionDialogFragment();
 
 		DisclosureChoice choice = new DisclosureChoice(request);
@@ -256,18 +250,15 @@ public class SessionDialogFragment extends DialogFragment {
 					@Override
 					public void onClick(DialogInterface dialog, int which) {
 						if (!issuing)
-							listener.onDiscloseOK(proofRequest, choice);
+							irmaClient.disclose(proofRequest, choice);
 						else
-							listener.onIssueOK(issuingRequest, choice);
+							irmaClient.finishIssuance(issuingRequest, choice);
 					}
 				})
 				.setNegativeButton(R.string.no, new DialogInterface.OnClickListener() {
 					@Override
 					public void onClick(DialogInterface dialog, int which) {
-						if (!issuing)
-							listener.onDiscloseCancel();
-						else
-							listener.onIssueCancel();
+						irmaClient.cancelSession();
 					}
 				});
 

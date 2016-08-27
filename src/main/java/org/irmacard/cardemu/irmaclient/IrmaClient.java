@@ -1,18 +1,19 @@
 package org.irmacard.cardemu.irmaclient;
 
+import android.util.Log;
 import android.util.Patterns;
 
 import org.irmacard.api.common.ClientQr;
 import org.irmacard.api.common.DisclosureProofRequest;
 import org.irmacard.api.common.IssuingRequest;
+import org.irmacard.api.common.exceptions.ApiErrorMessage;
 import org.irmacard.api.common.util.GsonUtil;
 import org.irmacard.cardemu.DisclosureChoice;
-import org.irmacard.cardemu.disclosuredialog.SessionDialogFragment;
 
 import java.util.Arrays;
 import java.util.List;
 
-public abstract class IrmaClient implements SessionDialogFragment.SessionDialogListener {
+public abstract class IrmaClient {
 	/** Specifies the current state of the instance. */
 	public enum Status {
 		CONNECTED, COMMUNICATING, DONE
@@ -23,6 +24,7 @@ public abstract class IrmaClient implements SessionDialogFragment.SessionDialogL
 		DISCLOSING, ISSUING, UNKNOWN
 	}
 
+	public final static String TAG = "IrmaClient";
 	protected Action action = Action.UNKNOWN;
 	protected IrmaClientHandler handler;
 
@@ -36,7 +38,7 @@ public abstract class IrmaClient implements SessionDialogFragment.SessionDialogL
 	 * @param request The request containing the attributes to show (each of its disjunctions should have
 	 *                a selected attribute).
 	 */
-	public abstract void disclose(DisclosureProofRequest request, DisclosureChoice disclosureChoice);
+	abstract public void disclose(DisclosureProofRequest request, DisclosureChoice disclosureChoice);
 
 	/**
 	 * Informs the session that this session is to be deleted.
@@ -47,13 +49,22 @@ public abstract class IrmaClient implements SessionDialogFragment.SessionDialogL
 	 * Perform an issuing session.
 	 * @param request The request containing which attributes we will receive, and which we have to disclose
 	 */
-	abstract protected void finishIssuance(IssuingRequest request, DisclosureChoice disclosureChoice);
+	abstract public void finishIssuance(IssuingRequest request, DisclosureChoice disclosureChoice);
 
 	/**
 	 * Cancel the current session.
 	 */
 	public void cancelSession() {
+		deleteSession();
 		handler.onCancelled(action);
+	}
+
+	public void failSession(String feedback, boolean deleteSession, ApiErrorMessage error, String info) {
+		Log.w(TAG, feedback);
+
+		if (deleteSession)
+			deleteSession();
+		handler.onFailure(action, feedback, error, info);
 	}
 
 	/**
@@ -100,26 +111,6 @@ public abstract class IrmaClient implements SessionDialogFragment.SessionDialogL
 
 		// We have a valid URL: let's go!
 		new JsonIrmaClient(url, handler, protocolVersion);
-	}
-
-	@Override
-	public void onDiscloseOK(final DisclosureProofRequest request, DisclosureChoice disclosureChoice) {
-		disclose(request, disclosureChoice);
-	}
-
-	@Override
-	public void onDiscloseCancel() {
-		cancelSession();
-	}
-
-	@Override
-	public void onIssueOK(IssuingRequest request, DisclosureChoice disclosureChoice) {
-		finishIssuance(request, disclosureChoice);
-	}
-
-	@Override
-	public void onIssueCancel() {
-		cancelSession();
 	}
 }
 

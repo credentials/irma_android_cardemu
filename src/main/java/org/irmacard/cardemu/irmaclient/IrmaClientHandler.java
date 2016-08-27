@@ -15,7 +15,6 @@ import org.irmacard.api.common.SessionRequest;
 import org.irmacard.api.common.exceptions.ApiErrorMessage;
 import org.irmacard.api.common.util.GsonUtil;
 import org.irmacard.cardemu.CredentialManager;
-import org.irmacard.cardemu.DisclosureChoice;
 import org.irmacard.cardemu.disclosuredialog.DisclosureInformationActivity;
 import org.irmacard.cardemu.disclosuredialog.SessionDialogFragment;
 import org.irmacard.cardemu.irmaclient.IrmaClient.Action;
@@ -24,7 +23,7 @@ import org.irmacard.cardemu.irmaclient.IrmaClient.Status;
 import java.util.List;
 
 /**
- * Glue between {@link IrmaClient} instances and their users, allowing them to specify the
+ * Glue between {@link IrmaClient} instances and a {@link Activity} user, allowing it to specify the
  * behaviour of the IrmaClient instance. At minimum, inheritors must
  * implement the on-methods, specifying what to do when the status changes, or when the
  * session is successful, cancelled or failed. If it is given an activity in its constructor,
@@ -32,15 +31,9 @@ import java.util.List;
  * {@link #askForVerificationPermission(DisclosureProofRequest, String)} and
  * {@link #askForIssuancePermission(IssuingRequest, String)}.
  */
-public abstract class IrmaClientHandler implements SessionDialogFragment.SessionDialogListener {
+public abstract class IrmaClientHandler {
 	private Activity activity;
 	private IrmaClient irmaClient;
-
-	/**
-	 * Construct a new handler. No permission will be asked of the user before disclosing or
-	 * issuing (use {@link #IrmaClientHandler(Activity)} if this is necessary).
-	 */
-	public IrmaClientHandler() {}
 
 	/**
 	 * Construct a new handler. Before disclosing or issuing, a dialog will ask the user for permission
@@ -69,21 +62,16 @@ public abstract class IrmaClientHandler implements SessionDialogFragment.Session
 	}
 
 	/**
-	 * If this handler was given an activity in its constructor, ask the user if he is OK with disclosing
+	 * Ask the user if he is OK with disclosing
 	 * the attributes specified in the request. If she agrees then they are disclosed immediately; if she
 	 * does not, or the request cannot be satisfied, then the connection is aborted after closing the dialog.
 	 * @param request The disclosure request
 	 */
 	public void askForVerificationPermission(final DisclosureProofRequest request, final String requesterName) {
-		if (activity == null) { // Can't show dialogs in this case
-			onDiscloseOK(request, null);
-			return;
-		}
-
 		List<AttributeDisjunction> missing = CredentialManager.getUnsatisfiableDisjunctions(request.getContent());
 
 		if (missing.isEmpty()) {
-			SessionDialogFragment dialog = SessionDialogFragment.newDiscloseDialog(request, requesterName, this);
+			SessionDialogFragment dialog = SessionDialogFragment.newDiscloseDialog(request, requesterName, irmaClient);
 			dialog.show(activity.getFragmentManager(), "disclosuredialog");
 		}
 		else {
@@ -92,15 +80,10 @@ public abstract class IrmaClientHandler implements SessionDialogFragment.Session
 	}
 
 	/**
-	 * If this handler was given an activity in its constructor, ask the user if he is OK with issuance
+	 * Ask the user if he is OK with issuance
 	 * @param request The issuance request
 	 */
 	public void askForIssuancePermission(final IssuingRequest request, final String requesterName) {
-		if (activity == null) { // Can't show dialogs in this case
-			onIssueOK(request, null);
-			return;
-		}
-
 		AttributeDisjunctionList requiredAttributes = request.getRequiredAttributes();
 		if (!requiredAttributes.isEmpty()) {
 			List<AttributeDisjunction> missing = CredentialManager.getUnsatisfiableDisjunctions(requiredAttributes);
@@ -113,11 +96,11 @@ public abstract class IrmaClientHandler implements SessionDialogFragment.Session
 			}
 		}
 
-		SessionDialogFragment dialog = SessionDialogFragment.newIssueDialog(request, requesterName, this);
+		SessionDialogFragment dialog = SessionDialogFragment.newIssueDialog(request, requesterName, irmaClient);
 		dialog.show(activity.getFragmentManager(), "issuingdialog");
 	}
 
-	public void showUnsatisfiableRequestDialog(List<AttributeDisjunction> missing,
+	private void showUnsatisfiableRequestDialog(List<AttributeDisjunction> missing,
 	                                           final DisclosureProofRequest request, final Action action) {
 		String message = "The verifier requires attributes of the following kind: ";
 		int count = 0;
@@ -138,8 +121,7 @@ public abstract class IrmaClientHandler implements SessionDialogFragment.Session
 				.setPositiveButton("OK", new DialogInterface.OnClickListener() {
 					@Override
 					public void onClick(DialogInterface dialog, int which) {
-						irmaClient.deleteSession();
-						onCancelled(action);
+						irmaClient.cancelSession();
 					}
 				})
 				.setNeutralButton("More Information", null)
@@ -163,21 +145,5 @@ public abstract class IrmaClientHandler implements SessionDialogFragment.Session
 		});
 
 		dialog.show();
-	}
-
-	@Override public void onDiscloseOK(DisclosureProofRequest request, DisclosureChoice disclosureChoice) {
-		irmaClient.onDiscloseOK(request, disclosureChoice);
-	}
-
-	@Override public void onDiscloseCancel() {
-		irmaClient.onDiscloseCancel();
-	}
-
-	@Override public void onIssueOK(IssuingRequest request, DisclosureChoice disclosureChoice) {
-		irmaClient.onIssueOK(request, disclosureChoice);
-	}
-
-	@Override public void onIssueCancel() {
-		irmaClient.onIssueCancel();
 	}
 }
