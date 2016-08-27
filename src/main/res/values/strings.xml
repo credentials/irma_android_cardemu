@@ -2,18 +2,12 @@
 <resources>
     <string name="app_name">IRMA</string>
     <string name="app_name_enroll">IRMA Document Enrollment</string>
-    <string name="menu_settings">Settings</string>
-    <string name="menu_reset">Load demo card</string>
-	<string name="irmalogo">IRMA logo</string>
+    <string name="irmalogo">IRMA logo</string>
 	<string name="credential_info">IRMA app</string>
-	<string name="feedback_waiting_for_card">Waiting for card</string>
     <string name="feedback_waiting_for_passport">Waiting for Document</string>
     <string name="feedback_communicating_passport">Communicating with Passport…</string>
-	<string name="pinhint">PIN</string>
-	<string name="pinmessage">Please enter your IRMA pincode</string>
-	<string name="connectserver">Connecting to server</string>
 
-	<string name="title_credential_detail">Credential Detail</string>
+    <string name="title_credential_detail">Credential Detail</string>
     <string name="title_log">Log</string>
 
 	<string name="status_idle">Tap to scan QR</string>
@@ -22,10 +16,6 @@
 	<string name="status_ready">Ready</string>
 	<string name="status_communicating">Communicating…</string>
 	<string name="status_waitingforpin">Waiting for PIN</string>
-    <string name="menu_enroll">Enroll</string>
-    <string name="enroll_expl">You are about to start receiving new (base) IRMA credentials. If you already have a set of credentials, then this step might overwrite some of those.
-    During this process your document will be read remotely and the contents will be compared to the subscription information known for this phone.
-    If the document data matches the subscription data, a set of base credentials will be issued to your IRMA app.</string>
     <string name="se_welcome">IRMA self enrollment</string>
     <string name="se_connect_mno"><![CDATA[
     This process consists of the following three steps: <br/><br/>
@@ -42,17 +32,11 @@
     <string name="retry">Retry</string>
     <string name="se_connected_mno">Connected to server</string>
     <string name="se_connecting_mno">Connecting to server…</string>
-    <string name="se_passport_verified">Passport data matched to subscriber data. \n Continue to MijnOverheid.nl to receive credentials.</string>
     <string name="se_connected_mijnoverheid">Connected to server</string>
     <string name="feedback_issueing">Issuing credentials…</string>
     <string name="done">Done.</string>
     <string name="clear_card">Delete all attributes</string>
-    <string name="enroll_url_menu_item">Set enroll server</string>
-    <string name="enroll_url_dialog_hint">Enroll server URL</string>
-    <string name="enroll_url_dialog_title">Enter the enrollment server URL</string>
-    <string name="default_string">Default</string>
     <string name="step_string">Step</string>
-    <string name="enroll_default_url">demo.irmacard.org</string>
     <string name="enroll_error_label">Self enrollment failed</string>
     <string name="error_nfc_notsupported">This phone does not support NFC.</string>
     <string name="error_nfc_disabled">NFC is disabled. Please enable NFC in the phone settings before using this
@@ -70,15 +54,9 @@
     <string name="enroll_enter_bac_title">Document data</string>
     <string name="enroll_enter_bac_desc">Please select the identity document you wish to use, and provide the requested data to allow the app to communicate with the document.</string>
     <string name="menu_show_log">Show log</string>
-    <string name="check_for_updates">Check for updates</string>
-    <string name="no_new_updates">No updates found.</string>
-    <string name="update_server_error">Could not connect to the update server.</string>
     <string name="no_credentials">You don\'t have any credentials yet.</string>
     <string name="enroll">Document Enroll</string>
     <string name="online_enroll">Demo Enroll</string>
-    <string name="yes">Yes</string>
-    <string name="no">No</string>
-    <string name="more_info">More Info</string>
 
     <plurals name="disclose_question_1">
 		<item quantity="one">The following attribute will be sent to the verifier.</item>
@@ -105,8 +83,6 @@
     </string-array>
     <string name="title_activity_scheme_manager_detail">Scheme Manager Details</string>
 
-    <string name="hello_world">Hello world!</string>
-    <string name="action_settings">Settings</string>
     <string name="name">Name:</string>
     <string name="url">URL:</string>
     <string name="description">Description:</string>
@@ -134,7 +110,6 @@
     <string name="continue_issuance">Continue issuance?</string>
 
     <!-- Copied from irma_android_library -->
-    <string name="verifierlogo">Verifier Logo</string>
     <string name="actorlogo">Actor Logo</string>
     <string name="actionimage">Action Image</string>
     <string name="irmashape">GUI artifact</string>
