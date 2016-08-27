@@ -73,9 +73,9 @@ public class JsonIrmaClient extends IrmaClient {
 		String feedback, techinfo;
 
 		if (errorMessage != null && errorMessage.getError() != null) {
-			feedback = "server returned: " + errorMessage.getError().getDescription();
+			feedback = String.format("server returned: %s", errorMessage.getError().getDescription());
 			techinfo = errorMessage.getStacktrace();
-			Log.w(TAG, "API error: " + errorMessage.getError().name() + ", " + errorMessage.getDescription());
+			Log.w(TAG, String.format("API error: %s, %s", errorMessage.getError().name(), errorMessage.getDescription()));
 			Log.w(TAG, errorMessage.getStacktrace());
 		} else if (e.getCause() != null) {
 			feedback = "could not connect to server";
@@ -83,7 +83,7 @@ public class JsonIrmaClient extends IrmaClient {
 			Log.w(TAG, "Exception details ", e);
 		} else {
 			feedback = "could not connect to server";
-			techinfo = "server returned status " + e.status;
+			techinfo = String.format("server returned status %d", e.status);
 			Log.w(TAG, "Exception details ", e);
 		}
 

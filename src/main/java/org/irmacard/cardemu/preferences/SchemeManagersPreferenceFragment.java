@@ -43,10 +43,8 @@ public class SchemeManagersPreferenceFragment
 	                                           final Runnable runnable) {
 		new AlertDialog.Builder(context)
 				.setIcon(android.R.drawable.ic_dialog_alert)
-				.setTitle("Remove scheme manager?")
-				.setMessage("Are you certain you want to remove this scheme manager? " +
-						"This renders all credentials that you might have that fall under " +
-						"the authority of this scheme manager unusable.")
+				.setTitle(R.string.remove_schememanager_title)
+				.setMessage(R.string.remove_schememanager_question)
 				.setNegativeButton(android.R.string.cancel, null)
 				.setPositiveButton(android.R.string.ok, new DialogInterface.OnClickListener() {
 					@Override public void onClick(DialogInterface dialog, int which) {
@@ -62,17 +60,16 @@ public class SchemeManagersPreferenceFragment
 	public void confirmAndDownloadManager(final String url, final Context context) {
 		if (descriptionStore.containsSchemeManager(url)) {
 			new AlertDialog.Builder(context)
-					.setTitle("Scheme manager already known")
-					.setMessage("This scheme manager cannot be added because it is already known.")
+					.setTitle(R.string.schememanager_known_title)
+					.setMessage(R.string.schememanager_known_text)
 					.setPositiveButton(android.R.string.ok, null)
 					.show();
 			return;
 		}
 
 		new AlertDialog.Builder(context)
-				.setTitle("Add scheme manager?") // TODO probably have this dialog be more informative
-				.setMessage("Are you certain that you want to add the scheme manager at "
-						+ url + "?")
+				.setTitle(R.string.add_schememanager_title) // TODO probably have this dialog be more informative
+				.setMessage(context.getString(R.string.add_schememanager_question, url))
 				.setNegativeButton(android.R.string.no, null)
 				.setPositiveButton(android.R.string.yes, new DialogInterface.OnClickListener() {
 					@Override public void onClick(DialogInterface dialog, int which) {
@@ -86,7 +83,7 @@ public class SchemeManagersPreferenceFragment
 		cancelFeedback = false; // If we're here, the activity is still alive so that it can show feedback
 
 		final ProgressDialog progressDialog = new ProgressDialog(context);
-		progressDialog.setMessage("Downloading...");
+		progressDialog.setMessage(context.getString(R.string.downloading));
 		progressDialog.setProgressStyle(ProgressDialog.STYLE_SPINNER);
 		progressDialog.setIndeterminate(true);
 		progressDialog.setCanceledOnTouchOutside(false);
@@ -106,8 +103,8 @@ public class SchemeManagersPreferenceFragment
 
 				progressDialog.cancel();
 				new AlertDialog.Builder(context)
-						.setTitle("Downloading scheme manager failed")
-						.setMessage("Downloading of the scheme manager failed. Error: " + e.getMessage())
+						.setTitle(R.string.downloading_schememanager_failed_title)
+						.setMessage(context.getString(R.string.downloading_schememanager_failed_text, e.getMessage()))
 						.setIcon(android.R.drawable.ic_dialog_alert)
 						.setPositiveButton(android.R.string.ok, null)
 						.show();

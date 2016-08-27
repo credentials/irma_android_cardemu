@@ -76,7 +76,7 @@ public class DisjunctionFragment extends Fragment {
 
 			String text = ai.getIssuerName() + " - " + ai.getCredentialName();
 			if (ai.isCredential())
-				text += " (possession of credential)";
+				text += " (" + getString(R.string.posession_credential) + ")";
 			else {
 				text += " - " + ai.getAttributeName();
 				if (disjunction.hasValues())

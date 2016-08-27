@@ -125,9 +125,9 @@ public class MainActivity extends Activity {
 		@Override public void onSuccess(IrmaClient.Action action) {
 			switch (action) {
 				case DISCLOSING:
-					setFeedback("Successfully disclosed attributes", "success"); break;
+					setFeedback(getString(R.string.disclosure_successful), "success"); break;
 				case ISSUING:
-					setFeedback("Issuing was successful", "success"); break;
+					setFeedback(getString(R.string.issuing_succesful), "success"); break;
 			}
 			finish(true);
 		}
@@ -135,9 +135,9 @@ public class MainActivity extends Activity {
 		@Override public void onCancelled(IrmaClient.Action action) {
 			switch (action) {
 				case DISCLOSING:
-					setFeedback("Cancelled disclosure", "warning"); break;
+					setFeedback(getString(R.string.disclosure_cancelled), "warning"); break;
 				case ISSUING:
-					setFeedback("Cancelled issuing", "warning"); break;
+					setFeedback(getString(R.string.issuing_cancelled), "warning"); break;
 			}
 			finish(true);
 		}
@@ -146,12 +146,12 @@ public class MainActivity extends Activity {
 			final String title;
 			switch (action) {
 				case DISCLOSING:
-					title = "Disclosure failed"; break;
+					title = getString(R.string.disclosure_failed); break;
 				case ISSUING:
-					title = "Issuing failed"; break;
+					title = getString(R.string.issuing_failed); break;
 				case UNKNOWN:
 				default:
-					title = "Failed"; break;
+					title = getString(R.string.failed); break;
 			}
 
 			final String feedback = title + ": " + message;
@@ -385,9 +385,9 @@ public class MainActivity extends Activity {
 	protected void deleteAllCredentials() {
 		if (activityState == STATE_IDLE) {
 			AlertDialog.Builder builder = new AlertDialog.Builder(this);
-			builder.setTitle("Deleting credentials")
-					.setMessage("Are you sure you want to delete ALL credentials?")
-					.setPositiveButton("Delete", new DialogInterface.OnClickListener() {
+			builder.setTitle(R.string.confirm_delete_all_title)
+					.setMessage(R.string.confirm_delete_all_question)
+					.setPositiveButton(R.string.delete, new DialogInterface.OnClickListener() {
 						public void onClick(DialogInterface dialog, int id) {
 							Log.i(TAG, "We're idle, attempting removal of all credentials");
 
@@ -396,7 +396,7 @@ public class MainActivity extends Activity {
 							updateCredentialList();
 						}
 					})
-					.setNegativeButton("Cancel", new DialogInterface.OnClickListener() {
+					.setNegativeButton(R.string.cancel, new DialogInterface.OnClickListener() {
 						public void onClick(DialogInterface dialog, int id) {
 							// Cancelled
 						}
@@ -438,7 +438,7 @@ public class MainActivity extends Activity {
 					updateCredentialList(false);
 				}
 				@Override public void onError(Exception e) {
-					setFeedback("Downloading credential info failed", "warning");
+					setFeedback(getString(R.string.downloading_credential_info_failed), "warning");
 					updateCredentialList(false);
 				}
 			});
@@ -535,7 +535,7 @@ public class MainActivity extends Activity {
 					new String[] { Manifest.permission.CAMERA }, PERMISSION_REQUEST_CAMERA);
 		}
 		else {
-			startQRScanner("Scan the QR image in the browser.");
+			startQRScanner(getString(R.string.scan_qr));
 		}
 	}
 
@@ -547,7 +547,7 @@ public class MainActivity extends Activity {
 				if (grantResults.length > 0
 						&& grantResults[0] == PackageManager.PERMISSION_GRANTED
 						&& permissions[0].equals(Manifest.permission.CAMERA)) {
-					startQRScanner("Scan the QR image in the browser.");
+					startQRScanner(getString(R.string.scan_qr));
 				}
 				break;
 		}
@@ -679,10 +679,10 @@ public class MainActivity extends Activity {
 
 	private void startManualSession() {
 		final EditText inputbox = new EditText(this);
-		inputbox.setHint("QR code contents");
+		inputbox.setHint(R.string.qr_code_contents);
 
 		new AlertDialog.Builder(this)
-				.setTitle("Manually start IRMA session")
+				.setTitle(R.string.manually_start_session)
 				.setView(inputbox)
 				.setPositiveButton(R.string.start, new DialogInterface.OnClickListener() {
 					@Override public void onClick(DialogInterface dialog, int whichButton) {

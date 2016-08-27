@@ -250,9 +250,9 @@ public class SessionDialogFragment extends DialogFragment {
 		}
 
 		AlertDialog.Builder builder = new AlertDialog.Builder(getActivity())
-				.setTitle((issuing ? "Receive" : "Disclose") + " attributes?")
+				.setTitle((issuing ? R.string.receive_attributes : R.string.disclose_attributes))
 				.setView(view)
-				.setPositiveButton("Yes", new DialogInterface.OnClickListener() {
+				.setPositiveButton(android.R.string.yes, new DialogInterface.OnClickListener() {
 					@Override
 					public void onClick(DialogInterface dialog, int which) {
 						if (!issuing)
@@ -261,7 +261,7 @@ public class SessionDialogFragment extends DialogFragment {
 							listener.onIssueOK(issuingRequest, choice);
 					}
 				})
-				.setNegativeButton("No", new DialogInterface.OnClickListener() {
+				.setNegativeButton(R.string.no, new DialogInterface.OnClickListener() {
 					@Override
 					public void onClick(DialogInterface dialog, int which) {
 						if (!issuing)
@@ -272,7 +272,7 @@ public class SessionDialogFragment extends DialogFragment {
 				});
 
 		if (dislosing)
-				builder.setNeutralButton("More Information", null);
+				builder.setNeutralButton(R.string.more_information, null);
 
 		final AlertDialog d = builder.create();
 

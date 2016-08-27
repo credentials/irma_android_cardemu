@@ -107,7 +107,7 @@ public class LogListAdapter extends PagingBaseAdapter<LogEntry> {
 		HashMap<String, Boolean> attributesDisclosed = new HashMap<String, Boolean>();
 
 		if(log instanceof VerifyLogEntry) {
-			header_text = "Verified: ";
+			header_text = activity.getString(R.string.verified);
 			actionImageResource = R.drawable.irma_icon_ok_064px;
 			actorLogo.setImageResource(R.drawable.irma_logo_150);
 
@@ -127,10 +127,10 @@ public class LogListAdapter extends PagingBaseAdapter<LogEntry> {
 				attribute.setText(attr);
 				String disclosure_text;
 				if (attributesDisclosed.get(attr)) {
-					disclosure_text = "disclosed";
+					disclosure_text = activity.getString(R.string.disclosed);
 					mode.setTypeface(null, Typeface.BOLD);
 				} else {
-					disclosure_text = "hidden";
+					disclosure_text = activity.getString(R.string.hidden);
 					attribute.setTypeface(null, Typeface.NORMAL);
 					int color = activity.getResources().getColor(
 							R.color.irmagrey);
@@ -142,11 +142,11 @@ public class LogListAdapter extends PagingBaseAdapter<LogEntry> {
 				attributesList.addView(item_view);
 			}
 		} else if(log instanceof RemoveLogEntry) {
-			header_text = "Removed: ";
+			header_text = activity.getString(R.string.removed);
 			actionImageResource = R.drawable.irma_icon_missing_064px;
 			actorLogo.setImageResource(R.drawable.irma_logo_150);
 		} else if(log instanceof IssueLogEntry) {
-			header_text = "Issued: ";
+			header_text = activity.getString(R.string.issued);
 			actionImageResource = R.drawable.irma_icon_warning_064px;
 			if (log.getCredential().getIssuerDescription() != null) {
 				actorLogo.setImageBitmap(

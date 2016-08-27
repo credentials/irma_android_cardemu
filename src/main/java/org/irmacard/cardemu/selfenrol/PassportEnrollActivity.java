@@ -249,7 +249,7 @@ public class PassportEnrollActivity extends AbstractNFCEnrollActivity {
 				} catch (GeneralSecurityException e) {
 					//Most likely something went wrong with creating the Pub key instance
 					//Anyway, the reading of the passport failed.
-					showErrorScreen("Failed to communicate with passport (could notread AA public key)");
+					showErrorScreen(getString(R.string.read_passport_failed));
 				}
 			}
 

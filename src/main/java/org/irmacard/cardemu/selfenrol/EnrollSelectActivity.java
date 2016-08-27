@@ -329,7 +329,7 @@ public class EnrollSelectActivity extends AbstractGUIEnrollActivity {
                         new String[]{Manifest.permission.CAMERA}, MainActivity.PERMISSION_REQUEST_CAMERA);
             }
             else {
-                startQRScanner("Scan the QR image on your Driver's License.");
+                startQRScanner(getString(R.string.scan_qr_dl));
             }
         }
     }

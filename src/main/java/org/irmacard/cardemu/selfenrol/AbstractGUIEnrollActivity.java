@@ -114,7 +114,7 @@ public abstract class AbstractGUIEnrollActivity extends Activity{
         // See if it is an ApiError code
         if (errormsgId < errors.length) {
             if (errors[errormsgId] != ApiError.EXCEPTION) // Contains detailed message, show it
-                errormsg = "Server reported: " + errors[errormsgId].getDescription();
+                errormsg = getString(R.string.server_reported, errors[errormsgId].getDescription());
             else // Unspecified error, show generic message
                 errormsg = getString(R.string.error_enroll_serverdied);
         }

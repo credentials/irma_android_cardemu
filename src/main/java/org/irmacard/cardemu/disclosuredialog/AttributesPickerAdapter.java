@@ -31,6 +31,7 @@
 package org.irmacard.cardemu.disclosuredialog;
 
 import android.content.Context;
+import android.content.res.Resources;
 import android.text.Html;
 import android.view.LayoutInflater;
 import android.view.View;
@@ -55,6 +56,7 @@ import java.util.HashMap;
  */
 public class AttributesPickerAdapter extends BaseAdapter {
 	private LayoutInflater inflater;
+	private Resources resources;
 	private HashMap<IdemixAttributeIdentifier, String> candidates;
 	private ArrayList<IdemixAttributeIdentifier> identifiers;
 	private int selected;
@@ -72,6 +74,7 @@ public class AttributesPickerAdapter extends BaseAdapter {
 		this.candidates = CredentialManager.getCandidates(disjunction);
 		this.identifiers = new ArrayList<>(candidates.keySet());
 		this.inflater = (LayoutInflater) context.getSystemService(Context.LAYOUT_INFLATER_SERVICE);
+		this.resources = context.getResources();
 	}
 
 	@Override
@@ -114,7 +117,8 @@ public class AttributesPickerAdapter extends BaseAdapter {
 
 		final CheckedTextView value = (CheckedTextView) view.findViewById(R.id.detail_attribute_value);
 
-		String attrVal = ai.isCredential() ? "(possession of credential)" : candidates.get(iai);
+		String attrVal = ai.isCredential() ?
+				"(" + resources.getString(R.string.posession_credential) + ")" : candidates.get(iai);
 
 		// The spaces (&nbsp;) push the radio button a bit to the right. Not very pretty but I can see no other way
 		// to do it. (We have to add them to both lines because we do not know which one will be longest.)

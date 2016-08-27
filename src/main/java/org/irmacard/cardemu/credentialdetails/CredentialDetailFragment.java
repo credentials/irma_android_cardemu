@@ -152,7 +152,7 @@ public class CredentialDetailFragment extends Fragment {
 					.getInstance().getTime().getTime())
 					/ (1000 * 60 * 60 * 24));
 			// FIXME: text should be from resources
-			validityRemaining.setText(deltaDays + " days remaining");
+			validityRemaining.setText(getString(R.string.validity_days_remaining, deltaDays));
 
 		} else {
 			// Credential has expired
