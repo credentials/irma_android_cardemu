@@ -163,4 +163,17 @@
     <string name="read_passport_failed">Failed to communicate with passport (could not read AA public key)</string>
     <string name="scan_qr_dl">Scan the QR image on your Driver\'s License.</string>
     <string name="server_reported">Server reported: %s</string>
+    <string name="missing_attributes_text">The verifier requires attributes of the following kind: %s but you do not have the appropriate attributes.</string>
+    <string name="missing_attributes_title">Missing attributes</string>
+    <string name="and">and</string>
+    <string name="server_returned">server returned: %s</string>
+    <string name="could_not_connect">could not connect to server</string>
+    <string name="server_returned_status">server returned status %d</string>
+    <string name="wrong_credential_type">wrong credential type</string>
+    <string name="missing_required_attributes">missing required attributes</string>
+    <string name="missing_pk">missing public key</string>
+    <string name="malformed_disclosure_request">Got malformed disclosure request</string>
+    <string name="unknown_scheme_manager">Unknown scheme manager</string>
+    <string name="downloading_info_failed">Could not download credential or issuer information</string>
+    <string name="server_rejected_proof">Server rejected proof: %s</string>
 </resources>

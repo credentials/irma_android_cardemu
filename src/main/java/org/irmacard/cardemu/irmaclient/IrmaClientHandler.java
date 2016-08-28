@@ -15,6 +15,7 @@ import org.irmacard.api.common.SessionRequest;
 import org.irmacard.api.common.exceptions.ApiErrorMessage;
 import org.irmacard.api.common.util.GsonUtil;
 import org.irmacard.cardemu.CredentialManager;
+import org.irmacard.cardemu.R;
 import org.irmacard.cardemu.disclosuredialog.DisclosureInformationActivity;
 import org.irmacard.cardemu.disclosuredialog.SessionDialogFragment;
 import org.irmacard.cardemu.irmaclient.IrmaClient.Action;
@@ -102,29 +103,28 @@ public abstract class IrmaClientHandler {
 
 	private void showUnsatisfiableRequestDialog(List<AttributeDisjunction> missing,
 	                                           final DisclosureProofRequest request, final Action action) {
-		String message = "The verifier requires attributes of the following kind: ";
+		String attrs = "";
 		int count = 0;
 		int max = missing.size();
 		for (AttributeDisjunction disjunction : missing) {
 			count++;
-			message += "<b>" + disjunction.getLabel() + "</b>";
+			attrs += "<b>" + disjunction.getLabel() + "</b>";
 			if (count < max - 1 || count == max)
-				message += ", ";
+				attrs += ", ";
 			if (count == max - 1 && max > 1)
-				message += " and ";
+				attrs += " " + activity.getString(R.string.and) +  " ";
 		}
-		message += " but you do not have the appropriate attributes.";
 
 		final AlertDialog dialog = new AlertDialog.Builder(activity)
-				.setTitle("Missing attributes")
-				.setMessage(Html.fromHtml(message))
-				.setPositiveButton("OK", new DialogInterface.OnClickListener() {
+				.setTitle(R.string.missing_attributes_title)
+				.setMessage(Html.fromHtml(activity.getString(R.string.missing_attributes_text, attrs)))
+				.setPositiveButton(android.R.string.ok, new DialogInterface.OnClickListener() {
 					@Override
 					public void onClick(DialogInterface dialog, int which) {
 						irmaClient.cancelSession();
 					}
 				})
-				.setNeutralButton("More Information", null)
+				.setNeutralButton(R.string.more_information, null)
 				.create();
 
 		// Set the listener for the More Info button here, so that it does not close the dialog
@@ -145,5 +145,9 @@ public abstract class IrmaClientHandler {
 		});
 
 		dialog.show();
+	}
+
+	public Activity getActivity() {
+		return activity;
 	}
 }

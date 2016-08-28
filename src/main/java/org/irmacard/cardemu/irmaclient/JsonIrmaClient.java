@@ -1,12 +1,12 @@
 package org.irmacard.cardemu.irmaclient;
 
+import android.content.res.Resources;
 import android.os.AsyncTask;
 import android.util.Log;
 
 import com.google.gson.reflect.TypeToken;
 
 import org.acra.ACRA;
-import org.irmacard.cardemu.store.StoreManager;
 import org.irmacard.api.common.ClientRequest;
 import org.irmacard.api.common.DisclosureProofRequest;
 import org.irmacard.api.common.DisclosureProofResult;
@@ -21,9 +21,11 @@ import org.irmacard.api.common.exceptions.ApiException;
 import org.irmacard.api.common.util.GsonUtil;
 import org.irmacard.cardemu.CredentialManager;
 import org.irmacard.cardemu.DisclosureChoice;
+import org.irmacard.cardemu.R;
 import org.irmacard.cardemu.httpclient.HttpClientException;
 import org.irmacard.cardemu.httpclient.HttpResultHandler;
 import org.irmacard.cardemu.httpclient.JsonHttpClient;
+import org.irmacard.cardemu.store.StoreManager;
 import org.irmacard.credentials.CredentialsException;
 import org.irmacard.credentials.idemix.messages.IssueCommitmentMessage;
 import org.irmacard.credentials.idemix.messages.IssueSignatureMessage;
@@ -34,7 +36,6 @@ import org.irmacard.credentials.info.KeyException;
 import java.io.IOException;
 import java.lang.reflect.Type;
 import java.util.ArrayList;
-import java.util.Locale;
 import java.util.regex.Pattern;
 
 public class JsonIrmaClient extends IrmaClient {
@@ -43,10 +44,12 @@ public class JsonIrmaClient extends IrmaClient {
 
 	private String server;
 	private String protocolVersion;
+	private Resources resources;
 
 	public JsonIrmaClient(String server, IrmaClientHandler handler, String protocolVersion) {
 		super(handler);
 		this.protocolVersion = protocolVersion;
+		this.resources = handler.getActivity().getResources();
 
 		if (server.endsWith("/"))
 			this.server = server;
@@ -71,17 +74,17 @@ public class JsonIrmaClient extends IrmaClient {
 		String feedback, techinfo;
 
 		if (errorMessage != null && errorMessage.getError() != null) {
-			feedback = String.format("server returned: %s", errorMessage.getError().getDescription());
+			feedback = resources.getString(R.string.server_returned, errorMessage.getError().getDescription());
 			techinfo = errorMessage.getStacktrace();
 			Log.w(TAG, String.format("API error: %s, %s", errorMessage.getError().name(), errorMessage.getDescription()));
 			Log.w(TAG, errorMessage.getStacktrace());
 		} else if (e.getCause() != null) {
-			feedback = "could not connect to server";
-			techinfo = e.getCause().getMessage();
+			feedback = resources.getString(R.string.could_not_connect);
+			techinfo = e.getCause().getLocalizedMessage();
 			Log.w(TAG, "Exception details ", e);
 		} else {
-			feedback = "could not connect to server";
-			techinfo = String.format(Locale.ENGLISH, "server returned status %d", e.status);
+			feedback = resources.getString(R.string.could_not_connect);
+			techinfo = resources.getString(R.string.server_returned_status, e.status);
 			Log.w(TAG, "Exception details ", e);
 		}
 
@@ -102,6 +105,10 @@ public class JsonIrmaClient extends IrmaClient {
 
 	private void fail(String feedback, boolean deleteSession) {
 		failSession(feedback, deleteSession, null, null);
+	}
+
+	private void fail(int feedbackId, boolean deleteSession) {
+		failSession(resources.getString(feedbackId), deleteSession, null, null);
 	}
 
 	/**
@@ -155,13 +162,13 @@ public class JsonIrmaClient extends IrmaClient {
 			msg = CredentialManager.getIssueCommitments(request, disclosureChoice);
 		} catch (InfoException e) {
 			e.printStackTrace();
-			fail("wrong credential type", true);
+			fail(R.string.wrong_credential_type, true);
 			return;
 		} catch (CredentialsException e) {
-			fail("missing required attributes", true);
+			fail(R.string.missing_required_attributes, true);
 			return;
 		} catch (KeyException e) {
-			fail("missing public key", true);
+			fail(R.string.missing_pk, true);
 			return;
 		}
 
@@ -233,7 +240,7 @@ public class JsonIrmaClient extends IrmaClient {
 	private <T extends SessionRequest> void continueSession(final T request, final Action action,
 	                                                        final String requesterName) {
 		if (request.isEmpty() || request.getNonce() == null || request.getContext() == null) {
-			fail("Got malformed disclosure request", true);
+			fail(R.string.malformed_disclosure_request, true);
 			return;
 		}
 
@@ -245,9 +252,9 @@ public class JsonIrmaClient extends IrmaClient {
 			}
 			@Override public void onError(Exception e) {
 				if (e instanceof InfoException)
-					fail("Unknown scheme manager", true);
+					fail(R.string.unknown_scheme_manager, true);
 				if (e instanceof IOException)
-					fail("Could not download credential or issuer information", true);
+					fail(R.string.downloading_info_failed, true);
 			}
 		});
 	}
@@ -276,7 +283,7 @@ public class JsonIrmaClient extends IrmaClient {
 				if (result == DisclosureProofResult.Status.VALID) {
 					handler.onSuccess(Action.DISCLOSING);
 				} else { // We successfully computed a proof but server rejects it? That's fishy, report it
-					String feedback = "Server rejected proof: " + result.name().toLowerCase();
+					String feedback = resources.getString(R.string.server_rejected_proof, result.name().toLowerCase());
 					ACRA.getErrorReporter().handleException(new Exception(feedback));
 					fail(feedback, false);
 				}
