@@ -30,6 +30,7 @@
 
 package org.irmacard.cardemu.disclosuredialog;
 
+import android.annotation.SuppressLint;
 import android.app.Activity;
 import android.app.AlertDialog;
 import android.app.Dialog;
@@ -38,6 +39,7 @@ import android.content.DialogInterface;
 import android.content.Intent;
 import android.content.res.Resources;
 import android.os.Bundle;
+import android.text.Html;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.widget.AdapterView;
@@ -45,11 +47,14 @@ import android.widget.LinearLayout;
 import android.widget.Spinner;
 import android.widget.TextView;
 import org.irmacard.api.common.*;
+import org.irmacard.cardemu.CredentialManager;
 import org.irmacard.cardemu.DisclosureChoice;
 import org.irmacard.cardemu.R;
 import org.irmacard.cardemu.identifiers.IdemixAttributeIdentifier;
+import org.irmacard.cardemu.identifiers.IdemixCredentialIdentifier;
 import org.irmacard.cardemu.irmaclient.IrmaClient;
 import org.irmacard.credentials.info.CredentialDescription;
+import org.irmacard.credentials.info.CredentialIdentifier;
 import org.irmacard.credentials.info.InfoException;
 import org.irmacard.mno.common.util.GsonUtil;
 
@@ -216,7 +221,7 @@ public class SessionDialogFragment extends DialogFragment {
 	@Override
 	public Dialog onCreateDialog(Bundle savedInstanceState) {
 		LayoutInflater inflater = getActivity().getLayoutInflater();
-		View view = inflater.inflate(R.layout.dialog_disclosure, null);
+		@SuppressLint("InflateParams") View view = inflater.inflate(R.layout.dialog_disclosure, null);
 
 		if (!issuing) {
 			view.findViewById(R.id.issuance_question).setVisibility(View.GONE);
@@ -252,7 +257,7 @@ public class SessionDialogFragment extends DialogFragment {
 						if (!issuing)
 							irmaClient.disclose(proofRequest, choice);
 						else
-							irmaClient.finishIssuance(issuingRequest, choice);
+							showOverwriteCredentialDialog();
 					}
 				})
 				.setNegativeButton(R.string.no, new DialogInterface.OnClickListener() {
@@ -292,6 +297,38 @@ public class SessionDialogFragment extends DialogFragment {
 		}
 
 		return d;
+	}
+
+	private void showOverwriteCredentialDialog() {
+		ArrayList<CredentialIdentifier> singletons = CredentialManager.filterSingletons(issuingRequest.getCredentials());
+		int count = singletons.size();
+
+		if (count == 0) { // No singleton credentials to overwrite, so we just continue
+			irmaClient.finishIssuance(issuingRequest, choice);
+			return;
+		}
+
+		StringBuilder builder = new StringBuilder();
+		for (int i = 0; i < count; ++i) {
+			builder.append("&nbsp&bull&nbsp;<b>")
+					.append(IdemixCredentialIdentifier.getBaseTitle(singletons.get(i)))
+					.append("</b><br/>");
+		}
+
+		new AlertDialog.Builder(getActivity())
+				.setTitle(R.string.overwrite_credentials_title)
+				.setMessage(Html.fromHtml(getString(R.string.overwrite_credentials_question, builder.toString())))
+				.setPositiveButton(R.string.yes, new DialogInterface.OnClickListener() {
+					@Override public void onClick(DialogInterface dialogInterface, int i) {
+						irmaClient.finishIssuance(issuingRequest, choice);
+					}
+				})
+				.setNegativeButton(R.string.no, new DialogInterface.OnClickListener() {
+					@Override public void onClick(DialogInterface dialogInterface, int i) {
+						irmaClient.cancelSession();
+					}
+				})
+				.show();
 	}
 }
 

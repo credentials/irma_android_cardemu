@@ -18,8 +18,12 @@ public class IdemixCredentialIdentifier extends IdemixIdentifier<CredentialIdent
 		if (includeIndex && count > 1)
 			suffix += " (" + (index+1) + ")";
 
-		return identifier.getIssuerName() + " - "
-				+ identifier.getCredentialDescription().getName()
-				+ suffix;
+		return getBaseTitle(identifier) + suffix;
+	}
+
+	public static String getBaseTitle(CredentialIdentifier identifier) {
+		return identifier.getIssuerName()
+				+ " - "
+				+ identifier.getCredentialDescription().getName();
 	}
 }

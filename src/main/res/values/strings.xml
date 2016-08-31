@@ -114,7 +114,9 @@
     <string name="actionimage">Action Image</string>
     <string name="irmashape">GUI artifact</string>
     <string name="issuerlogo">Issuer Logo</string>
-    <string name="validtill">Valid until:</string>
+    <!-- This is for the duration pseudo attribute in the main credential list, and should be kept
+         English since actual attribute names are untranslatable and therefore always English. -->
+    <string name="validtill" translatable="false">Valid until:</string>
     <string name="issuer">Issuer</string>
     <string name="credentialdescription">Credential Description</string>
     <string name="deletetext">Delete</string>
@@ -176,4 +178,6 @@
     <string name="unknown_scheme_manager">Unknown scheme manager</string>
     <string name="downloading_info_failed">Could not download credential or issuer information</string>
     <string name="server_rejected_proof">Server rejected proof: %s</string>
+    <string name="overwrite_credentials_title">Overwrite credentials?</string>
+    <string name="overwrite_credentials_question"><![CDATA[You already have instances of the following credentials: <br/><br/> %s <br/> You can have at most one of these credentials. Continuing will overwrite the ones you already have. <br/><br/> Proceed?]]></string>
 </resources>

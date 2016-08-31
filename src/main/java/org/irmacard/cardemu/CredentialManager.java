@@ -532,10 +532,34 @@ public class CredentialManager {
 				credentials.put(cd.getIdentifier(), list);
 			}
 
-			list.add(cred);
+			// Only grow the list if we are allowed to have more than 1 instance of this credential type
+			if (cd.shouldBeSingleton() && list.size() > 0)
+				list.set(0, cred);
+			else
+				list.add(cred);
 			logs.add(0, new IssueLogEntry(Calendar.getInstance().getTime(), cd));
 		}
 
 		save();
+	}
+
+	/**
+	 * Get the credential identifiers of the singletons in the specified list of credential requests
+	 * (i.e., of the credential types of which we are allowed to posess at most 1 credential).
+	*/
+	public static ArrayList<CredentialIdentifier> filterSingletons(ArrayList<CredentialRequest> creds) {
+		// This would be a oneliner in Java 8...
+
+		ArrayList<CredentialIdentifier> list = new ArrayList<>();
+
+		for (CredentialRequest cred : creds) {
+			CredentialIdentifier identifier = cred.getIdentifier();
+			if (credentials.containsKey(identifier)
+					&& credentials.get(identifier).size() > 0
+					&& identifier.getCredentialDescription().shouldBeSingleton())
+				list.add(identifier);
+		}
+
+		return list;
 	}
 }
