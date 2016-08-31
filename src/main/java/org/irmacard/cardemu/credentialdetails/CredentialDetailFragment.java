@@ -30,12 +30,13 @@
 
 package org.irmacard.cardemu.credentialdetails;
 
-import android.app.Activity;
 import android.app.AlertDialog;
+import android.content.Context;
 import android.content.DialogInterface;
 import android.graphics.Bitmap;
 import android.os.Bundle;
 import android.support.v4.app.Fragment;
+import android.support.v4.content.ContextCompat;
 import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
@@ -157,7 +158,7 @@ public class CredentialDetailFragment extends Fragment {
 		} else {
 			// Credential has expired
 			validityValue.setText(R.string.credential_no_longer_valid);
-			validityValue.setTextColor(getResources().getColor(R.color.irmared));
+			validityValue.setTextColor(ContextCompat.getColor(getContext(), R.color.irmared));
 			validityRemaining.setText("");
 		}
 		
@@ -179,16 +180,16 @@ public class CredentialDetailFragment extends Fragment {
 	}
 
 	@Override
-	public void onAttach(Activity activity) {
-		super.onAttach(activity);
+	public void onAttach(Context context) {
+		super.onAttach(context);
 
 		// Activities containing this fragment must implement its callbacks.
-		if (!(activity instanceof Callbacks)) {
+		if (!(context instanceof Callbacks)) {
 			throw new IllegalStateException(
 					"Activity must implement fragment's callbacks.");
 		}
 
-		mCallbacks = (Callbacks) activity;
+		mCallbacks = (Callbacks) context;
 	}
 
 	private void clickedDeleteButton() {

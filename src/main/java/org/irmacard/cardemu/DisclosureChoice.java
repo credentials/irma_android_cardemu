@@ -1,6 +1,5 @@
 package org.irmacard.cardemu;
 
-import org.irmacard.api.common.DisclosureProofRequest;
 import org.irmacard.api.common.SessionRequest;
 import org.irmacard.cardemu.identifiers.IdemixAttributeIdentifier;
 
@@ -19,11 +18,6 @@ public class DisclosureChoice implements Serializable {
 	public DisclosureChoice(SessionRequest request) {
 		this.request = request;
 		this.attributes = new ArrayList<>();
-	}
-
-	public DisclosureChoice(DisclosureProofRequest request, ArrayList<IdemixAttributeIdentifier> attributes) {
-		this.request = request;
-		this.attributes = attributes;
 	}
 
 	public SessionRequest getRequest() {

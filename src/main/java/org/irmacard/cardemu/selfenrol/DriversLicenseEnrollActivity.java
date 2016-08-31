@@ -15,7 +15,6 @@ import org.irmacard.mno.common.DocumentDataMessage;
 import org.irmacard.mno.common.EDLDataMessage;
 import org.irmacard.mno.common.EnrollmentStartMessage;
 import org.jmrtd.PassportService;
-import org.jmrtd.Util;
 import org.jmrtd.lds.icao.DG14File;
 import org.jmrtd.lds.icao.DG15File;
 import org.jmrtd.lds.SODFile;
@@ -88,8 +87,9 @@ public class DriversLicenseEnrollActivity extends AbstractNFCEnrollActivity {
             try {
                 String kdoc = mrz.substring(1, mrz.length() - 1);
                 byte[] keySeed = computeKeySeedForBAP(kdoc);
-                SecretKey kEnc = Util.deriveKey(keySeed, Util.ENC_MODE);
-                SecretKey kMac = Util.deriveKey(keySeed, Util.MAC_MODE);
+                // Importing Util would create an unsuppressable lint deprecation warning
+                SecretKey kEnc = org.jmrtd.Util.deriveKey(keySeed, org.jmrtd.Util.ENC_MODE);
+                SecretKey kMac = org.jmrtd.Util.deriveKey(keySeed, org.jmrtd.Util.MAC_MODE);
                 try {
                     //the eDL BAC is actually the same as the BAC for passports
                     ps.doBAC(kEnc,kMac);

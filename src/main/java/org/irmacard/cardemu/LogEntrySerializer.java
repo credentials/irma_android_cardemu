@@ -15,15 +15,15 @@ public class LogEntrySerializer implements JsonSerializer<LogEntry>, JsonDeseria
 
 		if (src instanceof VerifyLogEntry) {
 			o.addProperty("type", "verification");
-			o.add("value", context.serialize((VerifyLogEntry) src));
+			o.add("value", context.serialize(src));
 		}
 		else if (src instanceof IssueLogEntry) {
 			o.addProperty("type", "issue");
-			o.add("value", context.serialize((IssueLogEntry) src));
+			o.add("value", context.serialize(src));
 		}
 		else if (src instanceof RemoveLogEntry) {
 			o.addProperty("type", "remove");
-			o.add("value", context.serialize((RemoveLogEntry) src));
+			o.add("value", context.serialize(src));
 		}
 
 		return o;

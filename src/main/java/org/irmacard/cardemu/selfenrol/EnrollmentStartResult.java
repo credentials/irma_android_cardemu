@@ -46,10 +46,6 @@ class EnrollmentStartResult {
 		this(msg, null, 0);
 	}
 
-	public EnrollmentStartResult(HttpClientException exception) {
-		this(null, exception, 0);
-	}
-
 	public EnrollmentStartResult(HttpClientException exception, int errorId) {
 		this(null, exception, errorId);
 	}

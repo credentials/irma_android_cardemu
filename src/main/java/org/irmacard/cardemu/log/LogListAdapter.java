@@ -30,9 +30,11 @@
 
 package org.irmacard.cardemu.log;
 
+import android.annotation.SuppressLint;
 import android.app.Activity;
 import android.content.Context;
 import android.graphics.Typeface;
+import android.support.v4.content.ContextCompat;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
@@ -82,6 +84,7 @@ public class LogListAdapter extends PagingBaseAdapter<LogEntry> {
 		return position;
 	}
 
+	@SuppressLint("InflateParams")
 	@Override
 	public View getView(int position, View convert_view, ViewGroup parent) {
 		View view = convert_view;
@@ -104,7 +107,7 @@ public class LogListAdapter extends PagingBaseAdapter<LogEntry> {
 		LogEntry log = items.get(position);
 		String header_text = "";
 		int actionImageResource = R.drawable.irma_icon_warning_064px;
-		HashMap<String, Boolean> attributesDisclosed = new HashMap<String, Boolean>();
+		HashMap<String, Boolean> attributesDisclosed;
 
 		if(log instanceof VerifyLogEntry) {
 			header_text = activity.getString(R.string.verified);
@@ -132,8 +135,7 @@ public class LogListAdapter extends PagingBaseAdapter<LogEntry> {
 				} else {
 					disclosure_text = activity.getString(R.string.hidden);
 					attribute.setTypeface(null, Typeface.NORMAL);
-					int color = activity.getResources().getColor(
-							R.color.irmagrey);
+					int color =ContextCompat.getColor(activity, R.color.irmagrey);
 					attribute.setTextColor(color);
 					mode.setTextColor(color);
 				}

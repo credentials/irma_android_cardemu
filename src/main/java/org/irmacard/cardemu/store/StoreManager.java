@@ -30,6 +30,7 @@
 
 package org.irmacard.cardemu.store;
 
+import android.annotation.SuppressLint;
 import android.content.Context;
 import android.os.AsyncTask;
 
@@ -125,6 +126,7 @@ public class StoreManager implements DescriptionStoreSerializer, IdemixKeyStoreS
 		boolean b = fileOrDirectory.delete();
 	}
 
+	@SuppressLint("DefaultLocale")
 	@Override
 	public void saveIdemixKey(IssuerDescription issuer, String key, int counter) {
 		File issuerDir = getIssuerPath(issuer.getIdentifier());

@@ -302,8 +302,7 @@ public class PassportEnrollActivity extends AbstractNFCEnrollActivity {
 			try {
 				Log.d(TAG, "trying algorithm " + algorithm);
 				KeyFactory keyFactory = KeyFactory.getInstance(algorithm,new org.spongycastle.jce.provider.BouncyCastleProvider());
-				PublicKey publicKey = keyFactory.generatePublic(pubKeySpec);
-				return publicKey;
+				return keyFactory.generatePublic(pubKeySpec);
 			} catch (InvalidKeySpecException ikse) {
 				/* NOTE: Ignore, try next algorithm. */
 			}

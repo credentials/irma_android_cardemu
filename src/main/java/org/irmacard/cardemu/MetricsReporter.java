@@ -210,10 +210,9 @@ public class MetricsReporter {
 	}
 
 	private boolean isWifiConnected() {
-		ConnectivityManager connManager
-				= (ConnectivityManager) application.getSystemService(Context.CONNECTIVITY_SERVICE);
-		NetworkInfo wifi = connManager.getNetworkInfo(ConnectivityManager.TYPE_WIFI);
-		return wifi.isConnected();
+		NetworkInfo activeNetwork = ((ConnectivityManager) application.getSystemService(Context.CONNECTIVITY_SERVICE))
+				.getActiveNetworkInfo();
+		return activeNetwork != null && activeNetwork.getType() == ConnectivityManager.TYPE_WIFI;
 	}
 
 	/**

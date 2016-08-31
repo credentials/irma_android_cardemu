@@ -30,8 +30,11 @@
 
 package org.irmacard.cardemu.credentialdetails;
 
+import android.annotation.SuppressLint;
 import android.content.Context;
 import android.graphics.Color;
+import android.support.v4.content.ContextCompat;
+import android.support.v4.widget.TextViewCompat;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.widget.LinearLayout;
@@ -67,20 +70,21 @@ public class AttributesRenderer {
 	 * @param disclosedAttributes If specified, those attributes found in the credential but not here will be shown in
 	 *                            light grey to indicate they are not being disclosed.
 	 */
+	@SuppressLint("SetTextI18n")
 	public void render(Attributes attributes, LinearLayout list, boolean includeTitle, Attributes
 			disclosedAttributes) {
 		CredentialDescription cd = attributes.getCredentialDescription();
 
 		if (includeTitle) {
 			TextView attrName = new TextView(context);
-			attrName.setTextAppearance(context, R.style.DetailHeading);
+			TextViewCompat.setTextAppearance(attrName, R.style.DetailHeading);
 			attrName.setText(cd.getName());
 			attrName.setTextColor(Color.BLACK);
 			list.addView(attrName);
 		}
 
 		for (AttributeDescription desc : cd.getAttributes()) {
-			View attributeView = inflater.inflate(R.layout.row_attribute, null);
+			@SuppressLint("InflateParams") View attributeView = inflater.inflate(R.layout.row_attribute, null);
 
 			TextView name = (TextView) attributeView.findViewById(R.id.detail_attribute_name);
 			TextView value = (TextView) attributeView.findViewById(R.id.detail_attribute_value);
@@ -88,10 +92,10 @@ public class AttributesRenderer {
 			if (disclosedAttributes != null) {
 				if (disclosedAttributes.get(desc.getName()) != null) {
 					value.setTextColor(Color.BLACK);
-					value.setTextAppearance(context, R.style.DetailHeading);
+					TextViewCompat.setTextAppearance(value, R.style.DetailHeading);
 				} else {
-					name.setTextColor(context.getResources().getColor(R.color.irmagrey));
-					value.setTextColor(context.getResources().getColor(R.color.irmagrey));
+					name.setTextColor(ContextCompat.getColor(context, R.color.irmagrey));
+					value.setTextColor(ContextCompat.getColor(context, R.color.irmagrey));
 				}
 			}
 

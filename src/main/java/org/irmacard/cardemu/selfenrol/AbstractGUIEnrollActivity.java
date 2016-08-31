@@ -5,6 +5,7 @@ import android.content.Intent;
 import android.content.SharedPreferences;
 import android.content.res.Resources;
 import android.os.Bundle;
+import android.support.v4.content.ContextCompat;
 import android.util.Log;
 import android.view.View;
 import android.widget.Button;
@@ -27,6 +28,7 @@ public abstract class AbstractGUIEnrollActivity extends Activity{
 
     private static final String TAG = "cardemu.AbsGUIEnrollAct";
 
+    @SuppressWarnings("FieldCanBeLocal")
     private static int protocolVersion = 2;
 
     protected static final String SETTINGS = "cardemu";
@@ -88,16 +90,14 @@ public abstract class AbstractGUIEnrollActivity extends Activity{
     }
 
     private void updateStepLabels(int count, int color) {
-        Resources r = getResources();
-
         if (count >= 0)
-            ((TextView)findViewById(R.id.step_text)).setTextColor(r.getColor(color));
+            ((TextView)findViewById(R.id.step_text)).setTextColor(ContextCompat.getColor(this, color));
         if (count >= 1)
-            ((TextView)findViewById(R.id.step1_text)).setTextColor(r.getColor(color));
+            ((TextView)findViewById(R.id.step1_text)).setTextColor(ContextCompat.getColor(this, color));
         if (count >= 2)
-            ((TextView) findViewById(R.id.step2_text)).setTextColor(r.getColor(color));
+            ((TextView) findViewById(R.id.step2_text)).setTextColor(ContextCompat.getColor(this, color));
         if (count >= 3)
-            ((TextView) findViewById(R.id.step3_text)).setTextColor(r.getColor(color));
+            ((TextView) findViewById(R.id.step3_text)).setTextColor(ContextCompat.getColor(this, color));
     }
 
     private void prepareErrorScreen() {

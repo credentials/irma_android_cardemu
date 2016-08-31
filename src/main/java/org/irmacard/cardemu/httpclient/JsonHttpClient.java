@@ -47,6 +47,7 @@ import java.lang.reflect.Type;
  * NOTE: the synchronious methods of this class must not be used on the main thread,
  * as otherwise a NetworkOnMainThreadException will occur.
  */
+@SuppressWarnings("unused")
 public class JsonHttpClient {
 	private Gson gson;
 	private int timeout = 5000;

@@ -82,7 +82,7 @@ public class AndroidFileReader implements FileReader {
 			path = "/" + path;
 
 		// Using a set to avoid duplicates, if a path is present both in the assets and in internal storage
-		HashSet<String> files = new HashSet<String>();
+		HashSet<String> files = new HashSet<>();
 
 		try {
 			files.addAll(Arrays.asList(assets.list(assetPath + path)));

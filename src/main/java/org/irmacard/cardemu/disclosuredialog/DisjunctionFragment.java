@@ -32,6 +32,7 @@ package org.irmacard.cardemu.disclosuredialog;
 
 import android.app.Fragment;
 import android.os.Bundle;
+import android.support.v4.content.ContextCompat;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
@@ -67,7 +68,7 @@ public class DisjunctionFragment extends Fragment {
 		TextView title = (TextView) list.findViewById(R.id.disjunction_title);
 		title.setText(disjunction.getLabel());
 		if (candidates.isEmpty()) {
-			title.setTextColor(getResources().getColor(R.color.irmared));
+			title.setTextColor(ContextCompat.getColor(getActivity(), R.color.irmared));
 		}
 
 		LinearLayout content = (LinearLayout) list.findViewById(R.id.disjunction_content);

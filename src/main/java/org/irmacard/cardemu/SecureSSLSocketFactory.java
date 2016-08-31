@@ -100,14 +100,6 @@ public class SecureSSLSocketFactory extends SSLSocketFactory
 		return ciphers;
 	}
 
-	public String[] getDefaultProtocols() {
-		return protocols;
-	}
-
-	public String[] getSupportedProtocols() {
-		return protocols;
-	}
-
 	@Override
 	public Socket createSocket(Socket s, String host, int port, boolean autoClose) throws IOException {
 		SSLSocket ss = (SSLSocket)factory.createSocket(s, host, port, autoClose);
@@ -241,6 +233,7 @@ public class SecureSSLSocketFactory extends SSLSocketFactory
 	 * @param filename Filename without .cert extension
 	 * @return A client whose SSL with our certificate pinnned
 	 */
+	@SuppressWarnings("TryFinallyCanBeTryWithResources")
 	public static SSLSocketFactory getPinningSocketFactory(Context context, String filename) {
 		try {
 			Resources r = context.getResources();
