@@ -148,11 +148,11 @@
     <string name="no">No</string>
     <string name="more_information">More Information</string>
     <string name="posession_credential">possession of credential</string>
-    <string name="verified">Verified: </string>
+    <string name="verified">Verified</string>
     <string name="disclosed">disclosed</string>
     <string name="hidden">hidden</string>
-    <string name="removed">Removed: </string>
-    <string name="issued">Issued: </string>
+    <string name="removed">Removed</string>
+    <string name="issued">Issued</string>
     <string name="remove_schememanager_title">Remove scheme manager?</string>
     <string name="remove_schememanager_question">Are you certain you want to remove this scheme manager? This renders all credentials that you might have that fall under the authority of this scheme manager unusable.</string>
     <string name="schememanager_known_title">Scheme manager already known</string>

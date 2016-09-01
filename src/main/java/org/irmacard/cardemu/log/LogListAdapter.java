@@ -156,7 +156,7 @@ public class LogListAdapter extends PagingBaseAdapter<LogEntry> {
 			}
 		}
 
-		header_text += log.getCredential().getName();
+		header_text += ": " + log.getCredential().getName();
 		header.setText(header_text);
 		datetime.setText(SimpleDateFormat.getDateTimeInstance().format(log.getTimestamp()));
 		actionImage.setImageResource(actionImageResource);
