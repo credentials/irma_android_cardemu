@@ -18,3 +18,62 @@
 #-keepclassmembers class fqcn.of.javascript.interface.for.webview {
 #   public *;
 #}
+
+-dontobfuscate
+
+-keep public class * extends android.app.Activity
+-keep public class * extends android.app.Application
+-keep public class * extends android.app.Service
+-keep public class * extends android.content.BroadcastReceiver
+-keep public class * extends android.content.ContentProvider
+-keep public class * extends android.preference.Preference
+-keep public class com.android.vending.billing.IInAppBillingService
+-keep public class * extends android.view.View {
+    public <init>(android.content.Context);
+    public <init>(android.content.Context, android.util.AttributeSet);
+    public <init>(android.content.Context, android.util.AttributeSet, int);
+}
+-keepclasseswithmembers class * {
+    public <init>(android.content.Context, android.util.AttributeSet);
+}
+-keepclasseswithmembers class * {
+    public <init>(android.content.Context, android.util.AttributeSet, int);
+}
+-keepclassmembers class * extends android.content.Context {
+    public void *(android.view.View);
+    public void *(android.view.MenuItem);
+}
+
+-keep class android.support.v4.app.** { *; }
+-keep interface android.support.v4.app.** { *; }
+
+# Gson
+-keepattributes Signature
+-keepattributes *Annotation*
+-keep class sun.misc.Unsafe { *; }
+-keep class com.google.gson.examples.android.model.** { *; }
+
+# Spongycastle
+-keep class org.spongycastle.crypto.macs.** { *; }
+-dontwarn javax.naming.**
+-dontwarn javax.xml.**
+
+# Jackson
+-keepnames class com.fasterxml.jackson.** { *; }
+-dontwarn com.fasterxml.jackson.databind.**
+
+# Acra
+-keepattributes SourceFile,LineNumberTable
+-keep class org.acra.** { *; }
+-dontwarn android.support.v4.app.NotificationCompat*
+-keep class org.apache.http.** { *; }
+-dontwarn org.apache.http.**
+
+# slf4j
+-keep class org.slf4j.** { *; }
+-dontwarn org.slf4j.impl.**
+
+# Our stuff
+-keep class org.irmacard.** { *; }
+-keep class net.sf.scuba.** { *; }
+-keep class org.jmrtd.** { *; }
