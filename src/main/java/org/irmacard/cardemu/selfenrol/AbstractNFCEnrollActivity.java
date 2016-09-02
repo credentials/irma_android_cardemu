@@ -15,10 +15,14 @@ import android.util.Log;
 import android.view.View;
 import android.view.WindowManager;
 import android.widget.TextView;
+
 import com.google.gson.JsonSyntaxException;
+
 import net.sf.scuba.smartcards.CardService;
 import net.sf.scuba.smartcards.IsoDepCardService;
+
 import org.acra.ACRA;
+import org.bouncycastle.jce.provider.BouncyCastleProvider;
 import org.irmacard.api.common.ClientQr;
 import org.irmacard.api.common.exceptions.ApiErrorMessage;
 import org.irmacard.cardemu.BuildConfig;
@@ -35,8 +39,9 @@ import org.irmacard.mno.common.PassportVerificationResult;
 import org.irmacard.mno.common.PassportVerificationResultMessage;
 import org.irmacard.mno.common.util.GsonUtil;
 
-import javax.net.ssl.SSLSocketFactory;
 import java.security.Security;
+
+import javax.net.ssl.SSLSocketFactory;
 
 
 /**
@@ -113,9 +118,14 @@ public abstract class AbstractNFCEnrollActivity extends AbstractGUIEnrollActivit
         // Get the BasicClientMessage containing our nonce to send to the passport.
         getEnrollmentSession();
 
-        // Spongycastle provides the MAC ISO9797Alg3Mac, which JMRTD usesin the doBAC method below (at
-        // DESedeSecureMessagingWrapper.java, line 115)
-        Security.addProvider(new org.spongycastle.jce.provider.BouncyCastleProvider());
+        // Android's BouncyCastle is crippled and does not contain the MAC ISO9797Alg3Mac, which JMRTD uses in the
+        // doBAC method (at DESedeSecureMessagingWrapper.java, line 115). However, JMTRD explicitly has
+        // BouncyCastle as a dependency, and suprisingly we can apparently just instantiate a fully-fledged version
+        // from this dependency. So, we remove Android's BC and insert our own ("BC" is an alias for BouncyCastle;
+        // note that Security.addProvider does nothing if it already contains a provider of a given alias, so
+        // we have to remove it first.) This way, we do not have to depend on SpongyCastle.
+        Security.removeProvider("BC");
+        Security.addProvider(new BouncyCastleProvider());
 
         // The next advanceScreen() is called when the passport reading was successful (see onPostExecute() in
         // readPassport() above). Thus, if no passport arrives or we can't successfully read it, we have to
