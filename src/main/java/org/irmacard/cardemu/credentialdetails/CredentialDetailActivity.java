@@ -50,6 +50,7 @@ import org.irmacard.credentials.Attributes;
  */
 public class CredentialDetailActivity extends FragmentActivity implements
 		CredentialDetailFragment.Callbacks {
+	public static final int ACTIVITY_CODE = 101;
 	public static final String ARG_RESULT_DELETE = "deletedCred";
 	public static final int RESULT_DELETE = RESULT_FIRST_USER;
 

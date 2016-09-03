@@ -91,8 +91,6 @@ import java.util.LinkedHashMap;
 import javax.net.ssl.SSLSocketFactory;
 
 public class MainActivity extends Activity {
-	private static final int DETAIL_REQUEST = 101;
-
 	private static final String TAG = "CardEmuMainActivity";
 	private static final String SETTINGS = "cardemu";
 	public static final int PERMISSION_REQUEST_CAMERA = 1;
@@ -102,7 +100,7 @@ public class MainActivity extends Activity {
 	// Previewed list of credentials
 	private ExpandableCredentialsAdapter credentialListAdapter;
 
-	private State activityState = State.LOADING;
+	private State state = State.LOADING;
 
 	/**
 	 * {@link MainActivity} UI states
@@ -270,7 +268,7 @@ public class MainActivity extends Activity {
 					detailIntent.putExtra(CredentialDetailFragment.ATTRIBUTES,
 							credentialListAdapter.getAttributes(ici));
 					detailIntent.putExtra(CredentialDetailFragment.HASHCODE, CredentialManager.getHashCode(ici));
-					startActivityForResult(detailIntent, DETAIL_REQUEST);
+					startActivityForResult(detailIntent, CredentialDetailActivity.ACTIVITY_CODE);
 				} catch (ClassCastException e) {
 					Log.e(TAG, "Item " + i + " longclicked but was not a CredentialDescription");
 				}
@@ -378,11 +376,15 @@ public class MainActivity extends Activity {
 				.show();
 	}
 
+	public State getState() {
+		return state;
+	}
+
 	public void setState(State state) {
 		Log.i(TAG, "Set state: " + state);
-		activityState = state;
+		this.state = state;
 
-		switch (activityState) {
+		switch (state) {
 			case CREDENTIALS_LOADED:
 				credentialsLoaded = true;
 				break;
@@ -398,7 +400,7 @@ public class MainActivity extends Activity {
 		setUIForState();
 
 		// If we're finished booting
-		if (activityState.isBooting() && credentialsLoaded && descriptionStoreLoaded && keyStoreLoaded) {
+		if (state.isBooting() && credentialsLoaded && descriptionStoreLoaded && keyStoreLoaded) {
 			setState(State.IDLE);
 			processIntent();
 		}
@@ -408,7 +410,7 @@ public class MainActivity extends Activity {
 		int imageResource = 0;
 		int statusTextResource = 0;
 
-		switch (activityState) {
+		switch (getState()) {
 			case LOADING:
 			case CREDENTIALS_LOADED:
 			case DESCRIPTION_STORE_LOADED:
@@ -483,7 +485,7 @@ public class MainActivity extends Activity {
 	}
 
 	protected void deleteAllCredentials() {
-		if (activityState == State.IDLE) {
+		if (getState() == State.IDLE) {
 			AlertDialog.Builder builder = new AlertDialog.Builder(this);
 			builder.setTitle(R.string.confirm_delete_all_title)
 					.setMessage(R.string.confirm_delete_all_question)
@@ -508,7 +510,7 @@ public class MainActivity extends Activity {
 	}
 
 	protected void tryDeleteCredential(int hashCode) {
-		if (activityState != State.IDLE) {
+		if (getState() != State.IDLE) {
 			Log.i(TAG, "Delete long-click ignored in non-idle mode");
 			return;
 		}
@@ -536,7 +538,7 @@ public class MainActivity extends Activity {
      */
 	protected void updateCredentialList(boolean tryDownloading) {
 		if (!credentialsLoaded || !descriptionStoreLoaded
-				|| (!activityState.isBooting() && activityState != State.IDLE))
+				|| (!getState().isBooting() && getState() != State.IDLE))
 			return;
 
 		if (tryDownloading) {
@@ -601,7 +603,7 @@ public class MainActivity extends Activity {
 		onlineEnrolling = settings.getBoolean("onlineEnrolling", false);
 		launchedFromBrowser = settings.getBoolean("launchedFromBrowser", false);
 
-		if (activityState == State.IDLE) {
+		if (getState() == State.IDLE) {
 			updateCredentialList();
 			processIntent();
 		}
@@ -627,7 +629,7 @@ public class MainActivity extends Activity {
 	}
 
 	public void onMainShapeTouch(View v) {
-		if (activityState != State.IDLE)
+		if (getState() != State.IDLE)
 			return;
 
 		if (ContextCompat.checkSelfPermission(this, Manifest.permission.CAMERA)
@@ -657,7 +659,7 @@ public class MainActivity extends Activity {
 	public void onEnrollButtonTouch(View v) {
 		Intent i = new Intent(this, EnrollSelectActivity.class);
 		CredentialManager.save();
-		startActivityForResult(i, EnrollSelectActivity.EnrollSelectActivityCode);
+		startActivityForResult(i, EnrollSelectActivity.ACTIVITY_CODE);
 	}
 
 	public void onOnlineEnrollButtonTouch(View v) {
@@ -670,14 +672,17 @@ public class MainActivity extends Activity {
 	@Override
 	protected void onActivityResult(int requestCode, int resultCode, Intent data) {
 		super.onActivityResult(requestCode, resultCode, data);
-		if (requestCode == EnrollSelectActivity.EnrollSelectActivityCode && resultCode == RESULT_OK) {
+
+		if (requestCode == EnrollSelectActivity.ACTIVITY_CODE && resultCode == RESULT_OK) {
 			updateCredentialList();
 		}
-		else if (requestCode == DETAIL_REQUEST && resultCode == CredentialDetailActivity.RESULT_DELETE) {
+
+		else if (requestCode == CredentialDetailActivity.ACTIVITY_CODE && resultCode == CredentialDetailActivity.RESULT_DELETE) {
 			int hashCode = data.getIntExtra(CredentialDetailActivity.ARG_RESULT_DELETE, 0);
 			if (hashCode != 0)
 				tryDeleteCredential(hashCode);
 		}
+
 		else if (requestCode == IRMAPreferenceActivity.ACTIVITY_CODE) {
 			if (PreferenceManager.getDefaultSharedPreferences(this).getBoolean("allow_screenshots", false))
 				getWindow().clearFlags(WindowManager.LayoutParams.FLAG_SECURE);
@@ -685,7 +690,8 @@ public class MainActivity extends Activity {
 				getWindow().setFlags(
 						WindowManager.LayoutParams.FLAG_SECURE, WindowManager.LayoutParams.FLAG_SECURE);
 		}
-		else {
+
+		else { // Must be from the QR scanner
 			MetricsReporter.getInstance().reportAggregrateMeasurement("qr_scan_time", System.currentTimeMillis() - qrScanStartTime);
 
 			IntentResult scanResult = IntentIntegrator
@@ -721,7 +727,7 @@ public class MainActivity extends Activity {
 	@Override
 	public void onBackPressed() {
 		// When we are not in IDLE state, return there
-		if (activityState != State.IDLE) {
+		if (getState() != State.IDLE) {
 			if (cdt != null)
 				cdt.cancel();
 
@@ -766,7 +772,7 @@ public class MainActivity extends Activity {
 				startActivity(logIntent);
 				return true;
 			case R.id.menu_clear:
-				if (activityState == State.IDLE) {
+				if (getState() == State.IDLE) {
 					deleteAllCredentials();
 					updateCredentialList();
 				}

@@ -61,7 +61,7 @@ import java.util.GregorianCalendar;
 public class EnrollSelectActivity extends AbstractGUIEnrollActivity {
     // Configuration
     private static final String TAG = "EnrollSelectActivity";
-    public final static int EnrollSelectActivityCode = 200;
+    public final static int ACTIVITY_CODE = 200;
     protected static final int SCREEN_ISSUE = 4;
     protected static final int PASSPORT_ACTIVITY = 0;
     protected static final int DL_ACTIVITY = 1;

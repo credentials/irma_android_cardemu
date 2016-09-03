@@ -41,7 +41,6 @@ import org.irmacard.credentials.info.CredentialDescription;
 import org.irmacard.credentials.info.CredentialIdentifier;
 import org.irmacard.credentials.info.DescriptionStore;
 import org.irmacard.credentials.info.DescriptionStoreSerializer;
-import org.irmacard.credentials.info.InfoException;
 import org.irmacard.credentials.info.IssuerDescription;
 import org.irmacard.credentials.info.IssuerIdentifier;
 import org.irmacard.credentials.info.SchemeManager;
@@ -173,31 +172,6 @@ public class StoreManager implements DescriptionStoreSerializer, IdemixKeyStoreS
 		return verifier;
 	}
 
-
-	private static void downloadSync(Iterable<IssuerIdentifier> issuers,
-	                                 Iterable<CredentialIdentifier> credentials,
-	                                 Map<IssuerIdentifier, Integer> keys)
-			throws InfoException, IOException {
-		// This also downloads the issuer description
-		if (issuers != null)
-			for (IssuerIdentifier issuer: issuers)
-				if (DescriptionStore.getInstance().getIssuerDescription(issuer) == null)
-					DescriptionStore.getInstance().downloadIssuerDescription(issuer);
-
-		if (keys != null) {
-			for (IssuerIdentifier issuer : keys.keySet()) {
-				int counter = keys.get(issuer);
-				if (!IdemixKeyStore.getInstance().containsPublicKey(issuer, counter))
-					IdemixKeyStore.getInstance().downloadPublicKey(issuer, counter);
-			}
-		}
-
-		if (credentials != null)
-			for (CredentialIdentifier credential : credentials)
-				if (DescriptionStore.getInstance().getCredentialDescription(credential) == null)
-					DescriptionStore.getInstance().downloadCredentialDescription(credential);
-	}
-
 	/**
 	 * Asynchroniously attempt to download issuer descriptions, public keys and credential descriptions
 	 * from the scheme managers.
@@ -226,7 +200,25 @@ public class StoreManager implements DescriptionStoreSerializer, IdemixKeyStoreS
 				try {
 					if (schemeManagerUrl != null)
 						DescriptionStore.getInstance().downloadSchemeManager(schemeManagerUrl);
-					downloadSync(issuers, credentials, keys);
+
+					if (issuers != null)
+						for (IssuerIdentifier issuer: issuers)
+							if (DescriptionStore.getInstance().getIssuerDescription(issuer) == null)
+								DescriptionStore.getInstance().downloadIssuerDescription(issuer);
+
+					if (keys != null) {
+						for (IssuerIdentifier issuer : keys.keySet()) {
+							int counter = keys.get(issuer);
+							if (!IdemixKeyStore.getInstance().containsPublicKey(issuer, counter))
+								IdemixKeyStore.getInstance().downloadPublicKey(issuer, counter);
+						}
+					}
+
+					if (credentials != null)
+						for (CredentialIdentifier credential : credentials)
+							if (DescriptionStore.getInstance().getCredentialDescription(credential) == null)
+								DescriptionStore.getInstance().downloadCredentialDescription(credential);
+
 					return null;
 				} catch (Exception e) {
 					return e;
