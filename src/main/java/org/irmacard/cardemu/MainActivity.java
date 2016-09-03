@@ -340,11 +340,14 @@ public class MainActivity extends Activity {
 
 	public void setState(State state) {
 		Log.i(TAG, "Set state: " + state);
+		State oldState = activityState;
 		activityState = state;
 
 		switch (activityState) {
 			case IDLE:
 				updateCredentialList();
+				if (oldState == State.LOADING)
+					processIntent();
 				break;
 		}
 
@@ -538,9 +541,10 @@ public class MainActivity extends Activity {
 		onlineEnrolling = settings.getBoolean("onlineEnrolling", false);
 		launchedFromBrowser = settings.getBoolean("launchedFromBrowser", false);
 
-		if (activityState == State.IDLE)
+		if (activityState == State.IDLE) {
 			updateCredentialList();
-		processIntent();
+			processIntent();
+		}
 	}
 
 	private void processIntent() {
