@@ -31,24 +31,15 @@
 package org.irmacard.cardemu;
 
 import android.app.Application;
-import android.os.Build;
+
 import org.acra.ACRA;
 import org.acra.ACRAConfiguration;
 import org.acra.ReportField;
 import org.acra.annotation.ReportsCrashes;
-import org.irmacard.cardemu.store.AndroidFileReader;
-import org.irmacard.cardemu.store.StoreManager;
 import org.irmacard.api.common.util.GsonUtil;
+import org.irmacard.cardemu.store.StoreManager;
 import org.irmacard.credentials.CredentialsException;
-import org.irmacard.credentials.idemix.info.IdemixKeyStore;
-import org.irmacard.credentials.idemix.info.IdemixKeyStoreDeserializer;
-import org.irmacard.credentials.info.DescriptionStore;
-import org.irmacard.credentials.info.DescriptionStoreDeserializer;
-import org.irmacard.credentials.info.FileReader;
-import org.irmacard.credentials.info.InfoException;
 import org.irmacard.credentials.util.log.LogEntry;
-
-import javax.net.ssl.SSLSocketFactory;
 
 @ReportsCrashes(
         formUri = BuildConfig.acraServer,
@@ -100,18 +91,8 @@ public class IRMApp extends Application {
             e.printStackTrace();
         }
 
-        // Setup the DescriptionStore and IdemixKeyStore
-        FileReader reader = new AndroidFileReader(this);
-        try {
-            storeManager = new StoreManager(this);
-            SSLSocketFactory socketFactory = null;
-            if (Build.VERSION.SDK_INT >= 21) // 20 = 4.4 Kitkat, 21 = 5.0 Lollipop
-                socketFactory = new SecureSSLSocketFactory();
-            DescriptionStore.initialize(new DescriptionStoreDeserializer(reader), storeManager, socketFactory);
-            IdemixKeyStore.initialize(new IdemixKeyStoreDeserializer(reader), storeManager);
-        } catch (InfoException e) { // Can't do anything in this case
-            throw new RuntimeException(e);
-        }
+
+        storeManager = new StoreManager(this);
 
         GsonUtil.addTypeAdapter(LogEntry.class, new LogEntrySerializer());
 

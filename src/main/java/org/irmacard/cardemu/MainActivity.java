@@ -39,6 +39,8 @@ import android.content.Intent;
 import android.content.SharedPreferences;
 import android.content.pm.PackageManager;
 import android.net.Uri;
+import android.os.AsyncTask;
+import android.os.Build;
 import android.os.Bundle;
 import android.os.CountDownTimer;
 import android.os.Process;
@@ -51,26 +53,42 @@ import android.view.Menu;
 import android.view.MenuItem;
 import android.view.View;
 import android.view.WindowManager;
-import android.widget.*;
+import android.widget.AdapterView;
+import android.widget.Button;
+import android.widget.EditText;
+import android.widget.ExpandableListView;
+import android.widget.ImageView;
+import android.widget.TextView;
+
 import com.google.zxing.integration.android.IntentIntegrator;
 import com.google.zxing.integration.android.IntentResult;
-import org.irmacard.cardemu.log.LogActivity;
-import org.irmacard.cardemu.log.LogFragment;
+
+import org.irmacard.api.common.exceptions.ApiErrorMessage;
 import org.irmacard.cardemu.credentialdetails.CredentialDetailActivity;
 import org.irmacard.cardemu.credentialdetails.CredentialDetailFragment;
-import org.irmacard.cardemu.store.StoreManager;
-import org.irmacard.api.common.exceptions.ApiErrorMessage;
 import org.irmacard.cardemu.identifiers.IdemixCredentialIdentifier;
-import org.irmacard.cardemu.preferences.IRMAPreferenceActivity;
 import org.irmacard.cardemu.irmaclient.IrmaClient;
 import org.irmacard.cardemu.irmaclient.IrmaClientHandler;
+import org.irmacard.cardemu.log.LogActivity;
+import org.irmacard.cardemu.log.LogFragment;
+import org.irmacard.cardemu.preferences.IRMAPreferenceActivity;
 import org.irmacard.cardemu.selfenrol.EnrollSelectActivity;
+import org.irmacard.cardemu.store.AndroidFileReader;
+import org.irmacard.cardemu.store.StoreManager;
 import org.irmacard.credentials.Attributes;
 import org.irmacard.credentials.CredentialsException;
+import org.irmacard.credentials.idemix.info.IdemixKeyStore;
+import org.irmacard.credentials.idemix.info.IdemixKeyStoreDeserializer;
+import org.irmacard.credentials.info.DescriptionStore;
+import org.irmacard.credentials.info.DescriptionStoreDeserializer;
+import org.irmacard.credentials.info.FileReader;
+import org.irmacard.credentials.info.InfoException;
 import org.irmacard.credentials.util.log.LogEntry;
 
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
+
+import javax.net.ssl.SSLSocketFactory;
 
 public class MainActivity extends Activity {
 	private static final int DETAIL_REQUEST = 101;
@@ -84,9 +102,10 @@ public class MainActivity extends Activity {
 	// Previewed list of credentials
 	private ExpandableCredentialsAdapter credentialListAdapter;
 
-	private int activityState = STATE_IDLE;
+	private int activityState = STATE_LOADING;
 
 	// New states
+	public final static int STATE_LOADING = 0;
 	public static final int STATE_IDLE = 1;
 	public static final int STATE_CONNECTING_TO_SERVER = 2;
 	public static final int STATE_CONNECTED = 3;
@@ -223,11 +242,11 @@ public class MainActivity extends Activity {
 		// touch events that were meant for its container. Don't know why setting its value here works.
 		((TextView) findViewById(R.id.feedback_text)).setTextIsSelectable(false);
 
-		// Display cool list
+		// Prepare cool list
 		ExpandableListView credentialList = (ExpandableListView) findViewById(R.id.listView);
 		credentialListAdapter = new ExpandableCredentialsAdapter(this);
 		credentialList.setAdapter(credentialListAdapter);
-		updateCredentialList();
+		loadStore();
 
 		credentialList.setOnItemLongClickListener(new AdapterView.OnItemLongClickListener() {
 			@Override
@@ -251,10 +270,38 @@ public class MainActivity extends Activity {
 			}
 		});
 
-		setState(STATE_IDLE);
 		clearFeedback();
 
 		settings = getSharedPreferences(SETTINGS, 0);
+	}
+
+	private void loadStore() {
+		new AsyncTask<Void,Void,Exception>() {
+			@Override
+			protected Exception doInBackground(Void... voids) {
+				FileReader reader = new AndroidFileReader(MainActivity.this);
+				SSLSocketFactory socketFactory = null;
+				if (Build.VERSION.SDK_INT >= 21) // 20 = 4.4 Kitkat, 21 = 5.0 Lollipop
+					socketFactory = new SecureSSLSocketFactory();
+
+				try {
+					DescriptionStore.initialize(new DescriptionStoreDeserializer(reader), IRMApp.getStoreManager(), socketFactory);
+					IdemixKeyStore.initialize(new IdemixKeyStoreDeserializer(reader), IRMApp.getStoreManager());
+					return null;
+				} catch (InfoException e) {
+					return e;
+				}
+			}
+
+			@Override
+			protected void onPostExecute(Exception e) {
+				if (e != null)
+					throw new RuntimeException(e);
+
+				setState(STATE_IDLE);
+				updateCredentialList();
+			}
+		}.execute();
 	}
 
 	private void showApplicationError() {
@@ -296,8 +343,6 @@ public class MainActivity extends Activity {
 			case STATE_IDLE:
 				updateCredentialList();
 				break;
-			default:
-				break;
 		}
 
 		setUIForState();
@@ -308,6 +353,10 @@ public class MainActivity extends Activity {
 		int statusTextResource = 0;
 
 		switch (activityState) {
+			case STATE_LOADING:
+				imageResource = R.drawable.irma_icon_place_card_520px;
+				statusTextResource = R.string.loading;
+				break;
 			case STATE_IDLE:
 				imageResource = R.drawable.irma_icon_place_card_520px;
 				statusTextResource = R.string.status_idle;
@@ -494,7 +543,8 @@ public class MainActivity extends Activity {
 		onlineEnrolling = settings.getBoolean("onlineEnrolling", false);
 		launchedFromBrowser = settings.getBoolean("launchedFromBrowser", false);
 
-		updateCredentialList();
+		if (activityState == STATE_IDLE)
+			updateCredentialList();
 		processIntent();
 	}
 
