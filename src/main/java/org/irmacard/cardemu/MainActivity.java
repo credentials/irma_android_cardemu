@@ -102,16 +102,16 @@ public class MainActivity extends Activity {
 	// Previewed list of credentials
 	private ExpandableCredentialsAdapter credentialListAdapter;
 
-	private int activityState = STATE_LOADING;
+	private State activityState = State.LOADING;
 
-	// New states
-	public final static int STATE_LOADING = 0;
-	public static final int STATE_IDLE = 1;
-	public static final int STATE_CONNECTING_TO_SERVER = 2;
-	public static final int STATE_CONNECTED = 3;
-	public static final int STATE_READY = 4;
-	public static final int STATE_COMMUNICATING = 5;
-	public static final int STATE_WAITING_FOR_PIN = 6;
+	// UI states
+	enum State {
+		LOADING,
+		IDLE,
+		CONNECTED,
+		READY,
+		COMMUNICATING
+	}
 
 	// Timer for briefly displaying feedback messages on CardEmu
 	private CountDownTimer cdt;
@@ -133,11 +133,11 @@ public class MainActivity extends Activity {
 		@Override public void onStatusUpdate(IrmaClient.Action action, IrmaClient.Status status) {
 			switch (status) {
 				case COMMUNICATING:
-					setState(STATE_COMMUNICATING); break;
+					setState(State.COMMUNICATING); break;
 				case CONNECTED:
-					setState(STATE_CONNECTED); break;
+					setState(State.CONNECTED); break;
 				case DONE:
-					setState(STATE_IDLE); break;
+					setState(State.IDLE); break;
 			}
 		}
 
@@ -181,7 +181,7 @@ public class MainActivity extends Activity {
 		}
 
 		private void finish(boolean returnToBrowser) {
-			setState(STATE_IDLE);
+			setState(State.IDLE);
 
 			lastSessionUrl = currentSessionUrl;
 			currentSessionUrl = "";
@@ -298,7 +298,7 @@ public class MainActivity extends Activity {
 				if (e != null)
 					throw new RuntimeException(e);
 
-				setState(STATE_IDLE);
+				setState(State.IDLE);
 				updateCredentialList();
 			}
 		}.execute();
@@ -330,17 +330,12 @@ public class MainActivity extends Activity {
 				.show();
 	}
 
-	@SuppressWarnings("unused")
-	public int getState() {
-		return activityState;
-	}
-
-	public void setState(int state) {
+	public void setState(State state) {
 		Log.i(TAG, "Set state: " + state);
 		activityState = state;
 
 		switch (activityState) {
-			case STATE_IDLE:
+			case IDLE:
 				updateCredentialList();
 				break;
 		}
@@ -353,33 +348,25 @@ public class MainActivity extends Activity {
 		int statusTextResource = 0;
 
 		switch (activityState) {
-			case STATE_LOADING:
+			case LOADING:
 				imageResource = R.drawable.irma_icon_place_card_520px;
 				statusTextResource = R.string.loading;
 				break;
-			case STATE_IDLE:
+			case IDLE:
 				imageResource = R.drawable.irma_icon_place_card_520px;
 				statusTextResource = R.string.status_idle;
 				break;
-			case STATE_CONNECTING_TO_SERVER:
-				imageResource = R.drawable.irma_icon_place_card_520px;
-				statusTextResource = R.string.status_connecting;
-				break;
-			case STATE_CONNECTED:
+			case CONNECTED:
 				imageResource = R.drawable.irma_icon_place_card_520px;
 				statusTextResource = R.string.status_connected;
 				break;
-			case STATE_READY:
+			case READY:
 				imageResource = R.drawable.irma_icon_card_found_520px;
 				statusTextResource = R.string.status_ready;
 				break;
-			case STATE_COMMUNICATING:
+			case COMMUNICATING:
 				imageResource = R.drawable.irma_icon_card_found_520px;
 				statusTextResource = R.string.status_communicating;
-				break;
-			case STATE_WAITING_FOR_PIN:
-				imageResource = R.drawable.irma_icon_card_found_520px;
-				statusTextResource = R.string.status_waitingforpin;
 				break;
 			default:
 				break;
@@ -432,7 +419,7 @@ public class MainActivity extends Activity {
 	}
 
 	protected void deleteAllCredentials() {
-		if (activityState == STATE_IDLE) {
+		if (activityState == State.IDLE) {
 			AlertDialog.Builder builder = new AlertDialog.Builder(this);
 			builder.setTitle(R.string.confirm_delete_all_title)
 					.setMessage(R.string.confirm_delete_all_question)
@@ -457,7 +444,7 @@ public class MainActivity extends Activity {
 	}
 
 	protected void tryDeleteCredential(int hashCode) {
-		if (activityState != STATE_IDLE) {
+		if (activityState != State.IDLE) {
 			Log.i(TAG, "Delete long-click ignored in non-idle mode");
 			return;
 		}
@@ -477,7 +464,7 @@ public class MainActivity extends Activity {
 
 	protected void updateCredentialList(boolean tryDownloading) {
 		// Can only be run when not connected to a server
-		if (activityState != STATE_IDLE) {
+		if (activityState != State.IDLE) {
 			return;
 		}
 
@@ -543,7 +530,7 @@ public class MainActivity extends Activity {
 		onlineEnrolling = settings.getBoolean("onlineEnrolling", false);
 		launchedFromBrowser = settings.getBoolean("launchedFromBrowser", false);
 
-		if (activityState == STATE_IDLE)
+		if (activityState == State.IDLE)
 			updateCredentialList();
 		processIntent();
 	}
@@ -576,7 +563,7 @@ public class MainActivity extends Activity {
 	}
 
 	public void onMainShapeTouch(View v) {
-		if (activityState != STATE_IDLE)
+		if (activityState != State.IDLE)
 			return;
 
 		if (ContextCompat.checkSelfPermission(this, Manifest.permission.CAMERA)
@@ -669,11 +656,11 @@ public class MainActivity extends Activity {
 	@Override
 	public void onBackPressed() {
 		// When we are not in IDLE state, return there
-		if (activityState != STATE_IDLE) {
+		if (activityState != State.IDLE) {
 			if (cdt != null)
 				cdt.cancel();
 
-			setState(STATE_IDLE);
+			setState(State.IDLE);
 			clearFeedback();
 		} else {
 			// We are in Idle, do what we always do
@@ -714,7 +701,7 @@ public class MainActivity extends Activity {
 				startActivity(logIntent);
 				return true;
 			case R.id.menu_clear:
-				if (activityState == STATE_IDLE) {
+				if (activityState == State.IDLE) {
 					deleteAllCredentials();
 					updateCredentialList();
 				}
