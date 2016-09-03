@@ -104,22 +104,33 @@ public class MainActivity extends Activity {
 
 	private State activityState = State.LOADING;
 
-	// UI states
+	/**
+	 * {@link MainActivity} UI states
+	 */
 	enum State {
-		LOADING,
-		IDLE,
-		CONNECTED,
-		READY,
-		COMMUNICATING
+		LOADING(true),
+		CREDENTIALS_LOADED(true),
+		DESCRIPTION_STORE_LOADED(true),
+		KEY_STORE_LOADED(true),
+		IDLE(false),
+		CONNECTED(false),
+		READY(false),
+		COMMUNICATING(false);
+
+		private boolean booting;
+		State(boolean booting) {
+			this.booting = booting;
+		}
+		/** Whether this state is still part of the app boot process */
+		public boolean isBooting() {
+			return booting;
+		}
 	}
 
 	// Timer for briefly displaying feedback messages on CardEmu
 	private CountDownTimer cdt;
 	private static final int FEEDBACK_SHOW_DELAY = 10000;
 	private boolean showingFeedback = false;
-
-	// Time after which old Intents are ignored (in milliseconds)
-	private static final long INTENT_EXPIRY_TIME = 5000;
 
 	private long qrScanStartTime;
 
@@ -128,6 +139,10 @@ public class MainActivity extends Activity {
 	private String currentSessionUrl = "()";
 	private boolean launchedFromBrowser;
 	private boolean onlineEnrolling;
+
+	private boolean credentialsLoaded = false;
+	private boolean descriptionStoreLoaded = false;
+	private boolean keyStoreLoaded = false;
 
 	private IrmaClientHandler irmaClientHandler = new IrmaClientHandler(this) {
 		@Override public void onStatusUpdate(IrmaClient.Action action, IrmaClient.Status status) {
@@ -227,21 +242,19 @@ public class MainActivity extends Activity {
 		super.onCreate(savedInstanceState);
 		Log.i(TAG, "onCreate() called");
 
-		// Set to true if IRMApp did not manage to deserialize our credentials
-		// Since an Application cannot show an AlertDialog, we do it for it.
-		if (IRMApp.attributeDeserializationError)
-			showApplicationError();
-
 		// Disable screenshots if we should
 		if (!PreferenceManager.getDefaultSharedPreferences(this).getBoolean("allow_screenshots", false))
 			getWindow().setFlags(WindowManager.LayoutParams.FLAG_SECURE, WindowManager.LayoutParams.FLAG_SECURE);
 
 		setContentView(R.layout.activity_main);
 
+		settings = getSharedPreferences(SETTINGS, 0);
+
 		// Prepare cool list
 		ExpandableListView credentialList = (ExpandableListView) findViewById(R.id.listView);
 		credentialListAdapter = new ExpandableCredentialsAdapter(this);
 		credentialList.setAdapter(credentialListAdapter);
+		loadCredentials();
 		loadStore();
 
 		credentialList.setOnItemLongClickListener(new AdapterView.OnItemLongClickListener() {
@@ -267,8 +280,33 @@ public class MainActivity extends Activity {
 		});
 
 		clearFeedback();
+	}
 
-		settings = getSharedPreferences(SETTINGS, 0);
+	/**
+	 * Initializes {@link CredentialManager} asynchroniously.
+	 */
+	private void loadCredentials() {
+		new AsyncTask<Void,Void,Exception>() {
+			@Override
+			protected Exception doInBackground(Void... params) {
+				try {
+					Log.i(TAG, "Loading credentials and logs");
+					CredentialManager.init(settings);
+					return null;
+				} catch (CredentialsException e) {
+					return e;
+				}
+			}
+
+			@Override
+			protected void onPostExecute(Exception e) {
+				Log.i(TAG, "Finished loading credentials and logs");
+				if (e != null)
+					showApplicationError();
+				else
+					setState(State.CREDENTIALS_LOADED);
+			}
+		}.execute();
 	}
 
 	/**
@@ -279,6 +317,7 @@ public class MainActivity extends Activity {
 		new AsyncTask<Void,Void,Exception>() {
 			@Override
 			protected Exception doInBackground(Void... voids) {
+				Log.i(TAG, "Loading DescriptionStore and IdemixKeyStore");
 				FileReader reader = new AndroidFileReader(MainActivity.this);
 				SSLSocketFactory socketFactory = null;
 				if (Build.VERSION.SDK_INT >= 21) // 20 = 4.4 Kitkat, 21 = 5.0 Lollipop
@@ -299,15 +338,16 @@ public class MainActivity extends Activity {
 
 			@Override
 			protected void onProgressUpdate(Void... values) {
-				updateCredentialList();
+				setState(State.DESCRIPTION_STORE_LOADED);
 			}
 
 			@Override
 			protected void onPostExecute(Exception e) {
+				Log.i(TAG, "Finished loading DescriptionStore and IdemixKeyStore");
 				if (e != null)
 					throw new RuntimeException(e);
-
-				setState(State.IDLE);
+				else
+					setState(State.KEY_STORE_LOADED);
 			}
 		}.execute();
 	}
@@ -340,18 +380,28 @@ public class MainActivity extends Activity {
 
 	public void setState(State state) {
 		Log.i(TAG, "Set state: " + state);
-		State oldState = activityState;
 		activityState = state;
 
 		switch (activityState) {
-			case IDLE:
-				updateCredentialList();
-				if (oldState == State.LOADING)
-					processIntent();
+			case CREDENTIALS_LOADED:
+				credentialsLoaded = true;
+				break;
+			case DESCRIPTION_STORE_LOADED:
+				descriptionStoreLoaded = true;
+				break;
+			case KEY_STORE_LOADED:
+				keyStoreLoaded = true;
 				break;
 		}
 
+		updateCredentialList();
 		setUIForState();
+
+		// If we're finished booting
+		if (activityState.isBooting() && credentialsLoaded && descriptionStoreLoaded && keyStoreLoaded) {
+			setState(State.IDLE);
+			processIntent();
+		}
 	}
 
 	private void setUIForState() {
@@ -360,6 +410,9 @@ public class MainActivity extends Activity {
 
 		switch (activityState) {
 			case LOADING:
+			case CREDENTIALS_LOADED:
+			case DESCRIPTION_STORE_LOADED:
+			case KEY_STORE_LOADED:
 				imageResource = R.drawable.irma_icon_place_card_520px;
 				statusTextResource = R.string.loading;
 				break;
@@ -469,15 +522,22 @@ public class MainActivity extends Activity {
 		updateCredentialList();
 	}
 
+	/**
+	 * Update the list of credentials. (Note: this method does nothing if the activity is not in
+	 * an appropriate state.)
+	 */
 	protected void updateCredentialList() {
 		updateCredentialList(true);
 	}
 
+	/**
+	 * Update the list of credentials if the activity is in the appropriate state
+	 * @param tryDownloading Whether to update the description store and keystore in advance
+     */
 	protected void updateCredentialList(boolean tryDownloading) {
-		// Can only be run when not connected to a server
-		if (activityState != State.IDLE) {
+		if (!credentialsLoaded || !descriptionStoreLoaded
+				|| (!activityState.isBooting() && activityState != State.IDLE))
 			return;
-		}
 
 		if (tryDownloading) {
 			CredentialManager.updateStores(new StoreManager.DownloadHandler() {
@@ -555,17 +615,9 @@ public class MainActivity extends Activity {
 		if (!intent.getAction().equals(Intent.ACTION_VIEW) || qr == null)
 			return;
 
-		// The rest of this methoud should already prevent double intent handling, so checking
-		// the timestamp might be superfluous. But let's let it stay for now just to be sure
-		long timestamp  = intent.getLongExtra("timestamp", 0);
-		if (timestamp > 0 && System.currentTimeMillis() - timestamp > INTENT_EXPIRY_TIME) {
-			Log.i(TAG, "Discarding event, timestamp (" + timestamp + ") too old for qr: " + qr);
-			return;
-		}
-
 		Log.i(TAG, "Received qr in intent: " + qr);
 		if(qr.equals(currentSessionUrl) || qr.equals(lastSessionUrl)) {
-			Log.i(TAG, "Already processed this qr");
+			Log.i(TAG, "Already processed this qr, ignoring");
 			return;
 		}
 
@@ -640,14 +692,15 @@ public class MainActivity extends Activity {
 					.parseActivityResult(requestCode, resultCode, data);
 
 			// Process the results from the QR-scanning activity
-			if (scanResult != null) {
-				String contents = scanResult.getContents();
-				if (contents != null) {
-					launchedFromBrowser = false;
-					onlineEnrolling = false;
-					IrmaClient.NewSession(contents, irmaClientHandler);
-				}
-			}
+			if (scanResult == null)
+				return;
+			String contents = scanResult.getContents();
+			if (contents == null)
+				return;
+
+			launchedFromBrowser = false;
+			onlineEnrolling = false;
+			IrmaClient.NewSession(contents, irmaClientHandler);
 		}
 	}
 

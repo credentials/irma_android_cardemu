@@ -71,8 +71,6 @@ public class IRMApp extends Application {
     private final static long reportTimeInterval = 1000*60*60*24; // 1 day in milliseconds
     private static StoreManager storeManager;
 
-    public static boolean attributeDeserializationError = false;
-
     @Override
     public void onCreate() {
         super.onCreate();
@@ -91,21 +89,9 @@ public class IRMApp extends Application {
             e.printStackTrace();
         }
 
-
         storeManager = new StoreManager(this);
-
         GsonUtil.addTypeAdapter(LogEntry.class, new LogEntrySerializer());
-
         MetricsReporter.init(this, BuildConfig.metricServer, reportTimeInterval);
-
-        try {
-            CredentialManager.init(getSharedPreferences("cardemu", 0));
-        } catch (final CredentialsException e) {
-            ACRA.getErrorReporter().handleException(e);
-            // Since AlertDialog.Builder requires an activity as argument we can't show
-            // any error here, so we use this boolean to inform MainActivity.
-            attributeDeserializationError = true;
-        }
     }
 
     public static StoreManager getStoreManager() {
