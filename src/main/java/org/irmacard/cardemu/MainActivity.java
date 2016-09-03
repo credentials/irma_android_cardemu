@@ -238,10 +238,6 @@ public class MainActivity extends Activity {
 
 		setContentView(R.layout.activity_main);
 
-		// For some reason this textview ignores the android:textIsSelectable in its xml file, so that it catches
-		// touch events that were meant for its container. Don't know why setting its value here works.
-		((TextView) findViewById(R.id.feedback_text)).setTextIsSelectable(false);
-
 		// Prepare cool list
 		ExpandableListView credentialList = (ExpandableListView) findViewById(R.id.listView);
 		credentialListAdapter = new ExpandableCredentialsAdapter(this);

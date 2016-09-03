@@ -40,7 +40,8 @@
         android:text="@string/credential_info"
         android:textAppearance="?android:attr/textAppearanceLarge"
         android:textColor="@color/irmadarkblue"
-        android:textSize="16sp" />
+        android:textSize="16sp"
+        android:textIsSelectable="false"/>
 
     <TextView
         android:id="@+id/feedback_text"
@@ -54,7 +55,7 @@
         android:textColor="@color/irmadarkblue"
         android:text="Status message"
         android:textSize="14sp"
-        android:textIsSelectable="true" />
+        android:textIsSelectable="false" />
 
 
     <ImageView
