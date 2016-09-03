@@ -118,7 +118,6 @@
             android:layout_width="fill_parent"
             android:layout_height="wrap_content"
             android:layout_below="@id/no_credentials_text"
-            android:visibility="gone"
             android:gravity="center">
 
         <Button
@@ -131,7 +130,8 @@
                 android:onClick="onEnrollButtonTouch"
                 android:layout_marginRight="10sp"
                 android:paddingLeft="10sp"
-                android:paddingRight="10sp"/>
+                android:paddingRight="10sp"
+                android:visibility="gone"/>
 
         <Button
                 style="@style/Irma.Button"
@@ -142,7 +142,8 @@
                 android:layout_marginTop="15dp"
                 android:onClick="onOnlineEnrollButtonTouch"
                 android:paddingLeft="10sp"
-                android:paddingRight="10sp"/>
+                android:paddingRight="10sp"
+                android:visibility="gone" />
 
     </LinearLayout>
 </RelativeLayout>
