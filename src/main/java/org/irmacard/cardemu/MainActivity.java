@@ -275,6 +275,10 @@ public class MainActivity extends Activity {
 		settings = getSharedPreferences(SETTINGS, 0);
 	}
 
+	/**
+	 * Loads {@link DescriptionStore} and {@link IdemixKeyStore} asynchroniously, and shows the
+	 * credential list in between the two.
+	 */
 	private void loadStore() {
 		new AsyncTask<Void,Void,Exception>() {
 			@Override
@@ -286,11 +290,20 @@ public class MainActivity extends Activity {
 
 				try {
 					DescriptionStore.initialize(new DescriptionStoreDeserializer(reader), IRMApp.getStoreManager(), socketFactory);
+					Log.i(TAG, "Loaded DescriptionStore");
+					publishProgress();
+
 					IdemixKeyStore.initialize(new IdemixKeyStoreDeserializer(reader), IRMApp.getStoreManager());
+					Log.i(TAG, "Loaded IdemixKeyStore");
 					return null;
 				} catch (InfoException e) {
 					return e;
 				}
+			}
+
+			@Override
+			protected void onProgressUpdate(Void... values) {
+				updateCredentialList();
 			}
 
 			@Override
@@ -299,7 +312,6 @@ public class MainActivity extends Activity {
 					throw new RuntimeException(e);
 
 				setState(State.IDLE);
-				updateCredentialList();
 			}
 		}.execute();
 	}
