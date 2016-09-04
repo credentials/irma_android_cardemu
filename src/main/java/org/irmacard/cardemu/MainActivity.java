@@ -95,13 +95,6 @@ public class MainActivity extends Activity {
 	private static final String SETTINGS = "cardemu";
 	public static final int PERMISSION_REQUEST_CAMERA = 1;
 
-	private SharedPreferences settings;
-
-	// Previewed list of credentials
-	private ExpandableCredentialsAdapter credentialListAdapter;
-
-	private State state = State.LOADING;
-
 	/**
 	 * {@link MainActivity} UI states
 	 */
@@ -125,6 +118,13 @@ public class MainActivity extends Activity {
 		}
 	}
 
+	private State state = State.LOADING;
+
+	private SharedPreferences settings;
+
+	// Previewed list of credentials
+	private ExpandableCredentialsAdapter credentialListAdapter;
+
 	// Timer for briefly displaying feedback messages on CardEmu
 	private CountDownTimer cdt;
 	private static final int FEEDBACK_SHOW_DELAY = 10000;
@@ -138,102 +138,12 @@ public class MainActivity extends Activity {
 	private boolean launchedFromBrowser;
 	private boolean onlineEnrolling;
 
+	// Keep track of how far we are in the app boot process
 	private boolean credentialsLoaded = false;
 	private boolean descriptionStoreLoaded = false;
 	private boolean keyStoreLoaded = false;
 
-	private IrmaClientHandler irmaClientHandler = new IrmaClientHandler(this) {
-		@Override public void onStatusUpdate(IrmaClient.Action action, IrmaClient.Status status) {
-			switch (status) {
-				case COMMUNICATING:
-					setState(State.COMMUNICATING); break;
-				case CONNECTED:
-					setState(State.CONNECTED); break;
-				case DONE:
-					setState(State.IDLE); break;
-			}
-		}
-
-		@Override public void onSuccess(IrmaClient.Action action) {
-			switch (action) {
-				case DISCLOSING:
-					setFeedback(getString(R.string.disclosure_successful), "success"); break;
-				case ISSUING:
-					setFeedback(getString(R.string.issuing_succesful), "success"); break;
-			}
-			finish(true);
-		}
-
-		@Override public void onCancelled(IrmaClient.Action action) {
-			switch (action) {
-				case DISCLOSING:
-					setFeedback(getString(R.string.disclosure_cancelled), "warning"); break;
-				case ISSUING:
-					setFeedback(getString(R.string.issuing_cancelled), "warning"); break;
-			}
-			finish(true);
-		}
-
-		@Override public void onFailure(IrmaClient.Action action, String message, ApiErrorMessage error, final String techInfo) {
-			final String title;
-			switch (action) {
-				case DISCLOSING:
-					title = getString(R.string.disclosure_failed); break;
-				case ISSUING:
-					title = getString(R.string.issuing_failed); break;
-				case UNKNOWN:
-				default:
-					title = getString(R.string.failed); break;
-			}
-
-			final String feedback = title + ": " + message;
-			setFeedback(title, "failure");
-			finish(false);
-
-			showErrorDialog(title, feedback, techInfo);
-		}
-
-		private void finish(boolean returnToBrowser) {
-			setState(State.IDLE);
-
-			lastSessionUrl = currentSessionUrl;
-			currentSessionUrl = "";
-
-			if (!onlineEnrolling && launchedFromBrowser && returnToBrowser)
-				onBackPressed();
-
-			onlineEnrolling = false;
-			launchedFromBrowser = false;
-		}
-	};
-
-	private void showErrorDialog(final String title, final String message, final String techInfo) {
-		showErrorDialog(title, message, techInfo, false);
-	}
-
-	private void showErrorDialog(final String title, final String message,
-	                             final String techInfo, final boolean showingTechInfo) {
-		String m = message;
-		if (showingTechInfo && techInfo != null)
-			m += ". " + techInfo;
-
-		AlertDialog.Builder builder = new AlertDialog.Builder(MainActivity.this)
-				.setIcon(R.drawable.irma_error)
-				.setTitle(title)
-				.setMessage(m)
-				.setPositiveButton(R.string.dismiss, null);
-
-		if (techInfo != null) {
-			int buttonText = showingTechInfo ? R.string.lessinfo : R.string.techinfo;
-			builder.setNeutralButton(buttonText, new DialogInterface.OnClickListener() {
-				@Override public void onClick(DialogInterface dialogInterface, int i) {
-					showErrorDialog(title, message, techInfo, !showingTechInfo);
-				}
-			});
-		}
-
-		builder.show();
-	}
+	private IrmaClientHandler irmaClientHandler = new ClientHandler();
 
 	@Override
 	protected void onCreate(Bundle savedInstanceState) {
@@ -252,8 +162,9 @@ public class MainActivity extends Activity {
 		ExpandableListView credentialList = (ExpandableListView) findViewById(R.id.listView);
 		credentialListAdapter = new ExpandableCredentialsAdapter(this);
 		credentialList.setAdapter(credentialListAdapter);
-		loadCredentials();
-		loadStore();
+
+		new CredentialsLoader().execute();
+		new StoreLoader().execute();
 
 		credentialList.setOnItemLongClickListener(new AdapterView.OnItemLongClickListener() {
 			@Override
@@ -280,107 +191,40 @@ public class MainActivity extends Activity {
 		clearFeedback();
 	}
 
-	/**
-	 * Initializes {@link CredentialManager} asynchroniously.
-	 */
-	private void loadCredentials() {
-		new AsyncTask<Void,Void,Exception>() {
-			@Override
-			protected Exception doInBackground(Void... params) {
-				try {
-					Log.i(TAG, "Loading credentials and logs");
-					CredentialManager.init(settings);
-					return null;
-				} catch (CredentialsException e) {
-					return e;
-				}
-			}
-
-			@Override
-			protected void onPostExecute(Exception e) {
-				Log.i(TAG, "Finished loading credentials and logs");
-				if (e != null)
-					showApplicationError();
-				else
-					setState(State.CREDENTIALS_LOADED);
-			}
-		}.execute();
+	private void showErrorDialog(final String title, final String message, final String techInfo) {
+		showErrorDialog(title, message, techInfo, false);
 	}
 
-	/**
-	 * Loads {@link DescriptionStore} and {@link IdemixKeyStore} asynchroniously, and shows the
-	 * credential list in between the two.
-	 */
-	private void loadStore() {
-		new AsyncTask<Void,Void,Exception>() {
-			@Override
-			protected Exception doInBackground(Void... voids) {
-				Log.i(TAG, "Loading DescriptionStore and IdemixKeyStore");
-				FileReader reader = new AndroidFileReader(MainActivity.this);
-				SSLSocketFactory socketFactory = null;
-				if (Build.VERSION.SDK_INT >= 21) // 20 = 4.4 Kitkat, 21 = 5.0 Lollipop
-					socketFactory = new SecureSSLSocketFactory();
+	private void showErrorDialog(final String title, final String message,
+								 final String techInfo, final boolean showingTechInfo) {
+		String m = message;
+		if (showingTechInfo && techInfo != null)
+			m += ". " + techInfo;
 
-				try {
-					DescriptionStore.initialize(new DescriptionStoreDeserializer(reader), IRMApp.getStoreManager(), socketFactory);
-					Log.i(TAG, "Loaded DescriptionStore");
-					publishProgress();
-
-					IdemixKeyStore.initialize(new IdemixKeyStoreDeserializer(reader), IRMApp.getStoreManager());
-					Log.i(TAG, "Loaded IdemixKeyStore");
-					return null;
-				} catch (InfoException e) {
-					return e;
-				}
-			}
-
-			@Override
-			protected void onProgressUpdate(Void... values) {
-				setState(State.DESCRIPTION_STORE_LOADED);
-			}
-
-			@Override
-			protected void onPostExecute(Exception e) {
-				Log.i(TAG, "Finished loading DescriptionStore and IdemixKeyStore");
-				if (e != null)
-					throw new RuntimeException(e);
-				else
-					setState(State.KEY_STORE_LOADED);
-			}
-		}.execute();
-	}
-
-	private void showApplicationError() {
-		new AlertDialog.Builder(this)
+		AlertDialog.Builder builder = new AlertDialog.Builder(MainActivity.this)
 				.setIcon(R.drawable.irma_error)
-				.setTitle(R.string.cantreadattributes)
-				.setMessage(R.string.cantreadattributes_long)
-				.setNeutralButton(R.string.se_continue, new DialogInterface.OnClickListener() {
-					@Override public void onClick(DialogInterface dialogInterface, int i) {
-						settings.edit().remove(CredentialManager.CREDENTIAL_STORAGE).apply();
-						try {
-							CredentialManager.init(settings);
-							updateCredentialList();
-						} catch (CredentialsException e1) {
-							// This couldn't possibly happen, but if it does, let's be safe
-							throw new RuntimeException(e1);
-						}
-					}
-				})
-				.setPositiveButton(R.string.exit, new DialogInterface.OnClickListener() {
-					@Override public void onClick(DialogInterface dialogInterface, int i) {
-						Process.killProcess(Process.myPid());
-						System.exit(1);
-					}
-				})
-				.show();
+				.setTitle(title)
+				.setMessage(m)
+				.setPositiveButton(R.string.dismiss, null);
+
+		if (techInfo != null) {
+			int buttonText = showingTechInfo ? R.string.lessinfo : R.string.techinfo;
+			builder.setNeutralButton(buttonText, new DialogInterface.OnClickListener() {
+				@Override
+				public void onClick(DialogInterface dialogInterface, int i) {
+					showErrorDialog(title, message, techInfo, !showingTechInfo);
+				}
+			});
+		}
+
+		builder.show();
 	}
 
-	public State getState() {
+	private State getState() {
 		return state;
 	}
 
-	public void setState(State state) {
+	private void setState(State state) {
 		Log.i(TAG, "Set state: " + state);
 		this.state = state;
 
@@ -799,5 +643,172 @@ public class MainActivity extends Activity {
 				})
 				.setNegativeButton(android.R.string.cancel, null)
 				.show();
+	}
+
+
+	// Classes handling (integration with) other components of the app
+
+	/**
+	 * Reports session info to the user using {@link #setFeedback(String, String)} and updates
+	 * the activity state
+	 */
+	private class ClientHandler extends IrmaClientHandler {
+		public ClientHandler() {
+			super(MainActivity.this);
+		}
+
+		@Override public void onStatusUpdate(IrmaClient.Action action, IrmaClient.Status status) {
+			switch (status) {
+				case COMMUNICATING:
+					setState(State.COMMUNICATING); break;
+				case CONNECTED:
+					setState(State.CONNECTED); break;
+				case DONE:
+					setState(State.IDLE); break;
+			}
+		}
+
+		@Override public void onSuccess(IrmaClient.Action action) {
+			switch (action) {
+				case DISCLOSING:
+					setFeedback(getString(R.string.disclosure_successful), "success"); break;
+				case ISSUING:
+					setFeedback(getString(R.string.issuing_succesful), "success"); break;
+			}
+			finish(true);
+		}
+
+		@Override public void onCancelled(IrmaClient.Action action) {
+			switch (action) {
+				case DISCLOSING:
+					setFeedback(getString(R.string.disclosure_cancelled), "warning"); break;
+				case ISSUING:
+					setFeedback(getString(R.string.issuing_cancelled), "warning"); break;
+			}
+			finish(true);
+		}
+
+		@Override public void onFailure(IrmaClient.Action action, String message, ApiErrorMessage error, final String techInfo) {
+			final String title;
+			switch (action) {
+				case DISCLOSING:
+					title = getString(R.string.disclosure_failed); break;
+				case ISSUING:
+					title = getString(R.string.issuing_failed); break;
+				case UNKNOWN:
+				default:
+					title = getString(R.string.failed); break;
+			}
+
+			final String feedback = title + ": " + message;
+			setFeedback(title, "failure");
+			finish(false);
+
+			showErrorDialog(title, feedback, techInfo);
+		}
+
+		private void finish(boolean returnToBrowser) {
+			setState(State.IDLE);
+
+			lastSessionUrl = currentSessionUrl;
+			currentSessionUrl = "";
+
+			if (!onlineEnrolling && launchedFromBrowser && returnToBrowser)
+				onBackPressed();
+
+			onlineEnrolling = false;
+			launchedFromBrowser = false;
+		}
+	}
+
+	/**
+	 * Initializes {@link CredentialManager} asynchroniously.
+	 */
+	private class CredentialsLoader extends AsyncTask<Void,Void,Exception> {
+		@Override
+		protected Exception doInBackground(Void... params) {
+			try {
+				Log.i(TAG, "Loading credentials and logs");
+				CredentialManager.init(settings);
+				return null;
+			} catch (CredentialsException e) {
+				return e;
+			}
+		}
+
+		@Override
+		protected void onPostExecute(Exception e) {
+			Log.i(TAG, "Finished loading credentials and logs");
+			if (e == null)
+				setState(State.CREDENTIALS_LOADED);
+			else {
+				// In this case the app would at some point erase the unserializable attributes by
+				// overwriting them, so we should give the user a chance to bail out
+				new AlertDialog.Builder(MainActivity.this)
+						.setIcon(R.drawable.irma_error)
+						.setTitle(R.string.cantreadattributes)
+						.setMessage(R.string.cantreadattributes_long)
+						.setNeutralButton(R.string.se_continue, new DialogInterface.OnClickListener() {
+							@Override public void onClick(DialogInterface dialogInterface, int i) {
+								settings.edit().remove(CredentialManager.CREDENTIAL_STORAGE).apply();
+								try {
+									CredentialManager.init(settings);
+									updateCredentialList();
+								} catch (CredentialsException e1) {
+									// This couldn't possibly happen, but if it does, let's be safe
+									throw new RuntimeException(e1);
+								}
+							}
+						})
+						.setPositiveButton(R.string.exit, new DialogInterface.OnClickListener() {
+							@Override public void onClick(DialogInterface dialogInterface, int i) {
+								Process.killProcess(Process.myPid());
+								System.exit(1);
+							}
+						})
+						.show();
+			}
+		}
+	}
+
+	/**
+	 * Loads {@link DescriptionStore} and {@link IdemixKeyStore} asynchroniously, reporting back
+	 * to the activity in between
+	 */
+	private class StoreLoader extends AsyncTask<Void,Void,Exception> {
+		@Override
+		protected Exception doInBackground(Void... voids) {
+			Log.i(TAG, "Loading DescriptionStore and IdemixKeyStore");
+			FileReader reader = new AndroidFileReader(MainActivity.this);
+			SSLSocketFactory socketFactory = null;
+			if (Build.VERSION.SDK_INT >= 21) // 20 = 4.4 Kitkat, 21 = 5.0 Lollipop
+				socketFactory = new SecureSSLSocketFactory();
+
+			try {
+				DescriptionStore.initialize(new DescriptionStoreDeserializer(reader), IRMApp.getStoreManager(), socketFactory);
+				Log.i(TAG, "Loaded DescriptionStore");
+				publishProgress();
+
+				IdemixKeyStore.initialize(new IdemixKeyStoreDeserializer(reader), IRMApp.getStoreManager());
+				Log.i(TAG, "Loaded IdemixKeyStore");
+				return null;
+			} catch (InfoException e) {
+				return e;
+			}
+		}
+
+		@Override
+		protected void onProgressUpdate(Void... values) {
+			setState(State.DESCRIPTION_STORE_LOADED);
+		}
+
+		@Override
+		protected void onPostExecute(Exception e) {
+			Log.i(TAG, "Finished loading DescriptionStore and IdemixKeyStore");
+			if (e != null)
+				throw new RuntimeException(e);
+			else
+				setState(State.KEY_STORE_LOADED);
+		}
 	}
 }
