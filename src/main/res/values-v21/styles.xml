@@ -18,7 +18,6 @@
         <item name="android:colorBackground">@color/background</item>
 
         <item name="android:textViewStyle">@style/Irma.TextViewStyle</item>
-        <item name="android:buttonStyle">@style/Irma.Button</item>
     </style>
 
     <style name="Irma.Button" parent="android:Widget.Material.Light.Button.Borderless.Colored">
