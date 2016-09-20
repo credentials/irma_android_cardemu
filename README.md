@@ -17,7 +17,6 @@ External dependencies:
 
 Internal dependencies:
 
- * [irma_android_library](https://github.com/credentials/irma_android_library/), The IRMA android library
  * [irma_api_common](https://github.com/credentials/irma_api_common/), The common classes for the verification and issuance protocol
  * [Scuba](https://github.com/credentials/scuba), The smartcard abstraction layer, uses `scuba_sc_android` and `scuba_smartcard`
  * [jmrtd](http://jmrtd.org/), A library for easy reading of ICAO documents.
