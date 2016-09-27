@@ -31,6 +31,8 @@
 package org.irmacard.cardemu.httpclient;
 
 import android.os.AsyncTask;
+import android.util.Log;
+
 import com.google.api.client.http.*;
 import com.google.api.client.http.javanet.NetHttpTransport;
 import com.google.gson.Gson;
@@ -40,6 +42,8 @@ import org.irmacard.credentials.info.DescriptionStore;
 import javax.net.ssl.SSLSocketFactory;
 import java.io.IOException;
 import java.lang.reflect.Type;
+import java.util.HashMap;
+import java.util.Map;
 
 /**
  * Convenience class to (a)synchroniously do HTTP GET and PUT requests,
@@ -52,6 +56,10 @@ public class JsonHttpClient {
 	private Gson gson;
 	private int timeout = 5000;
 	private HttpRequestFactory requestFactory;
+
+	private HashMap<String, String> extraHeaders = new HashMap<>();
+
+	private String TAG = "JsonHTTPClient";
 
 	/**
 	 * Instantiate a new JsonHttpClient.
@@ -80,6 +88,10 @@ public class JsonHttpClient {
 						httpRequest.setReadTimeout(timeout);
 					}
 				});
+	}
+
+	public void setExtraHeader(String header, String value) {
+		extraHeaders.put(header, value);
 	}
 
 	public void setTimeout(int timeout) {
@@ -183,6 +195,8 @@ public class JsonHttpClient {
 	private <T> T doRequest(Type type, String url, Object object, String authorization, String method)
 	throws HttpClientException {
 		HttpContent post = null;
+		Log.d(TAG, "Connecting to: " + url);
+		Log.d(TAG, "Sending object: " + gson.toJson(object));
 		if (method.equals("POST"))
 			post = new ByteArrayContent("application/json;charset=utf-8", gson.toJson(object).getBytes());
 
@@ -192,8 +206,15 @@ public class JsonHttpClient {
 			if (authorization != null && authorization.length() > 0)
 				request.getHeaders().setAuthorization(authorization);
 
+			for(Map.Entry<String, String> e : extraHeaders.entrySet()) {
+				request.getHeaders().set(e.getKey(), e.getValue());
+			}
+
 			response = request.execute();
-			return gson.fromJson(DescriptionStore.inputStreamToString(response.getContent()), type);
+
+			String input = DescriptionStore.inputStreamToString(response.getContent());
+			Log.d(TAG, "Received: " + input);
+			return gson.fromJson(input, type);
 		} catch (HttpResponseException e) {
 			throw new HttpClientException(e.getStatusCode(), e.getContent());
 		} catch (IOException|JsonParseException e) {
