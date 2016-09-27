@@ -26,16 +26,26 @@ import org.irmacard.cardemu.httpclient.HttpClientException;
 import org.irmacard.cardemu.httpclient.HttpResultHandler;
 import org.irmacard.cardemu.httpclient.JsonHttpClient;
 import org.irmacard.cardemu.store.StoreManager;
+import org.irmacard.cloud.common.AuthorizationResult;
+import org.irmacard.cloud.common.CloudResult;
+import org.irmacard.cloud.common.IRMAHeaders;
+import org.irmacard.cloud.common.PinTokenMessage;
 import org.irmacard.credentials.CredentialsException;
 import org.irmacard.credentials.idemix.messages.IssueCommitmentMessage;
 import org.irmacard.credentials.idemix.messages.IssueSignatureMessage;
 import org.irmacard.credentials.idemix.proofs.ProofList;
+import org.irmacard.credentials.idemix.proofs.ProofListBuilder;
+import org.irmacard.credentials.idemix.proofs.ProofP;
+import org.irmacard.credentials.idemix.proofs.ProofPCommitmentMap;
 import org.irmacard.credentials.info.InfoException;
 import org.irmacard.credentials.info.KeyException;
+import org.irmacard.credentials.info.PublicKeyIdentifier;
 
 import java.io.IOException;
 import java.lang.reflect.Type;
+import java.math.BigInteger;
 import java.util.ArrayList;
+import java.util.List;
 import java.util.regex.Pattern;
 
 public class JsonIrmaClient extends IrmaClient {
@@ -45,6 +55,15 @@ public class JsonIrmaClient extends IrmaClient {
 	private String server;
 	private String protocolVersion;
 	private Resources resources;
+
+	// Some specific distributed issuance/verification state
+	private ProofListBuilder builder;
+	private BigInteger challenge;
+
+	// Constants to indicate whether we are issuing or verifying
+	private static int mode;
+	private static final int MODE_ISSUE = 0;
+	private static final int MODE_VERIFY = 1;
 
 	public JsonIrmaClient(String server, IrmaClientHandler handler, String protocolVersion) {
 		super(handler);
@@ -157,20 +176,37 @@ public class JsonIrmaClient extends IrmaClient {
 		// Increase timeout for this step as issuance server might take longer for many creds
 		client.setTimeout(15000);
 
-		IssueCommitmentMessage msg;
-		try {
-			msg = CredentialManager.getIssueCommitments(request, disclosureChoice);
-		} catch (InfoException e) {
-			e.printStackTrace();
-			fail(R.string.wrong_credential_type, true);
-			return;
-		} catch (CredentialsException e) {
-			fail(R.string.missing_required_attributes, true);
-			return;
-		} catch (KeyException e) {
-			fail(R.string.missing_pk, true);
-			return;
+		if (CredentialManager.isDistributed()) {
+			try {
+				this.builder = CredentialManager.generateProofListBuilderForIssuance(request, disclosureChoice);
+			} catch (InfoException|CredentialsException|KeyException e) {
+				e.printStackTrace();
+				return;
+			}
+			mode = MODE_ISSUE;
+			obtainValidAuthorizationToken(-1);
+
+		} else {
+			IssueCommitmentMessage msg;
+			try {
+				msg = CredentialManager.getIssueCommitments(request, disclosureChoice);
+			} catch (InfoException e) {
+				e.printStackTrace();
+				fail("wrong credential type", true);
+				return;
+			} catch (CredentialsException e) {
+				fail("missing required attributes", true);
+				return;
+			} catch (KeyException e) {
+				fail("missing public key", true);
+				return;
+			}
+			sendIssueCommitmentMessage(msg);
 		}
+	}
+
+	private void sendIssueCommitmentMessage(IssueCommitmentMessage msg) {
+		final JsonHttpClient client = new JsonHttpClient(GsonUtil.getGson());
 
 		Type t = new TypeToken<ArrayList<IssueSignatureMessage>>(){}.getType();
 		client.post(t, server + "commitments", msg, new JsonResultHandler<ArrayList<IssueSignatureMessage>>() {
@@ -181,6 +217,145 @@ public class JsonIrmaClient extends IrmaClient {
 				} catch (InfoException|CredentialsException e) {
 					fail(e, false); // No need to inform the server if this failed
 				}
+			}
+		});
+	}
+
+	private void obtainCloudProofP(ProofPCommitmentMap plistcom, final int mode) {
+		ProofListBuilder.Commitment com = builder.calculateCommitments();
+		com.mergeProofPCommitments(plistcom);
+		challenge = com.calculateChallenge(builder.getContext(), builder.getNonce());
+
+		if(mode == MODE_ISSUE) {
+			CredentialManager.addPublicSKs(plistcom);
+		}
+
+		final JsonHttpClient client = new JsonHttpClient(GsonUtil.getGson());
+		client.setExtraHeader(IRMAHeaders.USERNAME, CredentialManager.getCloudUsername());
+		client.setExtraHeader(IRMAHeaders.AUTHORIZATION, CredentialManager.getCloudToken());
+
+		Log.i(TAG, "Posting challenge to the cloud server now!");
+		client.post(ProofP.class, CredentialManager.getCloudServer() + "/prove/getResponse", challenge, new JsonResultHandler<ProofP>() {
+			@Override public void onSuccess(ProofP result) {
+				Log.i(TAG, "Unbelievable, also received a ProofP from the server");
+				JsonIrmaClient.this.finishDistributedProtocol(result, mode);
+			}
+		});
+	}
+
+	private void finishDistributedProtocol(ProofP proofp, int mode) {
+		ProofList list = builder.createProofList(challenge, proofp);
+
+		if(mode == MODE_VERIFY) {
+			sendDisclosureProofs(list);
+		} else {
+			IssueCommitmentMessage msg = new IssueCommitmentMessage(list, CredentialManager.getNonce2());
+			sendIssueCommitmentMessage(msg);
+		}
+	}
+
+	private void obtainValidAuthorizationToken(final int tries) {
+		JsonHttpClient client = new JsonHttpClient(GsonUtil.getGson());
+
+		client.setExtraHeader(IRMAHeaders.USERNAME, CredentialManager.getCloudUsername());
+		client.setExtraHeader(IRMAHeaders.AUTHORIZATION, CredentialManager.getCloudToken());
+
+		String url = CredentialManager.getCloudServer() + "/users/isAuthorized";
+		client.post(AuthorizationResult.class, url, "", new HttpResultHandler<AuthorizationResult>() {
+			@Override
+			public void onSuccess(AuthorizationResult result) {
+				Log.i(TAG, "Successfully retrieved authorization result, " + result);
+				if(result.getStatus().equals(AuthorizationResult.STATUS_AUTHORIZED)) {
+					Log.i(TAG, "Token is still valid! Continuing!");
+					continueProtocolWithAuthorization();
+				} else if(result.getStatus().equals(AuthorizationResult.STATUS_EXPIRED)) {
+					Log.i(TAG, "Token has expired, should get proper auth!");
+					handler.verifyPin(tries);
+				} else {
+					Log.i(TAG, "Authorization is blocked!!!");
+					fail("Cloud authorization blocked", true);
+				}
+			}
+
+			@Override
+			public void onError(HttpClientException exception) {
+				// TODO: handle properly
+				fail("Failed to test authorization status", true);
+				if(exception != null)
+					exception.printStackTrace();
+				Log.e(TAG, "Pin verification returned error");
+			}
+		});
+	}
+
+	@Override
+	public void onPinEntered(String pin) {
+		verifyPinAtCloud(pin);
+	}
+
+	@Override
+	public void onPinCancelled() {
+		fail("Pin entry cancelled", true);
+	}
+
+	private void verifyPinAtCloud(String pin) {
+		JsonHttpClient client = new JsonHttpClient(GsonUtil.getGson());
+		client.setExtraHeader(IRMAHeaders.USERNAME, CredentialManager.getCloudUsername());
+		client.setExtraHeader(IRMAHeaders.AUTHORIZATION, CredentialManager.getCloudToken());
+
+		PinTokenMessage msg = new PinTokenMessage(CredentialManager.getCloudUsername(), pin);
+
+		String url = CredentialManager.getCloudServer() + "/users/verify/pin";
+		client.post(CloudResult.class, url, msg, new HttpResultHandler<CloudResult>() {
+			@Override
+			public void onSuccess(CloudResult result) {
+				Log.i(TAG, "PIN Verification call was successful, " + result);
+				if(result.getStatus().equals(CloudResult.STATUS_SUCCESS)) {
+					Log.i(TAG, "Verification with PIN verified, yay!");
+					CredentialManager.setCloudToken(result.getMessage());
+					continueProtocolWithAuthorization();
+				} else {
+					Log.i(TAG, "Something went wrong verifying the pin");
+					String msg = result.getMessage();
+					if(msg != null) {
+						obtainValidAuthorizationToken(new Integer(msg));
+					}
+				}
+			}
+
+			@Override
+			public void onError(HttpClientException exception) {
+				// TODO: handle properly
+				// setFeedback("Failed to verify PIN with Cloud Server", "error");
+				if(exception != null)
+					exception.printStackTrace();
+				Log.e(TAG, "Pin verification failed");
+			}
+		});
+	}
+
+	private void continueProtocolWithAuthorization() {
+		builder.generateRandomizers();
+		List<PublicKeyIdentifier> pkids = builder.getPublicKeyIdentifiers();
+		Log.i(TAG, "Trying to obtain commitments from cloud server now!");
+		obtainCloudProofPCommitments(pkids, mode);
+	}
+
+	private void obtainCloudProofPCommitments(final List<PublicKeyIdentifier> pkids, final int mode) {
+		final JsonHttpClient client = new JsonHttpClient(GsonUtil.getGson());
+		client.setExtraHeader(IRMAHeaders.USERNAME, CredentialManager.getCloudUsername());
+		client.setExtraHeader(IRMAHeaders.AUTHORIZATION, CredentialManager.getCloudToken());
+
+		Log.i(TAG, "Posting to the cloud server now!");
+		client.post(ProofPCommitmentMap.class, CredentialManager.getCloudServer() + "/prove/getCommitments", pkids, new JsonResultHandler<ProofPCommitmentMap>() {
+			@Override public void onSuccess(ProofPCommitmentMap result) {
+				Log.i(TAG, "Unbelievable, it actually worked:");
+				for(PublicKeyIdentifier pkid : pkids) {
+					Log.i(TAG, "Key " + pkid + ", response " + result.get(pkid));
+				}
+				Log.i(TAG, "Calling next function in this protocol class:" + JsonProtocol.this);
+
+				obtainCloudProofP(result, mode);
 			}
 		});
 	}
@@ -267,15 +442,31 @@ public class JsonIrmaClient extends IrmaClient {
 		handler.onStatusUpdate(Action.DISCLOSING, Status.COMMUNICATING);
 		Log.i(TAG, "Sending disclosure proofs to " + server);
 
-		ProofList proofs;
-		try {
-			proofs = CredentialManager.getProofs(disclosureChoice);
-		} catch (CredentialsException e) {
-			e.printStackTrace();
-			fail(e, true);
-			return;
+		if(CredentialManager.isDistributed()) {
+			try {
+				this.builder = CredentialManager.generateProofListBuilderForVerification(disclosureChoice);
+			} catch (CredentialsException e) {
+				// TODO!!
+				e.printStackTrace();
+				return;
+			}
+			mode = MODE_VERIFY;
+			obtainValidAuthorizationToken(-1);
+		} else {
+			ProofList proofs;
+			try {
+				proofs = CredentialManager.getProofs(disclosureChoice);
+			} catch (CredentialsException e) {
+				e.printStackTrace();
+				// cancelSession(); TODO why was this removed?
+				fail(e, true);
+				return;
+			}
+			sendDisclosureProofs(proofs);
 		}
+	}
 
+	private void sendDisclosureProofs(ProofList proofs) {
 		JsonHttpClient client = new JsonHttpClient(GsonUtil.getGson());
 		client.post(DisclosureProofResult.Status.class, server + "proofs", proofs,
 			new JsonResultHandler<DisclosureProofResult.Status>() {

@@ -42,6 +42,7 @@ import org.irmacard.cardemu.identifiers.IdemixCredentialIdentifier;
 import org.irmacard.credentials.Attributes;
 import org.irmacard.credentials.CredentialsException;
 import org.irmacard.credentials.idemix.CredentialBuilder;
+import org.irmacard.credentials.idemix.DistributedCredentialBuilder;
 import org.irmacard.credentials.idemix.IdemixCredential;
 import org.irmacard.credentials.idemix.IdemixSystemParameters1024;
 import org.irmacard.credentials.idemix.info.IdemixKeyStore;
@@ -49,6 +50,7 @@ import org.irmacard.credentials.idemix.messages.IssueCommitmentMessage;
 import org.irmacard.credentials.idemix.messages.IssueSignatureMessage;
 import org.irmacard.credentials.idemix.proofs.ProofList;
 import org.irmacard.credentials.idemix.proofs.ProofListBuilder;
+import org.irmacard.credentials.idemix.proofs.ProofPCommitmentMap;
 import org.irmacard.credentials.info.*;
 import org.irmacard.credentials.util.log.IssueLogEntry;
 import org.irmacard.credentials.util.log.LogEntry;
@@ -84,6 +86,9 @@ public class CredentialManager {
 	public static final String CREDENTIAL_STORAGE = "credentials";
 	private static final String LOG_STORAGE = "logs";
 
+	// TODO: compare this with the global preference, one needs to go
+	private static final String DISTRIBUTED_FLAG = "distributedFlag";
+
 	// TODO: not sure if this is a nice place, but at least this I can reach
 	private static final String CLOUD_USERNAME = "CloudUsername";
 	private static final String CLOUD_SERVER = "CloudServer";
@@ -95,6 +100,9 @@ public class CredentialManager {
 
 	// Issuing state
 	private static List<CredentialBuilder> credentialBuilders;
+	private static BigInteger nonce2;
+
+	private static boolean isDistributed = true;
 
 	public static void init(SharedPreferences s) throws CredentialsException {
 		settings = s;
@@ -118,6 +126,7 @@ public class CredentialManager {
 		settings.edit()
 				.putString(CREDENTIAL_STORAGE, credentialsJson)
 				.putString(LOG_STORAGE, logsJson)
+				.putBoolean(DISTRIBUTED_FLAG, isDistributed)
 				.putString(CLOUD_USERNAME, cloudUsername)
 				.putString(CLOUD_SERVER, cloudServer)
 				.putString(CLOUD_TOKEN, cloudToken)
@@ -133,6 +142,7 @@ public class CredentialManager {
 		Gson gson = GsonUtil.getGson();
 		String credentialsJson = settings.getString(CREDENTIAL_STORAGE, "");
 		String logsJson = settings.getString(LOG_STORAGE, "");
+		setDistributed(settings.getBoolean(DISTRIBUTED_FLAG, false));
 
 		cloudUsername = settings.getString(CLOUD_USERNAME, "");
 		cloudServer = settings.getString(CLOUD_SERVER, "");
@@ -295,16 +305,20 @@ public class CredentialManager {
 	 * @throws CredentialsException if something goes wrong
 	 */
 	public static ProofList getProofs(DisclosureChoice disclosureChoice) throws CredentialsException {
+		return generateProofListBuilderForVerification(disclosureChoice).build();
+	}
+
+	public static ProofListBuilder generateProofListBuilderForVerification(DisclosureChoice disclosureChoice) throws CredentialsException {
 		SessionRequest request = disclosureChoice.getRequest();
 		ProofListBuilder builder = new ProofListBuilder(request.getContext(), request.getNonce());
-		return getProofs(disclosureChoice, builder).build();
+		return addProofsToBuilder(disclosureChoice, builder);
 	}
 
 	/**
 	 * For the selected attribute of each disjunction, add a disclosure proof-commitment to the specified
 	 * proof builder.
 	 */
-	private static ProofListBuilder getProofs(DisclosureChoice disclosureChoice, ProofListBuilder builder)
+	private static ProofListBuilder addProofsToBuilder(DisclosureChoice disclosureChoice, ProofListBuilder builder)
 	throws CredentialsException {
 		Map<IdemixCredentialIdentifier, List<Integer>> toDisclose = groupAttributesById(disclosureChoice);
 
@@ -495,38 +509,65 @@ public class CredentialManager {
 	 */
 	public static IssueCommitmentMessage getIssueCommitments(
 			IssuingRequest request, DisclosureChoice disclosureChoice)
-	throws InfoException, CredentialsException, KeyException {
+			throws InfoException, CredentialsException, KeyException {
+		ProofListBuilder builder = CredentialManager.generateProofListBuilderForIssuance(request,
+				disclosureChoice);
+		return new IssueCommitmentMessage(builder.build(), CredentialManager.getNonce2());
+	}
+
+
+	/**
+	 * Compute compute a ProofList Builder for the first step of the distributed issuing protocol:
+	 * like {@link #getIssueCommitments(IssuingRequest request, DisclosureChoice disclosureChoice)}
+	 * it contains the commitments to the secret key and v_prime and the commitments of the
+	 * corresponding proofs of correctness. The cloud server still needs to be used to integrate the
+	 * other parts of the secret key.
+	 *
+	 * @param request The request containing the description of the credentials that will be issued
+	 * @return The ProofListBuilder
+	 * @throws InfoException If one of the credentials in the request or its attributes is not contained or
+	 *                       does not match our DescriptionStore
+	 */
+	public static ProofListBuilder generateProofListBuilderForIssuance(
+			IssuingRequest request, DisclosureChoice disclosureChoice)
+			throws InfoException, CredentialsException, KeyException {
 		if (!request.credentialsMatchStore())
 			throw new InfoException("Request contains mismatching attributes");
 
 		// Initialize issuing state
 		credentialBuilders = new ArrayList<>(request.getCredentials().size());
-
-		BigInteger nonce2 = CredentialBuilder.createReceiverNonce(request.getLargestParameters());
+		nonce2 = CredentialBuilder.createReceiverNonce(request.getLargestParameters());
 
 		// Construct the commitment proofs
 		ProofListBuilder proofsBuilder = new ProofListBuilder(request.getContext(), request.getNonce());
 		proofsBuilder.setSecretKey(getSecretKey());
 
 		for (CredentialRequest cred : request.getCredentials()) {
-			CredentialBuilder cb = new CredentialBuilder(
-					cred.getPublicKey(), cred.convertToBigIntegers(), request.getContext(), nonce2);
+			CredentialBuilder cb;
+			if(isDistributed())
+				cb = new DistributedCredentialBuilder(
+						cred.getPublicKey(), cred.convertToBigIntegers(), request.getContext(), nonce2);
+			else
+				cb = new CredentialBuilder(
+						cred.getPublicKey(), cred.convertToBigIntegers(), request.getContext(), nonce2);
+
 			proofsBuilder.addCredentialBuilder(cb);
 			credentialBuilders.add(cb);
 		}
 
 		// Add disclosures, if any
 		if (!request.getRequiredAttributes().isEmpty() && disclosureChoice != null)
-			getProofs(disclosureChoice, proofsBuilder);
+			addProofsToBuilder(disclosureChoice, proofsBuilder);
 
-		return new IssueCommitmentMessage(proofsBuilder.build(), nonce2);
+		return proofsBuilder;
 	}
+
 
 	/**
 	 * Given the issuer's reply to our {@link IssueCommitmentMessage}, compute the new Idemix credentials and save them
 	 * @param sigs The message from the issuer containing the CL signatures and proofs of correctness
 	 * @throws InfoException If one of the credential types is unknown (this should already have happened in
-	 *         {@link #getIssueCommitments(IssuingRequest, DisclosureChoice)} )})
+	 *         {@link #generateProofListBuilderForIssuance(IssuingRequest, DisclosureChoice)})
 	 * @throws CredentialsException If one of the credentials could not be reconstructed (e.g., because of an incorrect
 	 *         issuer proof)
 	 */
@@ -579,6 +620,14 @@ public class CredentialManager {
 		return list;
 	}
 
+	public static void addPublicSKs(ProofPCommitmentMap map) {
+		for(CredentialBuilder cb : credentialBuilders) {
+			if(cb instanceof DistributedCredentialBuilder) {
+				((DistributedCredentialBuilder) cb).addPublicSK(map);
+			}
+		}
+	}
+
 	public static void setCloudUsername(String username) {
 		cloudUsername = username;
 	}
@@ -603,5 +652,17 @@ public class CredentialManager {
 
 	public static String getCloudToken() {
 		return cloudToken;
+	}
+
+	public static void setDistributed(boolean distributed) {
+		isDistributed = distributed;
+	}
+
+	public static boolean isDistributed() {
+		return isDistributed;
+	}
+
+	public static BigInteger getNonce2() {
+		return nonce2;
 	}
 }
