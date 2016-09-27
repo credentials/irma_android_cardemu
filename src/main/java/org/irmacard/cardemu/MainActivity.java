@@ -64,8 +64,12 @@ import com.google.zxing.integration.android.IntentIntegrator;
 import com.google.zxing.integration.android.IntentResult;
 
 import org.irmacard.api.common.exceptions.ApiErrorMessage;
+import org.irmacard.api.common.util.GsonUtil;
 import org.irmacard.cardemu.credentialdetails.CredentialDetailActivity;
 import org.irmacard.cardemu.credentialdetails.CredentialDetailFragment;
+import org.irmacard.cardemu.httpclient.HttpClientException;
+import org.irmacard.cardemu.httpclient.HttpResultHandler;
+import org.irmacard.cardemu.httpclient.JsonHttpClient;
 import org.irmacard.cardemu.identifiers.IdemixCredentialIdentifier;
 import org.irmacard.cardemu.irmaclient.IrmaClient;
 import org.irmacard.cardemu.irmaclient.IrmaClientHandler;
@@ -75,6 +79,8 @@ import org.irmacard.cardemu.preferences.IRMAPreferenceActivity;
 import org.irmacard.cardemu.selfenrol.EnrollSelectActivity;
 import org.irmacard.cardemu.store.AndroidFileReader;
 import org.irmacard.cardemu.store.StoreManager;
+import org.irmacard.cloud.common.CloudQR;
+import org.irmacard.cloud.common.UserMessage;
 import org.irmacard.credentials.Attributes;
 import org.irmacard.credentials.CredentialsException;
 import org.irmacard.credentials.idemix.info.IdemixKeyStore;
@@ -548,10 +554,58 @@ public class MainActivity extends Activity {
 			if (contents == null)
 				return;
 
-			launchedFromBrowser = false;
-			onlineEnrolling = false;
-			IrmaClient.NewSession(contents, irmaClientHandler);
+			// FIXME: this is a bit of a hack, can we do more consistent branching?
+			if(contents.contains("cloud_enroll")) {
+				Log.i(TAG, "Running cloud enroll from qr code!");
+				cloudEnroll(contents);
+			} else {
+				launchedFromBrowser = false;
+				onlineEnrolling = false;
+				IrmaClient.NewSession(contents, irmaClientHandler);
+			}
 		}
+	}
+
+	private void cloudEnroll(String contents) {
+		Log.i(TAG, "Gotten qr code for cloud enroll: " +contents);
+		CloudQR qr = GsonUtil.getGson().fromJson(contents, CloudQR.class);
+		Log.i(TAG, "Parsed: " + qr.getUsername() + " " + qr.getUrl());
+
+		// TODO: why also store this in CredentialManager when we have global settings?
+		CredentialManager.setDistributed(true);
+		CredentialManager.setCloudServer(qr.getUrl());
+		CredentialManager.setCloudUsername(qr.getUsername());
+		CredentialManager.save();
+
+		// TODO: throw away existing credentials to not confuse user,
+		// after asking for permission of course.
+
+		JsonHttpClient client = new JsonHttpClient(GsonUtil.getGson());
+
+		String url = qr.getUrl() + "/web/users/" + qr.getUserID() + "/enroll";
+		client.post(UserMessage.class, url, "", new HttpResultHandler<UserMessage>() {
+			@Override
+			public void onSuccess(UserMessage result) {
+				Log.i(TAG, "Enrollment call was successful, " + result);
+				if(result.isEnrolled()) {
+					setFeedback("IRMA App is now linked to the cloud server", "success");
+					Log.i(TAG, "Enrollment with cloud server successful!");
+				} else {
+					setFeedback("Linking to cloud server not succesfull", "warning");
+					Log.i(TAG, "Something went wrong with confirming enrolment");
+				}
+			}
+
+			@Override
+			public void onError(HttpClientException exception) {
+				// TODO: handle properly
+				// TODO: funny seems that exception is always null
+				if(exception != null)
+					exception.printStackTrace();
+				setFeedback("Error linking to cloud server", "error");
+				Log.e(TAG, "Confirming enrolment failed");
+			}
+		});
 	}
 
 	@Override
