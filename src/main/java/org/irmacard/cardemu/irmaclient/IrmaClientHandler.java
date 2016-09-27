@@ -6,10 +6,8 @@ import android.app.DialogFragment;
 import android.content.DialogInterface;
 import android.content.Intent;
 import android.text.Html;
-import android.util.Log;
 import android.view.View;
 
-import org.irmacard.cardemu.pindialog.EnterPINDialogFragment;
 import org.irmacard.api.common.AttributeDisjunction;
 import org.irmacard.api.common.AttributeDisjunctionList;
 import org.irmacard.api.common.DisclosureProofRequest;
@@ -23,6 +21,8 @@ import org.irmacard.cardemu.disclosuredialog.DisclosureInformationActivity;
 import org.irmacard.cardemu.disclosuredialog.SessionDialogFragment;
 import org.irmacard.cardemu.irmaclient.IrmaClient.Action;
 import org.irmacard.cardemu.irmaclient.IrmaClient.Status;
+import org.irmacard.cardemu.pindialog.EnterPINDialogFragment;
+import org.irmacard.cardemu.pindialog.EnterPINDialogFragment.PINDialogListener;
 
 import java.util.List;
 
@@ -156,8 +156,13 @@ public abstract class IrmaClientHandler {
 		return activity;
 	}
 
-	public void verifyPin(int tries) {
-		DialogFragment newFragment = EnterPINDialogFragment.getInstance(tries, irmaClient);
+	/**
+	 * Ask for a PIN using {@link EnterPINDialogFragment}.
+	 * @param tries The amount of tries allowed to the user
+	 * @param listener Will receive the PIN
+     */
+	public void verifyPin(int tries, PINDialogListener listener) {
+		DialogFragment newFragment = EnterPINDialogFragment.getInstance(tries, listener);
 		newFragment.show(activity.getFragmentManager(), "pin-entry");
 	}
 }

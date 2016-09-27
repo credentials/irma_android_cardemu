@@ -25,6 +25,7 @@ import org.irmacard.cardemu.R;
 import org.irmacard.cardemu.httpclient.HttpClientException;
 import org.irmacard.cardemu.httpclient.HttpResultHandler;
 import org.irmacard.cardemu.httpclient.JsonHttpClient;
+import org.irmacard.cardemu.pindialog.EnterPINDialogFragment;
 import org.irmacard.cardemu.store.StoreManager;
 import org.irmacard.cloud.common.AuthorizationResult;
 import org.irmacard.cloud.common.CloudResult;
@@ -48,7 +49,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.regex.Pattern;
 
-public class JsonIrmaClient extends IrmaClient {
+public class JsonIrmaClient extends IrmaClient implements EnterPINDialogFragment.PINDialogListener {
 	private static final String TAG = "CardEmuJson";
 	private static final int maxJwtAge = 10 * 60 * 1000; // 10 minutes in milliseconds
 
@@ -270,7 +271,7 @@ public class JsonIrmaClient extends IrmaClient {
 					continueProtocolWithAuthorization();
 				} else if(result.getStatus().equals(AuthorizationResult.STATUS_EXPIRED)) {
 					Log.i(TAG, "Token has expired, should get proper auth!");
-					handler.verifyPin(tries);
+					handler.verifyPin(tries, JsonIrmaClient.this);
 				} else {
 					Log.i(TAG, "Authorization is blocked!!!");
 					fail("Cloud authorization blocked", true);
@@ -318,7 +319,7 @@ public class JsonIrmaClient extends IrmaClient {
 					Log.i(TAG, "Something went wrong verifying the pin");
 					String msg = result.getMessage();
 					if(msg != null) {
-						obtainValidAuthorizationToken(new Integer(msg));
+						obtainValidAuthorizationToken(Integer.valueOf(msg));
 					}
 				}
 			}

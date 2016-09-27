@@ -30,6 +30,7 @@
 
 package org.irmacard.cardemu.pindialog;
 
+import android.annotation.SuppressLint;
 import android.app.AlertDialog;
 import android.app.Dialog;
 import android.app.DialogFragment;
@@ -47,18 +48,18 @@ import android.widget.TextView.OnEditorActionListener;
 import org.irmacard.cardemu.R;
 
 public class EnterPINDialogFragment extends DialogFragment {
-	private static final String EXTRA_TRIES = "irma_library.EnterPINDialogFragment.tries";
-	
-	public interface PINDialogListener {
-        public void onPinEntered(String pincode);
-        public void onPinCancelled();
-	}
+    private static final String EXTRA_TRIES = "irma_library.EnterPINDialogFragment.tries";
 
-    PINDialogListener mListener;
-    int tries;
-	private AlertDialog dialog;
+    public interface PINDialogListener {
+        void onPinEntered(String pincode);
+        void onPinCancelled();
+    }
 
-	public static EnterPINDialogFragment getInstance(int tries, PINDialogListener listener) {
+    private PINDialogListener mListener;
+    private int tries;
+    private AlertDialog dialog;
+
+    public static EnterPINDialogFragment getInstance(int tries, PINDialogListener listener) {
         EnterPINDialogFragment f = new EnterPINDialogFragment();
         f.mListener = listener;
 
@@ -67,18 +68,18 @@ public class EnterPINDialogFragment extends DialogFragment {
         f.setArguments(args);
 
         return f;
-	}
+    }
 
     @Override
     public void onCreate(Bundle savedInstanceState) {
-    	super.onCreate(savedInstanceState);
+        super.onCreate(savedInstanceState);
 
-    	// For backward compatibility
-    	if(getArguments().containsKey(EXTRA_TRIES)) {
-    		tries = getArguments().getInt(EXTRA_TRIES);
-    	} else {
-    		tries = -1;
-    	}
+        // For backward compatibility
+        if(getArguments().containsKey(EXTRA_TRIES)) {
+            tries = getArguments().getInt(EXTRA_TRIES);
+        } else {
+            tries = -1;
+        }
     }
 
     private void okOnDialog(View dialogView) {
@@ -96,47 +97,48 @@ public class EnterPINDialogFragment extends DialogFragment {
         // Use the Builder class for convenient dialog construction
         AlertDialog.Builder builder = new AlertDialog.Builder(getActivity());
         LayoutInflater inflater = getActivity().getLayoutInflater();
-        final View dialogView = inflater.inflate(R.layout.dialog_pinentry, null);
+        @SuppressLint("InflateParams") final View dialogView = inflater.inflate(R.layout.dialog_pinentry, null);
         builder.setView(dialogView)
-        	.setTitle("Enter PIN")
-	           .setPositiveButton("OK", new DialogInterface.OnClickListener() {
-	               public void onClick(DialogInterface dialog, int id) {
-	                  okOnDialog(dialogView);
-	               }
-	           })
-	           .setNegativeButton("Cancel", new DialogInterface.OnClickListener() {
-	               public void onClick(DialogInterface dialog, int id) {
-	            	   mListener.onPinCancelled();
-	               }
-	           });
+                .setTitle("Enter PIN")
+                .setPositiveButton("OK", new DialogInterface.OnClickListener() {
+                    public void onClick(DialogInterface dialog, int id) {
+                        okOnDialog(dialogView);
+                    }
+                })
+                .setNegativeButton("Cancel", new DialogInterface.OnClickListener() {
+                    public void onClick(DialogInterface dialog, int id) {
+                        mListener.onPinCancelled();
+                    }
+                });
         // Create the AlertDialog object and return it
         dialog = builder.create();
         // Make sure that the keyboard is always shown and doesn't require an additional touch
         // to focus the TextEdit view.
-        dialog.getWindow().setSoftInputMode (WindowManager.LayoutParams.SOFT_INPUT_STATE_ALWAYS_VISIBLE);
+        if (dialog.getWindow() != null)
+            dialog.getWindow().setSoftInputMode (WindowManager.LayoutParams.SOFT_INPUT_STATE_ALWAYS_VISIBLE);
 
         TextView error_field = (TextView) dialogView.findViewById(R.id.enterpin_error);
         EditText pin_field = (EditText) dialogView.findViewById(R.id.pincode);
         pin_field.setOnEditorActionListener(new OnEditorActionListener() {
-			public boolean onEditorAction(TextView v, int actionId,
-					KeyEvent event) {
-				if ((event != null && (event.getKeyCode() == KeyEvent.KEYCODE_ENTER))
-						|| (actionId == EditorInfo.IME_ACTION_DONE)) {
-					okOnDialog(dialogView);
-					dismissDialog();
-				}
-				return false;
+            public boolean onEditorAction(TextView v, int actionId,
+                                          KeyEvent event) {
+                if ((event != null && (event.getKeyCode() == KeyEvent.KEYCODE_ENTER))
+                        || (actionId == EditorInfo.IME_ACTION_DONE)) {
+                    okOnDialog(dialogView);
+                    dismissDialog();
+                }
+                return false;
             }
         });
 
         if(tries != -1) {
-        	error_field.setVisibility(View.VISIBLE);
-        	error_field.setText(getResources().getQuantityString(R.plurals.error_tries_left, tries, tries));
+            error_field.setVisibility(View.VISIBLE);
+            error_field.setText(getResources().getQuantityString(R.plurals.error_tries_left, tries, tries));
         }
-        
+
         // prevent cancelling the dialog by pressing outside the bounds
         dialog.setCanceledOnTouchOutside(false);
-        
+
         pin_field.requestFocus();
 
         return dialog;
