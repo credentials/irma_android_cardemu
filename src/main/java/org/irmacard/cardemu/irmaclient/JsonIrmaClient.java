@@ -353,7 +353,7 @@ public class JsonIrmaClient extends IrmaClient {
 				for(PublicKeyIdentifier pkid : pkids) {
 					Log.i(TAG, "Key " + pkid + ", response " + result.get(pkid));
 				}
-				Log.i(TAG, "Calling next function in this protocol class:" + JsonProtocol.this);
+				Log.i(TAG, "Calling next function in this protocol class:" + JsonIrmaClient.this);
 
 				obtainCloudProofP(result, mode);
 			}

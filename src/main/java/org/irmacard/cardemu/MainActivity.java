@@ -63,6 +63,7 @@ import android.widget.TextView;
 import com.google.zxing.integration.android.IntentIntegrator;
 import com.google.zxing.integration.android.IntentResult;
 
+import org.irmacard.cardemu.pindialog.EnterPINDialogFragment;
 import org.irmacard.api.common.exceptions.ApiErrorMessage;
 import org.irmacard.api.common.util.GsonUtil;
 import org.irmacard.cardemu.credentialdetails.CredentialDetailActivity;
@@ -96,7 +97,7 @@ import java.util.LinkedHashMap;
 
 import javax.net.ssl.SSLSocketFactory;
 
-public class MainActivity extends Activity {
+public class MainActivity extends Activity implements EnterPINDialogFragment.PINDialogListener {
 	private static final String TAG = "CardEmuMainActivity";
 	private static final String SETTINGS = "cardemu";
 	public static final int PERMISSION_REQUEST_CAMERA = 1;
@@ -699,6 +700,18 @@ public class MainActivity extends Activity {
 				.show();
 	}
 
+	// FIXME: Dirty hack since I don't want to rewrite PinDialog for now to send notifications elsewhere
+	@Override
+	public void onPINEntry(String pin) {
+		Log.i(TAG, "User entered PIN!");
+		irmaClientHandler.onPinEntered(pin);
+	}
+
+	@Override
+	public void onPINCancel() {
+		Log.i(TAG, "Pin verification cancelled!");
+		irmaClientHandler.onPinCancelled();
+	}
 
 	// Classes handling (integration with) other components of the app
 

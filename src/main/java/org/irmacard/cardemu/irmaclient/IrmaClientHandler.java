@@ -2,11 +2,13 @@ package org.irmacard.cardemu.irmaclient;
 
 import android.app.Activity;
 import android.app.AlertDialog;
+import android.app.DialogFragment;
 import android.content.DialogInterface;
 import android.content.Intent;
 import android.text.Html;
 import android.view.View;
 
+import org.irmacard.cardemu.pindialog.EnterPINDialogFragment;
 import org.irmacard.api.common.AttributeDisjunction;
 import org.irmacard.api.common.AttributeDisjunctionList;
 import org.irmacard.api.common.DisclosureProofRequest;
@@ -32,7 +34,9 @@ import java.util.List;
  * {@link #askForVerificationPermission(DisclosureProofRequest, String)} and
  * {@link #askForIssuancePermission(IssuingRequest, String)}.
  */
-public abstract class IrmaClientHandler {
+public abstract class IrmaClientHandler implements SessionDialogFragment.SessionDialogListener {
+	protected final String TAG = "ProtocolHandler";
+
 	private Activity activity;
 	private IrmaClient irmaClient;
 
@@ -149,5 +153,18 @@ public abstract class IrmaClientHandler {
 
 	public Activity getActivity() {
 		return activity;
+	}
+
+	public void verifyPin(int tries) {
+		DialogFragment newFragment = EnterPINDialogFragment.getInstance(tries);
+		newFragment.show(activity.getFragmentManager(), "pin-entry");
+	}
+
+	public void onPinEntered(String pin) {
+		irmaClient.onPinEntered(pin);
+	}
+
+	public void onPinCancelled() {
+		irmaClient.onPinCancelled();
 	}
 }

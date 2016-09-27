@@ -112,5 +112,8 @@ public abstract class IrmaClient {
 		// We have a valid URL: let's go!
 		new JsonIrmaClient(url, handler, protocolVersion);
 	}
+
+	public abstract void onPinEntered(String pin);
+	public abstract void onPinCancelled();
 }
 
