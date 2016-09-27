@@ -185,6 +185,7 @@
     <string name="linked_to_cloud">Linked to cloud server</string>
     <string name="not_linked_to_cloud">Not linked to cloud server</string>
     <string name="unlink_cloud_question">Unlinking from the cloud server will also delete all credentials. Proceed?</string>
+    <string name="link_cloud_question">Linking to this cloud server will also delete all credentials. Proceed?</string>
     <plurals name="error_tries_left">
         <item quantity="one">Pin Incorrect! You have one try left.</item>
         <item quantity="other">Pin Incorrect! You have %d tries left.</item>

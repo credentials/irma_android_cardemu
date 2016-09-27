@@ -63,7 +63,6 @@ import android.widget.TextView;
 import com.google.zxing.integration.android.IntentIntegrator;
 import com.google.zxing.integration.android.IntentResult;
 
-import org.irmacard.cardemu.pindialog.EnterPINDialogFragment;
 import org.irmacard.api.common.exceptions.ApiErrorMessage;
 import org.irmacard.api.common.util.GsonUtil;
 import org.irmacard.cardemu.credentialdetails.CredentialDetailActivity;
@@ -558,7 +557,7 @@ public class MainActivity extends Activity {
 			// FIXME: this is a bit of a hack, can we do more consistent branching?
 			if(contents.contains("cloud_enroll")) {
 				Log.i(TAG, "Running cloud enroll from qr code!");
-				cloudEnroll(contents);
+				askCloudEnrollPermission(contents);
 			} else {
 				launchedFromBrowser = false;
 				onlineEnrolling = false;
@@ -567,19 +566,39 @@ public class MainActivity extends Activity {
 		}
 	}
 
-	private void cloudEnroll(String contents) {
-		Log.i(TAG, "Gotten qr code for cloud enroll: " +contents);
-		CloudQR qr = GsonUtil.getGson().fromJson(contents, CloudQR.class);
+	/**
+	 * If we currently have any credentials, ask the user if she is OK with losing them,
+	 * as cloud enrolling would invalidate them. If she consents or if there are no credentials,
+	 * this also deletes the credentials and does the enrolling.
+	 */
+	private void askCloudEnrollPermission(final String qrcontents) {
+		if (CredentialManager.isEmpty()) {
+			cloudEnroll(qrcontents);
+		} else {
+			new AlertDialog.Builder(this)
+					.setTitle(R.string.confirm_delete_all_title)
+					.setMessage(R.string.link_cloud_question)
+					.setNegativeButton(android.R.string.cancel, null)
+					.setPositiveButton(android.R.string.ok, new DialogInterface.OnClickListener() {
+						@Override public void onClick(DialogInterface dialog, int which) {
+							CredentialManager.deleteAll();
+							cloudEnroll(qrcontents);
+							updateCredentialList();
+						}
+					})
+					.show();
+		}
+	}
+
+	private void cloudEnroll(String qrcontents) {
+		Log.i(TAG, "Gotten qr code for cloud enroll: " + qrcontents);
+		CloudQR qr = GsonUtil.getGson().fromJson(qrcontents, CloudQR.class);
 		Log.i(TAG, "Parsed: " + qr.getUsername() + " " + qr.getUrl());
 
-		// TODO: why also store this in CredentialManager when we have global settings?
 		CredentialManager.setDistributed(true);
 		CredentialManager.setCloudServer(qr.getUrl());
 		CredentialManager.setCloudUsername(qr.getUsername());
 		CredentialManager.save();
-
-		// TODO: throw away existing credentials to not confuse user,
-		// after asking for permission of course.
 
 		JsonHttpClient client = new JsonHttpClient(GsonUtil.getGson());
 

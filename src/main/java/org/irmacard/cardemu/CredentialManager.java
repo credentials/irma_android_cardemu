@@ -675,4 +675,8 @@ public class CredentialManager {
 		deleteAll();
 		save();
 	}
+
+	public static boolean isEmpty() {
+		return credentials.isEmpty();
+	}
 }
