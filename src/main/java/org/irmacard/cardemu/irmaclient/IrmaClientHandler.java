@@ -6,6 +6,7 @@ import android.app.DialogFragment;
 import android.content.DialogInterface;
 import android.content.Intent;
 import android.text.Html;
+import android.util.Log;
 import android.view.View;
 
 import org.irmacard.cardemu.pindialog.EnterPINDialogFragment;
@@ -156,15 +157,7 @@ public abstract class IrmaClientHandler {
 	}
 
 	public void verifyPin(int tries) {
-		DialogFragment newFragment = EnterPINDialogFragment.getInstance(tries);
+		DialogFragment newFragment = EnterPINDialogFragment.getInstance(tries, irmaClient);
 		newFragment.show(activity.getFragmentManager(), "pin-entry");
-	}
-
-	public void onPinEntered(String pin) {
-		irmaClient.onPinEntered(pin);
-	}
-
-	public void onPinCancelled() {
-		irmaClient.onPinCancelled();
 	}
 }

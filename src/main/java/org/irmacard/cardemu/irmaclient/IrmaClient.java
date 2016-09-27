@@ -9,11 +9,12 @@ import org.irmacard.api.common.IssuingRequest;
 import org.irmacard.api.common.exceptions.ApiErrorMessage;
 import org.irmacard.api.common.util.GsonUtil;
 import org.irmacard.cardemu.DisclosureChoice;
+import org.irmacard.cardemu.pindialog.EnterPINDialogFragment;
 
 import java.util.Arrays;
 import java.util.List;
 
-public abstract class IrmaClient {
+public abstract class IrmaClient implements EnterPINDialogFragment.PINDialogListener {
 	/** Specifies the current state of the instance. */
 	public enum Status {
 		CONNECTED, COMMUNICATING, DONE
@@ -112,8 +113,5 @@ public abstract class IrmaClient {
 		// We have a valid URL: let's go!
 		new JsonIrmaClient(url, handler, protocolVersion);
 	}
-
-	public abstract void onPinEntered(String pin);
-	public abstract void onPinCancelled();
 }
 

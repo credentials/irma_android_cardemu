@@ -30,7 +30,6 @@
 
 package org.irmacard.cardemu.pindialog;
 
-import android.app.Activity;
 import android.app.AlertDialog;
 import android.app.Dialog;
 import android.app.DialogFragment;
@@ -51,16 +50,17 @@ public class EnterPINDialogFragment extends DialogFragment {
 	private static final String EXTRA_TRIES = "irma_library.EnterPINDialogFragment.tries";
 	
 	public interface PINDialogListener {
-		public void onPINEntry(String pincode);
-        public void onPINCancel();
+        public void onPinEntered(String pincode);
+        public void onPinCancelled();
 	}
 
     PINDialogListener mListener;
     int tries;
 	private AlertDialog dialog;
 
-	public static EnterPINDialogFragment getInstance(int tries) {
+	public static EnterPINDialogFragment getInstance(int tries, PINDialogListener listener) {
         EnterPINDialogFragment f = new EnterPINDialogFragment();
+        f.mListener = listener;
 
         Bundle args = new Bundle();
         args.putInt(EXTRA_TRIES, tries);
@@ -84,7 +84,7 @@ public class EnterPINDialogFragment extends DialogFragment {
     private void okOnDialog(View dialogView) {
         EditText et = (EditText)dialogView.findViewById(R.id.pincode);
         String pincodeText = et.getText().toString();
-        mListener.onPINEntry(pincodeText);
+        mListener.onPinEntered(pincodeText);
     }
 
     private void dismissDialog() {
@@ -106,7 +106,7 @@ public class EnterPINDialogFragment extends DialogFragment {
 	           })
 	           .setNegativeButton("Cancel", new DialogInterface.OnClickListener() {
 	               public void onClick(DialogInterface dialog, int id) {
-	            	   mListener.onPINCancel();
+	            	   mListener.onPinCancelled();
 	               }
 	           });
         // Create the AlertDialog object and return it
@@ -140,20 +140,5 @@ public class EnterPINDialogFragment extends DialogFragment {
         pin_field.requestFocus();
 
         return dialog;
-    }
-    
-    // Override the Fragment.onAttach() method to instantiate the PINDialogListener
-    @Override
-    public void onAttach(Activity activity) {
-        super.onAttach(activity);
-        // Verify that the host activity implements the callback interface
-        try {
-            // Instantiate the PINDialogListener so we can send events to the host
-            mListener = (PINDialogListener) activity;
-        } catch (ClassCastException e) {
-            // The activity doesn't implement the interface, throw exception
-            throw new ClassCastException(activity.toString()
-                    + " must implement PINDialogListener");
-        }
     }
 }

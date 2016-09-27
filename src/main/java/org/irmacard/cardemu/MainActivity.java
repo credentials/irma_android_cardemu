@@ -97,7 +97,7 @@ import java.util.LinkedHashMap;
 
 import javax.net.ssl.SSLSocketFactory;
 
-public class MainActivity extends Activity implements EnterPINDialogFragment.PINDialogListener {
+public class MainActivity extends Activity {
 	private static final String TAG = "CardEmuMainActivity";
 	private static final String SETTINGS = "cardemu";
 	public static final int PERMISSION_REQUEST_CAMERA = 1;
@@ -698,19 +698,6 @@ public class MainActivity extends Activity implements EnterPINDialogFragment.PIN
 				})
 				.setNegativeButton(android.R.string.cancel, null)
 				.show();
-	}
-
-	// FIXME: Dirty hack since I don't want to rewrite PinDialog for now to send notifications elsewhere
-	@Override
-	public void onPINEntry(String pin) {
-		Log.i(TAG, "User entered PIN!");
-		irmaClientHandler.onPinEntered(pin);
-	}
-
-	@Override
-	public void onPINCancel() {
-		Log.i(TAG, "Pin verification cancelled!");
-		irmaClientHandler.onPinCancelled();
 	}
 
 	// Classes handling (integration with) other components of the app
