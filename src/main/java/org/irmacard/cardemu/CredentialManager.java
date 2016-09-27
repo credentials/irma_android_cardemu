@@ -84,6 +84,15 @@ public class CredentialManager {
 	public static final String CREDENTIAL_STORAGE = "credentials";
 	private static final String LOG_STORAGE = "logs";
 
+	// TODO: not sure if this is a nice place, but at least this I can reach
+	private static final String CLOUD_USERNAME = "CloudUsername";
+	private static final String CLOUD_SERVER = "CloudServer";
+	private static final String CLOUD_TOKEN = "CloudToken";
+
+	private static String cloudUsername;
+	private static String cloudServer;
+	private static String cloudToken;
+
 	// Issuing state
 	private static List<CredentialBuilder> credentialBuilders;
 
@@ -109,6 +118,9 @@ public class CredentialManager {
 		settings.edit()
 				.putString(CREDENTIAL_STORAGE, credentialsJson)
 				.putString(LOG_STORAGE, logsJson)
+				.putString(CLOUD_USERNAME, cloudUsername)
+				.putString(CLOUD_SERVER, cloudServer)
+				.putString(CLOUD_TOKEN, cloudToken)
 				.apply();
 	}
 
@@ -121,6 +133,10 @@ public class CredentialManager {
 		Gson gson = GsonUtil.getGson();
 		String credentialsJson = settings.getString(CREDENTIAL_STORAGE, "");
 		String logsJson = settings.getString(LOG_STORAGE, "");
+
+		cloudUsername = settings.getString(CLOUD_USERNAME, "");
+		cloudServer = settings.getString(CLOUD_SERVER, "");
+		cloudToken = settings.getString(CLOUD_TOKEN, "");
 
 		if (!credentialsJson.equals("")) {
 			try {
@@ -561,5 +577,31 @@ public class CredentialManager {
 		}
 
 		return list;
+	}
+
+	public static void setCloudUsername(String username) {
+		cloudUsername = username;
+	}
+
+	public static String getCloudUsername() {
+		return cloudUsername;
+	}
+
+	public static void setCloudServer(String server) {
+		Log.i(TAG, "Setting cloud server to :" + server);
+		cloudServer = server;
+	}
+
+	public static String getCloudServer() {
+		Log.i(TAG, "Returning server:" + cloudServer);
+		return cloudServer;
+	}
+
+	public static void setCloudToken(String token) {
+		cloudToken = token;
+	}
+
+	public static String getCloudToken() {
+		return cloudToken;
 	}
 }
