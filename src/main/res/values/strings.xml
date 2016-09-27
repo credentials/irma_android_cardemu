@@ -180,4 +180,10 @@
     <string name="server_rejected_proof">Server rejected proof: %s</string>
     <string name="overwrite_credentials_title">Overwrite credentials?</string>
     <string name="overwrite_credentials_question"><![CDATA[You already have instances of the following credentials: <br/><br/> %s <br/> You can have at most one of these credentials. Continuing will overwrite the ones you already have. <br/><br/> Proceed?]]></string>
+    <string name="pinhint">PIN</string>
+    <string name="pinmessage">Please enter your IRMA pincode</string>
+    <plurals name="error_tries_left">
+        <item quantity="one">Pin Incorrect! You have one try left.</item>
+        <item quantity="other">Pin Incorrect! You have %d tries left.</item>
+    </plurals>
 </resources>
