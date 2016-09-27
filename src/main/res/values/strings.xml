@@ -135,7 +135,7 @@
     <string name="disclosure_failed">Disclosure failed</string>
     <string name="issuing_failed">Issuing failed</string>
     <string name="failed">Failed</string>
-    <string name="confirm_delete_all_title">Deleting all credentials</string>
+    <string name="confirm_delete_all_title">Delete all credentials?</string>
     <string name="confirm_delete_all_question">Are you sure you want to delete ALL credentials?</string>
     <string name="downloading_credential_info_failed">Downloading credential info failed</string>
     <string name="scan_qr">Scan the QR image.</string>
@@ -182,6 +182,9 @@
     <string name="overwrite_credentials_question"><![CDATA[You already have instances of the following credentials: <br/><br/> %s <br/> You can have at most one of these credentials. Continuing will overwrite the ones you already have. <br/><br/> Proceed?]]></string>
     <string name="pinhint">PIN</string>
     <string name="pinmessage">Please enter your IRMA pincode</string>
+    <string name="linked_to_cloud">Linked to cloud server</string>
+    <string name="not_linked_to_cloud">Not linked to cloud server</string>
+    <string name="unlink_cloud_question">Unlinking from the cloud server will also delete all credentials. Proceed?</string>
     <plurals name="error_tries_left">
         <item quantity="one">Pin Incorrect! You have one try left.</item>
         <item quantity="other">Pin Incorrect! You have %d tries left.</item>

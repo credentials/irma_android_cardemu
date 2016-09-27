@@ -665,4 +665,14 @@ public class CredentialManager {
 	public static BigInteger getNonce2() {
 		return nonce2;
 	}
+
+	public static void unlinkFromCloud() {
+		isDistributed = false;
+		cloudServer = "";
+		cloudToken = "";
+		cloudUsername = "";
+
+		deleteAll();
+		save();
+	}
 }

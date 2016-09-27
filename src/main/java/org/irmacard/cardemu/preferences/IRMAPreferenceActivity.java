@@ -37,7 +37,8 @@ public class IRMAPreferenceActivity extends PreferenceActivity {
 	@Override
 	protected boolean isValidFragment(String fragmentName) {
 		return SchemeManagersPreferenceFragment.class.getName().equals(fragmentName)
-				|| ScreenshotPreferenceFragment.class.getName().equals(fragmentName);
+				|| ScreenshotPreferenceFragment.class.getName().equals(fragmentName)
+				|| CloudPreferenceFragment.class.getName().equals(fragmentName);
 	}
 
 	// Called by SchemeManagersPreferenceFragment.onCreate() so that we can tell it to
