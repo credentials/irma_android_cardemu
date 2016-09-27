@@ -37,7 +37,6 @@ import android.widget.ProgressBar;
 import android.widget.TextView;
 import net.sf.scuba.smartcards.CardService;
 import net.sf.scuba.smartcards.CardServiceException;
-import net.sf.scuba.tlv.TLVInputStream;
 import org.acra.ACRA;
 import org.irmacard.cardemu.MetricsReporter;
 import org.irmacard.cardemu.R;
@@ -52,12 +51,6 @@ import org.jmrtd.lds.icao.DG15File;
 import org.jmrtd.lds.icao.DG1File;
 
 import java.io.IOException;
-import java.security.GeneralSecurityException;
-import java.security.InvalidAlgorithmParameterException;
-import java.security.KeyFactory;
-import java.security.PublicKey;
-import java.security.spec.InvalidKeySpecException;
-import java.security.spec.X509EncodedKeySpec;
 import java.text.SimpleDateFormat;
 import java.util.Date;
 import java.util.Locale;
@@ -226,12 +219,7 @@ public class PassportEnrollActivity extends AbstractNFCEnrollActivity {
 						}
 					}
 					if (pdm.getDg15File() == null) {
-						//pdm.setDg15File(new DG15File(passportService.getInputStream(PassportService.EF_DG15))); -- this is the statement that would work if JMRTD would use spongy castle
-						TLVInputStream tlvInputStream = new TLVInputStream(passportService.getInputStream(PassportService.EF_DG15));
-						tlvInputStream.readTag();
-						tlvInputStream.readLength();
-						byte[] value = tlvInputStream.readValue();
-						pdm.setDg15File(new DG15File(getPublicKey(value)));
+						pdm.setDg15File(new DG15File(passportService.getInputStream(PassportService.EF_DG15)));
 						Log.i(TAG, "PassportEnrollActivity: reading DG15");
 						publishProgress();
 					}
@@ -246,13 +234,8 @@ public class PassportEnrollActivity extends AbstractNFCEnrollActivity {
 					// JMRTD sometimes throws a nullpointer exception if the passport communcation goes wrong
 					// (I've seen it happening if the passport is removed from the device halfway through)
 					throw new IOException("NullPointerException during passport communication", e);
-				} catch (GeneralSecurityException e) {
-					//Most likely something went wrong with creating the Pub key instance
-					//Anyway, the reading of the passport failed.
-					throw new IOException(getString(R.string.read_passport_failed),e);
 				}
 			}
-
 
 			@Override
 			protected void onPostExecute(PassportDataMessage pdm) {
@@ -287,28 +270,9 @@ public class PassportEnrollActivity extends AbstractNFCEnrollActivity {
 					showErrorScreen(R.string.error_enroll_passporterror);
 				}
 			}
-		}.execute(ps, pdm);
+		}.execute(ps,pdm);
 	}
 
-	/*
-	 * Helper function from JMRTD, needed here so we are certain it gets used with SpongyCastle, because the ECC of BouncyCastle is horribly broken
-	 */
-	private static PublicKey getPublicKey(byte[] keyBytes) throws GeneralSecurityException {
-		X509EncodedKeySpec pubKeySpec = new X509EncodedKeySpec(keyBytes);
-
-		String[] algorithms = { "RSA", "EC" };
-
-		for (String algorithm: algorithms) {
-			try {
-				Log.d(TAG, "trying algorithm " + algorithm);
-				KeyFactory keyFactory = KeyFactory.getInstance(algorithm);
-				return keyFactory.generatePublic(pubKeySpec);
-			} catch (InvalidKeySpecException ikse) {
-				/* NOTE: Ignore, try next algorithm. */
-			}
-		}
-		throw new InvalidAlgorithmParameterException();
-	}
 	/**
 	 * Get the BAC key using the input from the user from the BAC screen.
 	 *
