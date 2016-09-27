@@ -34,7 +34,7 @@ import java.util.List;
  * {@link #askForVerificationPermission(DisclosureProofRequest, String)} and
  * {@link #askForIssuancePermission(IssuingRequest, String)}.
  */
-public abstract class IrmaClientHandler implements SessionDialogFragment.SessionDialogListener {
+public abstract class IrmaClientHandler {
 	protected final String TAG = "ProtocolHandler";
 
 	private Activity activity;
