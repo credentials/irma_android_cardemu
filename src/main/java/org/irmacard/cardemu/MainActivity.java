@@ -592,13 +592,8 @@ public class MainActivity extends Activity {
 
 	private void cloudEnroll(String qrcontents) {
 		Log.i(TAG, "Gotten qr code for cloud enroll: " + qrcontents);
-		CloudQR qr = GsonUtil.getGson().fromJson(qrcontents, CloudQR.class);
+		final CloudQR qr = GsonUtil.getGson().fromJson(qrcontents, CloudQR.class);
 		Log.i(TAG, "Parsed: " + qr.getUsername() + " " + qr.getUrl());
-
-		CredentialManager.setDistributed(true);
-		CredentialManager.setCloudServer(qr.getUrl());
-		CredentialManager.setCloudUsername(qr.getUsername());
-		CredentialManager.save();
 
 		JsonHttpClient client = new JsonHttpClient(GsonUtil.getGson());
 
@@ -608,10 +603,14 @@ public class MainActivity extends Activity {
 			public void onSuccess(UserMessage result) {
 				Log.i(TAG, "Enrollment call was successful, " + result);
 				if(result.isEnrolled()) {
-					setFeedback("IRMA App is now linked to the cloud server", "success");
+					CredentialManager.setDistributed(true);
+					CredentialManager.setCloudServer(qr.getUrl());
+					CredentialManager.setCloudUsername(qr.getUsername());
+					CredentialManager.save();
+					setFeedback("Linked to cloud server", "success");
 					Log.i(TAG, "Enrollment with cloud server successful!");
 				} else {
-					setFeedback("Linking to cloud server not succesfull", "warning");
+					setFeedback("Linking to cloud server failed", "warning");
 					Log.i(TAG, "Something went wrong with confirming enrolment");
 				}
 			}
