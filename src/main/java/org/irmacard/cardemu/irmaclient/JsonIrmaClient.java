@@ -61,11 +61,6 @@ public class JsonIrmaClient extends IrmaClient implements EnterPINDialogFragment
 	private ProofListBuilder builder;
 	private BigInteger challenge;
 
-	// Constants to indicate whether we are issuing or verifying
-	private static int mode;
-	private static final int MODE_ISSUE = 0;
-	private static final int MODE_VERIFY = 1;
-
 	public JsonIrmaClient(String server, IrmaClientHandler handler, String protocolVersion) {
 		super(handler);
 		this.protocolVersion = protocolVersion;
@@ -86,6 +81,8 @@ public class JsonIrmaClient extends IrmaClient implements EnterPINDialogFragment
 			startIssuance();
 		}
 	}
+
+	// Failure reporting methods -------------------------------------------------------------------
 
 	/**
 	 * Report the specified error message (if present) or the exception (if not) to the handler
@@ -130,6 +127,8 @@ public class JsonIrmaClient extends IrmaClient implements EnterPINDialogFragment
 	private void fail(int feedbackId, boolean deleteSession) {
 		failSession(resources.getString(feedbackId), deleteSession, null, null);
 	}
+
+	// Issuance methods ----------------------------------------------------------------------------
 
 	/**
 	 * Retrieve an {@link IssuingRequest} from the server
@@ -184,8 +183,7 @@ public class JsonIrmaClient extends IrmaClient implements EnterPINDialogFragment
 				e.printStackTrace();
 				return;
 			}
-			mode = MODE_ISSUE;
-			obtainValidAuthorizationToken();
+			startCloudProtocol();
 
 		} else {
 			IssueCommitmentMessage msg;
@@ -222,154 +220,7 @@ public class JsonIrmaClient extends IrmaClient implements EnterPINDialogFragment
 		});
 	}
 
-	private void obtainCloudProofP(ProofPCommitmentMap plistcom, final int mode) {
-		ProofListBuilder.Commitment com = builder.calculateCommitments();
-		com.mergeProofPCommitments(plistcom);
-		challenge = com.calculateChallenge(builder.getContext(), builder.getNonce());
-
-		if(mode == MODE_ISSUE) {
-			CredentialManager.addPublicSKs(plistcom);
-		}
-
-		final JsonHttpClient client = new JsonHttpClient(GsonUtil.getGson());
-		client.setExtraHeader(IRMAHeaders.USERNAME, CredentialManager.getCloudUsername());
-		client.setExtraHeader(IRMAHeaders.AUTHORIZATION, CredentialManager.getCloudToken());
-
-		Log.i(TAG, "Posting challenge to the cloud server now!");
-		client.post(ProofP.class, CredentialManager.getCloudServer() + "/prove/getResponse", challenge, new JsonResultHandler<ProofP>() {
-			@Override public void onSuccess(ProofP result) {
-				Log.i(TAG, "Unbelievable, also received a ProofP from the server");
-				JsonIrmaClient.this.finishDistributedProtocol(result, mode);
-			}
-		});
-	}
-
-	private void finishDistributedProtocol(ProofP proofp, int mode) {
-		ProofList list = builder.createProofList(challenge, proofp);
-
-		if(mode == MODE_VERIFY) {
-			sendDisclosureProofs(list);
-		} else {
-			IssueCommitmentMessage msg = new IssueCommitmentMessage(list, CredentialManager.getNonce2());
-			sendIssueCommitmentMessage(msg);
-		}
-	}
-
-	private void obtainValidAuthorizationToken() {
-		obtainValidAuthorizationToken(-1);
-	}
-
-	private void obtainValidAuthorizationToken(final int tries) {
-		JsonHttpClient client = new JsonHttpClient(GsonUtil.getGson());
-
-		client.setExtraHeader(IRMAHeaders.USERNAME, CredentialManager.getCloudUsername());
-		client.setExtraHeader(IRMAHeaders.AUTHORIZATION, CredentialManager.getCloudToken());
-
-		String url = CredentialManager.getCloudServer() + "/users/isAuthorized";
-		client.post(AuthorizationResult.class, url, "", new HttpResultHandler<AuthorizationResult>() {
-			@Override
-			public void onSuccess(AuthorizationResult result) {
-				Log.i(TAG, "Successfully retrieved authorization result, " + result);
-				if(result.getStatus().equals(AuthorizationResult.STATUS_AUTHORIZED)) {
-					Log.i(TAG, "Token is still valid! Continuing!");
-					continueProtocolWithAuthorization();
-				} else if(result.getStatus().equals(AuthorizationResult.STATUS_EXPIRED)) {
-					Log.i(TAG, "Token has expired, should get proper auth!");
-					handler.verifyPin(tries, JsonIrmaClient.this);
-				} else {
-					Log.i(TAG, "Authorization is blocked!!!");
-					fail("Cloud authorization blocked", true);
-				}
-			}
-
-			@Override
-			public void onError(HttpClientException exception) {
-				// TODO: handle properly
-				fail("Failed to test authorization status", true);
-				if(exception != null)
-					exception.printStackTrace();
-				Log.e(TAG, "Pin verification returned error");
-			}
-		});
-	}
-
-	@Override
-	public void onPinEntered(String pin) {
-		verifyPinAtCloud(pin);
-	}
-
-	@Override
-	public void onPinCancelled() {
-		fail("Pin entry cancelled", true);
-	}
-
-	private void verifyPinAtCloud(String pin) {
-		JsonHttpClient client = new JsonHttpClient(GsonUtil.getGson());
-		client.setExtraHeader(IRMAHeaders.USERNAME, CredentialManager.getCloudUsername());
-		client.setExtraHeader(IRMAHeaders.AUTHORIZATION, CredentialManager.getCloudToken());
-
-		PinTokenMessage msg = new PinTokenMessage(CredentialManager.getCloudUsername(), pin);
-
-		String url = CredentialManager.getCloudServer() + "/users/verify/pin";
-		client.post(CloudResult.class, url, msg, new HttpResultHandler<CloudResult>() {
-			@Override
-			public void onSuccess(CloudResult result) {
-				Log.i(TAG, "PIN Verification call was successful, " + result);
-				if(result.getStatus().equals(CloudResult.STATUS_SUCCESS)) {
-					Log.i(TAG, "Verification with PIN verified, yay!");
-					CredentialManager.setCloudToken(result.getMessage());
-					continueProtocolWithAuthorization();
-				} else {
-					Log.i(TAG, "Something went wrong verifying the pin");
-					String msg = result.getMessage();
-					if(msg != null) {
-						int remainingTries = Integer.valueOf(msg);
-						if (remainingTries > 0)
-							obtainValidAuthorizationToken(Integer.valueOf(msg));
-						else {
-							Log.i(TAG, "Authorization is blocked!!!");
-							fail("Cloud authorization blocked", true);
-						}
-					}
-				}
-			}
-
-			@Override
-			public void onError(HttpClientException exception) {
-				// TODO: handle properly
-				// setFeedback("Failed to verify PIN with Cloud Server", "error");
-				if(exception != null)
-					exception.printStackTrace();
-				Log.e(TAG, "Pin verification failed");
-			}
-		});
-	}
-
-	private void continueProtocolWithAuthorization() {
-		builder.generateRandomizers();
-		List<PublicKeyIdentifier> pkids = builder.getPublicKeyIdentifiers();
-		Log.i(TAG, "Trying to obtain commitments from cloud server now!");
-		obtainCloudProofPCommitments(pkids, mode);
-	}
-
-	private void obtainCloudProofPCommitments(final List<PublicKeyIdentifier> pkids, final int mode) {
-		final JsonHttpClient client = new JsonHttpClient(GsonUtil.getGson());
-		client.setExtraHeader(IRMAHeaders.USERNAME, CredentialManager.getCloudUsername());
-		client.setExtraHeader(IRMAHeaders.AUTHORIZATION, CredentialManager.getCloudToken());
-
-		Log.i(TAG, "Posting to the cloud server now!");
-		client.post(ProofPCommitmentMap.class, CredentialManager.getCloudServer() + "/prove/getCommitments", pkids, new JsonResultHandler<ProofPCommitmentMap>() {
-			@Override public void onSuccess(ProofPCommitmentMap result) {
-				Log.i(TAG, "Unbelievable, it actually worked:");
-				for(PublicKeyIdentifier pkid : pkids) {
-					Log.i(TAG, "Key " + pkid + ", response " + result.get(pkid));
-				}
-				Log.i(TAG, "Calling next function in this protocol class:" + JsonIrmaClient.this);
-
-				obtainCloudProofP(result, mode);
-			}
-		});
-	}
+	// Disclosure methods --------------------------------------------------------------------------
 
 	/**
 	 * Retrieve a {@link DisclosureProofRequest} from the server, see if we can satisfy it, and if so,
@@ -402,10 +253,59 @@ public class JsonIrmaClient extends IrmaClient implements EnterPINDialogFragment
 		}
 	}
 
+	/**
+	 * Given a {@link DisclosureProofRequest} with selected attributes, perform the disclosure.
+	 */
+	@Override
+	public void disclose(final DisclosureProofRequest request, DisclosureChoice disclosureChoice) {
+		handler.onStatusUpdate(Action.DISCLOSING, Status.COMMUNICATING);
+		Log.i(TAG, "Sending disclosure proofs to " + server);
+
+		if(CredentialManager.isDistributed()) {
+			try {
+				this.builder = CredentialManager.generateProofListBuilderForVerification(disclosureChoice);
+			} catch (CredentialsException e) {
+				// TODO!!
+				e.printStackTrace();
+				return;
+			}
+			startCloudProtocol();
+		} else {
+			ProofList proofs;
+			try {
+				proofs = CredentialManager.getProofs(disclosureChoice);
+			} catch (CredentialsException e) {
+				e.printStackTrace();
+				// cancelSession(); TODO why was this removed?
+				fail(e, true);
+				return;
+			}
+			sendDisclosureProofs(proofs);
+		}
+	}
+
+	private void sendDisclosureProofs(ProofList proofs) {
+		JsonHttpClient client = new JsonHttpClient(GsonUtil.getGson());
+		client.post(DisclosureProofResult.Status.class, server + "proofs", proofs,
+				new JsonResultHandler<DisclosureProofResult.Status>() {
+					@Override public void onSuccess(DisclosureProofResult.Status result) {
+						if (result == DisclosureProofResult.Status.VALID) {
+							handler.onSuccess(Action.DISCLOSING);
+						} else { // We successfully computed a proof but server rejects it? That's fishy, report it
+							String feedback = resources.getString(R.string.server_rejected_proof, result.name().toLowerCase());
+							ACRA.getErrorReporter().handleException(new Exception(feedback));
+							fail(feedback, false);
+						}
+					}
+				});
+	}
+
+	// Methods used in both the issuing and disclosure protocols -----------------------------------
+
 	// These templates are getting a little crazy, could also create separate functions for
 	// issuing and disclosing
 	private <T extends ClientRequest<S>, S extends SessionRequest> void continueSession(
-		JwtSessionRequest sessionRequest, Class<T> clazz, final Action action) {
+			JwtSessionRequest sessionRequest, Class<T> clazz, final Action action) {
 		try {
 			JwtParser<T> jwtParser = new JwtParser<>(clazz, true, maxJwtAge);
 			jwtParser.parseJwt(sessionRequest.getJwt());
@@ -424,7 +324,7 @@ public class JsonIrmaClient extends IrmaClient implements EnterPINDialogFragment
 	}
 
 	private <T extends SessionRequest> void continueSession(final T request, final Action action,
-	                                                        final String requesterName) {
+															final String requesterName) {
 		if (request.isEmpty() || request.getNonce() == null || request.getContext() == null) {
 			fail(R.string.malformed_disclosure_request, true);
 			return;
@@ -441,54 +341,6 @@ public class JsonIrmaClient extends IrmaClient implements EnterPINDialogFragment
 					fail(R.string.unknown_scheme_manager, true);
 				if (e instanceof IOException)
 					fail(R.string.downloading_info_failed, true);
-			}
-		});
-	}
-
-	/**
-	 * Given a {@link DisclosureProofRequest} with selected attributes, perform the disclosure.
-	 */
-	@Override
-	public void disclose(final DisclosureProofRequest request, DisclosureChoice disclosureChoice) {
-		handler.onStatusUpdate(Action.DISCLOSING, Status.COMMUNICATING);
-		Log.i(TAG, "Sending disclosure proofs to " + server);
-
-		if(CredentialManager.isDistributed()) {
-			try {
-				this.builder = CredentialManager.generateProofListBuilderForVerification(disclosureChoice);
-			} catch (CredentialsException e) {
-				// TODO!!
-				e.printStackTrace();
-				return;
-			}
-			mode = MODE_VERIFY;
-			obtainValidAuthorizationToken();
-		} else {
-			ProofList proofs;
-			try {
-				proofs = CredentialManager.getProofs(disclosureChoice);
-			} catch (CredentialsException e) {
-				e.printStackTrace();
-				// cancelSession(); TODO why was this removed?
-				fail(e, true);
-				return;
-			}
-			sendDisclosureProofs(proofs);
-		}
-	}
-
-	private void sendDisclosureProofs(ProofList proofs) {
-		JsonHttpClient client = new JsonHttpClient(GsonUtil.getGson());
-		client.post(DisclosureProofResult.Status.class, server + "proofs", proofs,
-			new JsonResultHandler<DisclosureProofResult.Status>() {
-			@Override public void onSuccess(DisclosureProofResult.Status result) {
-				if (result == DisclosureProofResult.Status.VALID) {
-					handler.onSuccess(Action.DISCLOSING);
-				} else { // We successfully computed a proof but server rejects it? That's fishy, report it
-					String feedback = resources.getString(R.string.server_rejected_proof, result.name().toLowerCase());
-					ACRA.getErrorReporter().handleException(new Exception(feedback));
-					fail(feedback, false);
-				}
 			}
 		});
 	}
@@ -512,6 +364,200 @@ public class JsonIrmaClient extends IrmaClient implements EnterPINDialogFragment
 		}.execute(server);
 
 		server = null;
+	}
+
+	// Cloud methods -------------------------------------------------------------------------------
+
+	/**
+	 * Starts the cloud-part of the issuing or disclosure protocol.
+	 * Ask the user for her PIN if necessary (i.e., if our cloud JWT is absent or expired). We allow
+	 * the user as much attempts as the cloud server allows. The entered pin is checked using
+	 * {@link #verifyPinAtCloud(String)}. After this (if successful) we use the valid JWT to get the
+	 *  cloud's {@link ProofP} through {@link #continueProtocolWithAuthorization()}.
+	 */
+	private void startCloudProtocol() {
+		obtainValidAuthorizationToken(-1);
+	}
+
+	/**
+	 * Same as {@link #startCloudProtocol()}, but allowing the user the specified amount
+	 * of tries.
+	 */
+	private void obtainValidAuthorizationToken(final int tries) {
+		JsonHttpClient client = new JsonHttpClient(GsonUtil.getGson());
+
+		client.setExtraHeader(IRMAHeaders.USERNAME, CredentialManager.getCloudUsername());
+		client.setExtraHeader(IRMAHeaders.AUTHORIZATION, CredentialManager.getCloudToken());
+
+		String url = CredentialManager.getCloudServer() + "/users/isAuthorized";
+		client.post(AuthorizationResult.class, url, "", new HttpResultHandler<AuthorizationResult>() {
+			@Override
+			public void onSuccess(AuthorizationResult result) {
+				Log.i(TAG, "Successfully retrieved authorization result, " + result);
+				if(result.getStatus().equals(AuthorizationResult.STATUS_AUTHORIZED)) {
+					Log.i(TAG, "Token is still valid! Continuing!");
+					continueProtocolWithAuthorization();
+				} else if(result.getStatus().equals(AuthorizationResult.STATUS_EXPIRED)) {
+					Log.i(TAG, "Token has expired, should get proper auth!");
+					// Let the handler ask the user for the pin; afterwards it will call onPinEntered() or
+					/// onPinCancelled()
+					handler.verifyPin(tries, JsonIrmaClient.this);
+				} else {
+					Log.i(TAG, "Authorization is blocked!!!");
+					fail("Cloud authorization blocked", true);
+				}
+			}
+
+			@Override
+			public void onError(HttpClientException exception) {
+				// TODO: handle properly
+				fail("Failed to test authorization status", true);
+				if(exception != null)
+					exception.printStackTrace();
+				Log.e(TAG, "Pin verification returned error");
+			}
+		});
+	}
+
+	@Override
+	public void onPinEntered(String pin) {
+		verifyPinAtCloud(pin);
+	}
+
+	@Override
+	public void onPinCancelled() {
+		fail("Pin entry cancelled", true);
+	}
+
+	/**
+	 * Given a pin, ask the server if it is correct; if it is, store and use the returned cloud JWT
+	 * in {@link #continueProtocolWithAuthorization()}; if it is not, ask for the pin again using
+	 * {@link #obtainValidAuthorizationToken(int)} (which afterwards calls us again).
+	 */
+	private void verifyPinAtCloud(String pin) {
+		JsonHttpClient client = new JsonHttpClient(GsonUtil.getGson());
+		client.setExtraHeader(IRMAHeaders.USERNAME, CredentialManager.getCloudUsername());
+		client.setExtraHeader(IRMAHeaders.AUTHORIZATION, CredentialManager.getCloudToken());
+
+		PinTokenMessage msg = new PinTokenMessage(CredentialManager.getCloudUsername(), pin);
+
+		String url = CredentialManager.getCloudServer() + "/users/verify/pin";
+		client.post(CloudResult.class, url, msg, new HttpResultHandler<CloudResult>() {
+			@Override
+			public void onSuccess(CloudResult result) {
+				Log.i(TAG, "PIN Verification call was successful, " + result);
+				if(result.getStatus().equals(CloudResult.STATUS_SUCCESS)) {
+					Log.i(TAG, "Verification with PIN verified, yay!");
+					CredentialManager.setCloudToken(result.getMessage());
+					continueProtocolWithAuthorization();
+				} else {
+					Log.i(TAG, "Something went wrong verifying the pin");
+					String msg = result.getMessage();
+					if(msg != null) {
+						int remainingTries = Integer.valueOf(msg);
+						if (remainingTries > 0)
+							obtainValidAuthorizationToken(remainingTries);
+						else {
+							Log.i(TAG, "Authorization is blocked!!!");
+							fail("Cloud authorization blocked", true);
+						}
+					}
+				}
+			}
+
+			@Override
+			public void onError(HttpClientException exception) {
+				// TODO: handle properly
+				// setFeedback("Failed to verify PIN with Cloud Server", "error");
+				if(exception != null)
+					exception.printStackTrace();
+				Log.e(TAG, "Pin verification failed");
+			}
+		});
+	}
+
+	/**
+	 * Generate our randomizers for the proofs of knowledge of our part of the secret key, and (possibly)
+	 * hidden attributes; afterwards continue the protocol with
+	 * {@link #obtainCloudProofPCommitments(List)}.
+	 */
+	private void continueProtocolWithAuthorization() {
+		builder.generateRandomizers();
+		List<PublicKeyIdentifier> pkids = builder.getPublicKeyIdentifiers();
+		Log.i(TAG, "Trying to obtain commitments from cloud server now!");
+		obtainCloudProofPCommitments(pkids);
+	}
+
+	/**
+	 * Ask the cloud server for R_0^w mod n, with w being its randomness, and n the moduli
+	 * of each of the specified public keys; if successful, continue by calculating the challenge and
+	 * asking for the responses by {@link #obtainCloudProofP(ProofPCommitmentMap)}.
+	 * @param pkids List of public keys; for the n of each of these, we ask for R_0^w mod n
+	 */
+	private void obtainCloudProofPCommitments(final List<PublicKeyIdentifier> pkids) {
+		final JsonHttpClient client = new JsonHttpClient(GsonUtil.getGson());
+		client.setExtraHeader(IRMAHeaders.USERNAME, CredentialManager.getCloudUsername());
+		client.setExtraHeader(IRMAHeaders.AUTHORIZATION, CredentialManager.getCloudToken());
+
+		Log.i(TAG, "Posting to the cloud server now!");
+		client.post(ProofPCommitmentMap.class, CredentialManager.getCloudServer() + "/prove/getCommitments", pkids, new JsonResultHandler<ProofPCommitmentMap>() {
+			@Override public void onSuccess(ProofPCommitmentMap result) {
+				Log.i(TAG, "Unbelievable, it actually worked:");
+				for(PublicKeyIdentifier pkid : pkids) {
+					Log.i(TAG, "Key " + pkid + ", response " + result.get(pkid));
+				}
+				Log.i(TAG, "Calling next function in this protocol class:" + JsonIrmaClient.this);
+
+				obtainCloudProofP(result);
+			}
+		});
+	}
+
+	/**
+	 * Calculate the challenge c using our commitments and that of the cloud server, post that to the
+	 * cloud server, and ask for the response c * m + w (where m is the cloud's private key and w its
+	 * randomness used previously in its commitment). If successful, combine our responses with that
+	 * of the cloud server, and continue the protocol normally using
+	 * {@link #finishDistributedProtocol(ProofP)}.
+	 * @param plistcom List of commitments of the cloud for each public key
+	 */
+	private void obtainCloudProofP(ProofPCommitmentMap plistcom) {
+		ProofListBuilder.Commitment com = builder.calculateCommitments();
+		com.mergeProofPCommitments(plistcom);
+		challenge = com.calculateChallenge(builder.getContext(), builder.getNonce());
+
+		if (action == Action.ISSUING) {
+			CredentialManager.addPublicSKs(plistcom);
+		}
+
+		final JsonHttpClient client = new JsonHttpClient(GsonUtil.getGson());
+		client.setExtraHeader(IRMAHeaders.USERNAME, CredentialManager.getCloudUsername());
+		client.setExtraHeader(IRMAHeaders.AUTHORIZATION, CredentialManager.getCloudToken());
+
+		Log.i(TAG, "Posting challenge to the cloud server now!");
+		client.post(ProofP.class, CredentialManager.getCloudServer() + "/prove/getResponse", challenge, new JsonResultHandler<ProofP>() {
+			@Override public void onSuccess(ProofP result) {
+				Log.i(TAG, "Unbelievable, also received a ProofP from the server");
+				JsonIrmaClient.this.finishDistributedProtocol(result);
+			}
+		});
+	}
+
+	/**
+	 * Combine our proofs with that of the cloud server, and continue the protocol normally using
+	 * {@link #sendDisclosureProofs(ProofList)} or
+	 * {@link #sendIssueCommitmentMessage(IssueCommitmentMessage)}.
+	 * @param proofp The cloud's proof of its part of the secret key
+	 */
+	private void finishDistributedProtocol(ProofP proofp) {
+		ProofList list = builder.createProofList(challenge, proofp);
+
+		if(action == Action.DISCLOSING) {
+			sendDisclosureProofs(list);
+		} else {
+			IssueCommitmentMessage msg = new IssueCommitmentMessage(list, CredentialManager.getNonce2());
+			sendIssueCommitmentMessage(msg);
+		}
 	}
 
 	/**
