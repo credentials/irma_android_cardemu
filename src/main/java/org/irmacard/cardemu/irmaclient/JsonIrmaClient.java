@@ -185,7 +185,7 @@ public class JsonIrmaClient extends IrmaClient implements EnterPINDialogFragment
 				return;
 			}
 			mode = MODE_ISSUE;
-			obtainValidAuthorizationToken(-1);
+			obtainValidAuthorizationToken();
 
 		} else {
 			IssueCommitmentMessage msg;
@@ -255,6 +255,10 @@ public class JsonIrmaClient extends IrmaClient implements EnterPINDialogFragment
 		}
 	}
 
+	private void obtainValidAuthorizationToken() {
+		obtainValidAuthorizationToken(-1);
+	}
+
 	private void obtainValidAuthorizationToken(final int tries) {
 		JsonHttpClient client = new JsonHttpClient(GsonUtil.getGson());
 
@@ -319,7 +323,13 @@ public class JsonIrmaClient extends IrmaClient implements EnterPINDialogFragment
 					Log.i(TAG, "Something went wrong verifying the pin");
 					String msg = result.getMessage();
 					if(msg != null) {
-						obtainValidAuthorizationToken(Integer.valueOf(msg));
+						int remainingTries = Integer.valueOf(msg);
+						if (remainingTries > 0)
+							obtainValidAuthorizationToken(Integer.valueOf(msg));
+						else {
+							Log.i(TAG, "Authorization is blocked!!!");
+							fail("Cloud authorization blocked", true);
+						}
 					}
 				}
 			}
@@ -452,7 +462,7 @@ public class JsonIrmaClient extends IrmaClient implements EnterPINDialogFragment
 				return;
 			}
 			mode = MODE_VERIFY;
-			obtainValidAuthorizationToken(-1);
+			obtainValidAuthorizationToken();
 		} else {
 			ProofList proofs;
 			try {
