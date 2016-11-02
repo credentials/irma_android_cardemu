@@ -213,24 +213,6 @@ public class DriversLicenseEnrollActivity extends AbstractNFCEnrollActivity {
                 }
             }
 
-            protected byte[] readDg1File(InputStream inputStream) throws IOException {
-                int dataGroupTag = 0x61;
-                TLVInputStream tlvIn = inputStream instanceof TLVInputStream ? (TLVInputStream)inputStream : new TLVInputStream(inputStream);
-                int tag = tlvIn.readTag();
-                if (tag != dataGroupTag) {
-                    throw new IllegalArgumentException("Was expecting tag " + Integer.toHexString(dataGroupTag) + ", found " + Integer.toHexString(tag));
-                }
-                tlvIn.readLength();
-                byte[] value = tlvIn.readValue();
-
-                ByteArrayOutputStream bOut = new ByteArrayOutputStream();
-                TLVOutputStream tlvOut = new TLVOutputStream(bOut);
-                tlvOut.writeTag(tag);
-                tlvOut.writeValue(value);
-                return bOut.toByteArray();
-            }
-
-
             /**
              * Do the AA protocol with the passport using the passportService, and put the response in a new
              * PassportDataMessage. Also read some data groups.
@@ -242,7 +224,7 @@ public class DriversLicenseEnrollActivity extends AbstractNFCEnrollActivity {
                 try {
                     if (eDLMessage.getDg1File() == null) {
                         CardFileInputStream in = passportService.getInputStream((short) 0x0001);
-                        eDLMessage.setDg1File(readDg1File(in));
+                        eDLMessage.setDg1File(eDLMessage.readFile(in,0x61));
                         Log.i(TAG, "Reading DG1");
                         publishProgress();
                     } if (eDLMessage.getSodFile() == null) {
@@ -251,9 +233,9 @@ public class DriversLicenseEnrollActivity extends AbstractNFCEnrollActivity {
                         publishProgress();
                     } if (eDLMessage.getSodFile() != null) { // We need the SOD file to check if DG14 exists
                         if (eDLMessage.getSodFile().getDataGroupHashes().get(14) != null) { // Checks if DG14 exists
-                            if (eDLMessage.getDg14File() == null) {
-                                eDLMessage.setDg14File(new DG14File(passportService.getInputStream((short) 0x000e)));
-                                Log.i(TAG, "reading DG14");
+                            if (eDLMessage.getEaFile() == null) {
+                                eDLMessage.setEaFile(eDLMessage.readFile(passportService.getInputStream((short) 0x000e),0x6E));
+                                Log.i(TAG, "reading DG14/ EA File");
                                 publishProgress();
                             }
                         } else { // If DG14 does not exist, just advance the progress bar
@@ -261,9 +243,9 @@ public class DriversLicenseEnrollActivity extends AbstractNFCEnrollActivity {
                             publishProgress();
                         }
                     }
-                    if (eDLMessage.getDg13File() == null) {
-                        eDLMessage.setDg13File(new DG15File(passportService.getInputStream((short) 0x000d)));
-                        Log.i(TAG, "reading DG13");
+                    if (eDLMessage.getAaFile() == null) {
+                        eDLMessage.setAaFile(eDLMessage.readFile(passportService.getInputStream((short) 0x000d),0x6F));
+                        Log.i(TAG, "reading DG13/AA File");
                         publishProgress();
                     }
                     // The doAA() method does not use its first three arguments, it only passes the challenge
