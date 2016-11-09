@@ -104,7 +104,7 @@ dependencies {
     compile('org.irmacard.mno:irma_mno_common:0.3.0') {
         exclude group: 'org.apache.httpcomponents', module: 'httpclient'
     }
-    compile('org.irmacard.api:irma_api_common:0.5.1') {
+    compile('org.irmacard.api:irma_api_common:0.6.0') {
         exclude group: 'org.apache.httpcomponents', module: 'httpclient'
     }
 }
