@@ -1,7 +1,7 @@
 apply plugin: 'com.android.application'
 apply plugin: 'maven'
 
-version="3.2"
+version="3.3"
 group="org.irmacard"
 
 buildscript {
@@ -98,10 +98,10 @@ dependencies {
 
     // Our stuff
     compile 'org.irmacard.metrics:irma_metrics_common:0.1.1'
-    compile('org.irmacard.mno:irma_mno_common:0.3.0') {
+    compile('org.irmacard.mno:irma_mno_common:0.3.1') {
         exclude group: 'org.apache.httpcomponents', module: 'httpclient'
     }
-    compile('org.irmacard.api:irma_api_common:0.5.0') {
+    compile('org.irmacard.api:irma_api_common:0.5.1') {
         exclude group: 'org.apache.httpcomponents', module: 'httpclient'
     }
 }
