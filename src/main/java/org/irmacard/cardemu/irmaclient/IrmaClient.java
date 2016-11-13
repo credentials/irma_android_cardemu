@@ -6,6 +6,7 @@ import android.util.Patterns;
 import org.irmacard.api.common.ClientQr;
 import org.irmacard.api.common.DisclosureProofRequest;
 import org.irmacard.api.common.IssuingRequest;
+import org.irmacard.api.common.SignatureProofRequest;
 import org.irmacard.api.common.exceptions.ApiErrorMessage;
 import org.irmacard.api.common.util.GsonUtil;
 import org.irmacard.cardemu.DisclosureChoice;
@@ -21,7 +22,7 @@ public abstract class IrmaClient {
 
 	/** Specifies what action the instance is performing. */
 	public enum Action {
-		DISCLOSING, ISSUING, UNKNOWN
+		DISCLOSING, SIGNING, ISSUING, UNKNOWN
 	}
 
 	public final static String TAG = "IrmaClient";
@@ -39,6 +40,13 @@ public abstract class IrmaClient {
 	 *                a selected attribute).
 	 */
 	abstract public void disclose(DisclosureProofRequest request, DisclosureChoice disclosureChoice);
+
+	/**
+	 * Perform a signature session.
+	 * @param request The request containing the attributes to show (each of its disjunctions should have
+	 *                a selected attribute), and required conditions.
+	 */
+	abstract public void sign(final SignatureProofRequest request, DisclosureChoice disclosureChoice);
 
 	/**
 	 * Informs the session that this session is to be deleted.

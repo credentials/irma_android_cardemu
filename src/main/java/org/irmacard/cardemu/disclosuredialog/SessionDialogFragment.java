@@ -67,11 +67,13 @@ import java.util.ArrayList;
  */
 public class SessionDialogFragment extends DialogFragment {
 	private DisclosureProofRequest proofRequest;
+	private SignatureProofRequest signRequest;
 	private IssuingRequest issuingRequest;
 	private DisclosureChoice choice;
 	private String requesterName;
 	private boolean issuing;
 	private boolean dislosing;
+	private boolean signing;
 	private static IrmaClient irmaClient;
 
 	/**
@@ -118,17 +120,38 @@ public class SessionDialogFragment extends DialogFragment {
 		return dialog;
 	}
 
+
+	public static SessionDialogFragment newSignDialog(SignatureProofRequest request, String requesterName,
+	                                                  IrmaClient irmaClient) {
+		SessionDialogFragment.irmaClient = irmaClient;
+		SessionDialogFragment dialog = new SessionDialogFragment();
+
+		DisclosureChoice choice = new DisclosureChoice(request);
+		for (int i=0; i<request.getContent().size(); ++i)
+			choice.getAttributes().add(null);
+
+		Bundle args = new Bundle();
+		args.putSerializable("signRequest", request);
+		args.putSerializable("choice", choice);
+		args.putString("requesterName", requesterName);
+		dialog.setArguments(args);
+
+		return dialog;
+	}
+
 	@Override
 	@SuppressWarnings("unchecked")
 	public void onCreate(Bundle savedInstanceState) {
 		super.onCreate(savedInstanceState);
 
 		proofRequest = (DisclosureProofRequest) getArguments().getSerializable("proofRequest");
+		signRequest = (SignatureProofRequest) getArguments().getSerializable("signRequest");
 		issuingRequest = (IssuingRequest) getArguments().getSerializable("issuingRequest");
 		choice = (DisclosureChoice) getArguments().getSerializable("choice");
 		requesterName = getArguments().getString("requesterName");
 
 		issuing = issuingRequest != null;
+		signing = signRequest != null;
 		dislosing = issuingRequest == null || !issuingRequest.getRequiredAttributes().isEmpty();
 	}
 
@@ -169,6 +192,42 @@ public class SessionDialogFragment extends DialogFragment {
 			question1 = resources.getQuantityString(R.plurals.disclose_question_named,
 					request.getContent().size(), requesterName);
 		((TextView) view.findViewById(R.id.disclosure_question_1)).setText(question1);
+	}
+
+	// TODO merge with populateDisclosurePart
+	private void populateSigningPart(Activity activity, View view, final SignatureProofRequest request) {
+		LayoutInflater inflater = activity.getLayoutInflater();
+		Resources resources = activity.getResources();
+		LinearLayout list = (LinearLayout) view.findViewById(R.id.attributes_container);
+
+		if (list == null)
+			throw new IllegalArgumentException("Can't populate view: of incorrect type" +
+					" (should be R.layout.dialog_disclosure)");
+
+		final ArrayList<Spinner> spinners = new ArrayList<>(request.getContent().size());
+		AdapterView.OnItemSelectedListener spinnerListener = new AttributeSelectedListener(spinners, choice);
+
+		for (int i = 0; i < request.getContent().size(); ++i) {
+			AttributeDisjunction disjunction = request.getContent().get(i);
+
+			View attributeView = inflater.inflate(R.layout.attribute_picker, list, false);
+			TextView name = (TextView) attributeView.findViewById(R.id.detail_attribute_name);
+			name.setText(disjunction.getLabel());
+
+			Spinner spinner = (Spinner) attributeView.findViewById(R.id.attribute_spinner);
+			spinner.setAdapter(new AttributesPickerAdapter(activity, disjunction, i));
+			spinner.setOnItemSelectedListener(spinnerListener);
+			spinners.add(spinner);
+
+			list.addView(attributeView);
+		}
+
+		String message = request.getMessage();
+		((TextView) view.findViewById(R.id.sign_content)).setText(message);
+
+		String question1 = resources
+				.getQuantityString(R.plurals.sign_question_1, request.getContent().size());
+		((TextView) view.findViewById(R.id.sign_question_1)).setText(question1);
 	}
 
 	private void populateIssuingPart(Activity activity, View view, final IssuingRequest request) {
@@ -219,16 +278,24 @@ public class SessionDialogFragment extends DialogFragment {
 	}
 
 	@Override
+	@SuppressLint("InflateParams")
 	public Dialog onCreateDialog(Bundle savedInstanceState) {
 		LayoutInflater inflater = getActivity().getLayoutInflater();
-		@SuppressLint("InflateParams") View view = inflater.inflate(R.layout.dialog_disclosure, null);
+		View view;
 
 		if (!issuing) {
-			view.findViewById(R.id.issuance_question).setVisibility(View.GONE);
-			view.findViewById(R.id.issuance_container).setVisibility(View.GONE);
-			populateDisclosurePart(getActivity(), view, proofRequest);
+			if (signing) {
+				view = inflater.inflate(R.layout.dialog_sign, null);
+				populateSigningPart(getActivity(), view, signRequest);
+			} else {
+				view = inflater.inflate(R.layout.dialog_disclosure, null);
+				view.findViewById(R.id.issuance_question).setVisibility(View.GONE);
+				view.findViewById(R.id.issuance_container).setVisibility(View.GONE);
+				populateDisclosurePart(getActivity(), view, proofRequest);
+			}
 		}
 		else {
+			view = inflater.inflate(R.layout.dialog_disclosure, null);
 			populateIssuingPart(getActivity(), view, issuingRequest);
 
 			AttributeDisjunctionList requiredAttrs = issuingRequest.getRequiredAttributes();
@@ -248,13 +315,22 @@ public class SessionDialogFragment extends DialogFragment {
 			}
 		}
 
+		int title;
+		if (signing) {
+			title = R.string.sign_attributes;
+		} else {
+			title = (issuing ? R.string.receive_attributes : R.string.disclose_attributes);
+		}
+
 		AlertDialog.Builder builder = new AlertDialog.Builder(getActivity())
-				.setTitle((issuing ? R.string.receive_attributes : R.string.disclose_attributes))
+				.setTitle(title)
 				.setView(view)
 				.setPositiveButton(android.R.string.yes, new DialogInterface.OnClickListener() {
 					@Override
 					public void onClick(DialogInterface dialog, int which) {
-						if (!issuing)
+						if (signing) {
+							irmaClient.sign(signRequest, choice);
+						} else if (!issuing)
 							irmaClient.disclose(proofRequest, choice);
 						else
 							showOverwriteCredentialDialog();
@@ -276,7 +352,22 @@ public class SessionDialogFragment extends DialogFragment {
 
 		// We set the listener for the neutral ("More Information") button instead of above, because if we set it
 		// above then the dialog is dismissed afterwards and we don't want that.
-		if (dislosing) {
+		if (signing) {
+			final AttributeDisjunctionList disjunctions = signRequest.getContent();
+			d.setOnShowListener(new DialogInterface.OnShowListener() {
+				@Override
+				public void onShow(DialogInterface dialog) {
+					d.getButton(AlertDialog.BUTTON_NEUTRAL).setOnClickListener(new View.OnClickListener() {
+						@Override
+						public void onClick(View v) {
+							Intent intent = new Intent(getActivity(), DisclosureInformationActivity.class);
+							intent.putExtra("disjunctions", GsonUtil.getGson().toJson(disjunctions));
+							startActivity(intent);
+						}
+					});
+				}
+			});
+		} else if (dislosing) {
 			final AttributeDisjunctionList disjunctions = (!issuing) ?
 					proofRequest.getContent() : issuingRequest.getRequiredAttributes();
 

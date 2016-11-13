@@ -11,8 +11,10 @@ import android.view.View;
 import org.irmacard.api.common.AttributeDisjunction;
 import org.irmacard.api.common.AttributeDisjunctionList;
 import org.irmacard.api.common.DisclosureProofRequest;
+import org.irmacard.api.common.DisclosureRequest;
 import org.irmacard.api.common.IssuingRequest;
 import org.irmacard.api.common.SessionRequest;
+import org.irmacard.api.common.SignatureProofRequest;
 import org.irmacard.api.common.exceptions.ApiErrorMessage;
 import org.irmacard.api.common.util.GsonUtil;
 import org.irmacard.cardemu.CredentialManager;
@@ -65,6 +67,8 @@ public abstract class IrmaClientHandler {
 			askForVerificationPermission((DisclosureProofRequest) request, requesterName);
 		if (request instanceof IssuingRequest)
 			askForIssuancePermission((IssuingRequest) request, requesterName);
+		if (request instanceof SignatureProofRequest)
+			askForSignPermission((SignatureProofRequest) request, requesterName);
 	}
 
 	/**
@@ -84,6 +88,30 @@ public abstract class IrmaClientHandler {
 			showUnsatisfiableRequestDialog(missing, request, Action.DISCLOSING);
 		}
 	}
+
+	/**
+	 * If this handler was given an activity in its constructor, ask the user if he is OK with signing the message and
+	 * the attributes specified in the request. If she agrees then they are signed immediately; if she
+	 * does not, or the request cannot be satisfied, then the connection is aborted after closing the dialog.
+	 * TODO maybe merge with askForVerificationPermission()
+	 * @param request The disclosure request
+	 */
+	public void askForSignPermission(final SignatureProofRequest request, final String requesterName) {
+		List<AttributeDisjunction> missing = CredentialManager.getUnsatisfiableDisjunctions(
+				request.getContent());
+
+		// TODO: check conditions and give feedback to user if they are not met
+
+		if (missing.isEmpty()) {
+			SessionDialogFragment dialog = SessionDialogFragment.newSignDialog(request, requesterName, irmaClient);
+			dialog.show(activity.getFragmentManager(), "signdialog");
+		}
+		else {
+			showUnsatisfiableRequestDialog(missing, request, Action.SIGNING);
+		}
+	}
+
+
 
 	/**
 	 * Ask the user if he is OK with issuance
@@ -107,7 +135,7 @@ public abstract class IrmaClientHandler {
 	}
 
 	private void showUnsatisfiableRequestDialog(List<AttributeDisjunction> missing,
-	                                           final DisclosureProofRequest request, final Action action) {
+												final DisclosureRequest request, final Action action) {
 		String attrs = "";
 		int count = 0;
 		int max = missing.size();

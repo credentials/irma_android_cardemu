@@ -1,0 +1,51 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:orientation="vertical"
+    android:layout_width="wrap_content"
+    android:layout_height="wrap_content"
+    android:padding="@dimen/detail_medium_vspace">
+
+    <TextView
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:textSize="16sp"
+        android:textColor="#000"
+        android:text="@string/sign_question_0"
+        android:id="@+id/sign_question_0"
+        android:paddingBottom="@dimen/detail_small_vspace"/>
+
+    <TextView
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:textSize="16sp"
+        android:textColor="#000"
+        android:textStyle="italic"
+        android:text="Message"
+        android:id="@+id/sign_content"
+        android:paddingBottom="@dimen/detail_small_vspace"/>
+
+    <TextView
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:textSize="16sp"
+        android:textColor="#000"
+        android:text="First part of signature question here"
+        android:id="@+id/sign_question_1"
+        android:paddingBottom="@dimen/detail_small_vspace"/>
+
+    <LinearLayout
+        android:orientation="vertical"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:id="@+id/attributes_container">
+    </LinearLayout>
+
+    <TextView
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:textSize="16sp"
+        android:textColor="#000"
+        android:text="@string/sign_question_2"
+        android:id="@+id/sign_question_2"
+        android:paddingTop="@dimen/detail_small_vspace"/>
+</LinearLayout>

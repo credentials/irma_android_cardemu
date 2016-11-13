@@ -16,6 +16,7 @@ import org.irmacard.api.common.JwtParser;
 import org.irmacard.api.common.JwtSessionRequest;
 import org.irmacard.api.common.ServiceProviderRequest;
 import org.irmacard.api.common.SessionRequest;
+import org.irmacard.api.common.SignatureProofRequest;
 import org.irmacard.api.common.exceptions.ApiErrorMessage;
 import org.irmacard.api.common.exceptions.ApiException;
 import org.irmacard.api.common.util.GsonUtil;
@@ -79,6 +80,11 @@ public class JsonIrmaClient extends IrmaClient implements EnterPINDialogFragment
 		else if (Pattern.matches(".*/issue/[^/]+/?$", this.server)) {
 			action = Action.ISSUING;
 			startIssuance();
+		}
+
+		else if (Pattern.matches(".*/signature/[^/]+/?$", server)) {
+			action = Action.SIGNING;
+			startSigning();
 		}
 	}
 
@@ -293,6 +299,62 @@ public class JsonIrmaClient extends IrmaClient implements EnterPINDialogFragment
 							handler.onSuccess(Action.DISCLOSING);
 						} else { // We successfully computed a proof but server rejects it? That's fishy, report it
 							String feedback = resources.getString(R.string.server_rejected_proof, result.name().toLowerCase());
+							ACRA.getErrorReporter().handleException(new Exception(feedback));
+							fail(feedback, false);
+						}
+					}
+				});
+	}
+
+	// Signing methods -----------------------------------------------------------------------------
+
+	/**
+	 * Retrieve a {@link SignatureProofRequest} from the server, see if we can satisfy it, and if so,
+	 * ask the user which attributes she wants to disclose.
+	 * TODO: merge with Disclosure request?
+	 */
+	private void startSigning() {
+		handler.onStatusUpdate(Action.SIGNING, Status.COMMUNICATING);
+		Log.i(TAG, "Retrieving signing request: " + server);
+
+		JsonHttpClient client = new JsonHttpClient(GsonUtil.getGson());
+
+		// Get the signature request
+		client.get(SignatureProofRequest.class, server, new JsonResultHandler<SignatureProofRequest>() {
+			@Override
+			public void onSuccess(final SignatureProofRequest request) {
+				continueSession(request, Action.DISCLOSING);
+			}
+		});
+	}
+
+	/**
+	 * Given a {@link SignatureProofRequest} with selected attributes, create an IRMA signature.
+	 * TODO: maybe merge with disclose() ?
+	 */
+	@Override
+	public void sign(final SignatureProofRequest request, DisclosureChoice disclosureChoice) {
+		handler.onStatusUpdate(Action.SIGNING, Status.COMMUNICATING);
+		Log.i(TAG, "Sending signature to " + server);
+
+		ProofList proofs;
+		try {
+			proofs = CredentialManager.getSignatureProofs(disclosureChoice);
+		} catch (CredentialsException | InfoException e) {
+			e.printStackTrace();
+			cancelSession();
+			fail(e, true);
+			return;
+		}
+
+		JsonHttpClient client = new JsonHttpClient(GsonUtil.getGson());
+		client.post(DisclosureProofResult.Status.class, server + "proofs", proofs,
+				new JsonResultHandler<DisclosureProofResult.Status>() {
+					@Override public void onSuccess(DisclosureProofResult.Status result) {
+						if (result == DisclosureProofResult.Status.VALID) {
+							handler.onSuccess(Action.SIGNING);
+						} else { // We successfully computed a proof but server rejects it? That's fishy, report it
+							String feedback = "Server rejected proof: " + result.name().toLowerCase();
 							ACRA.getErrorReporter().handleException(new Exception(feedback));
 							fail(feedback, false);
 						}

@@ -310,6 +310,16 @@ public class CredentialManager {
 	}
 
 	/**
+	 +	 * Same as above method, but generate a signature instead
+	 +	 */
+		public static ProofList getSignatureProofs(DisclosureChoice disclosureChoice) throws CredentialsException, InfoException {
+			boolean isSig = true;
+			SignatureProofRequest request = (SignatureProofRequest) disclosureChoice.getRequest();
+			ProofListBuilder builder = new ProofListBuilder(request.getContext(), request.getChallenge(), isSig);
+			return addProofsToBuilder(disclosureChoice, builder).build();
+		}
+
+	/**
 	 * For the selected attribute of each disjunction, add a disclosure proof-commitment to the specified
 	 * proof builder.
 	 */
