@@ -156,6 +156,18 @@ public class SessionDialogFragment extends DialogFragment {
 	}
 
 	private void populateDisclosurePart(Activity activity, View view, final DisclosureProofRequest request) {
+		populateSharedPart(activity, view, request);
+
+		String question1;
+		if (requesterName == null)
+			question1 = activity.getResources().getQuantityString(R.plurals.disclose_question_1, request.getContent().size());
+		else
+			question1 = activity.getResources().getQuantityString(R.plurals.disclose_question_named,
+					request.getContent().size(), requesterName);
+		((TextView) view.findViewById(R.id.disclosure_question_1)).setText(question1);
+	}
+
+	private void populateSharedPart(Activity activity, View view, final DisclosureRequest request) {
 		LayoutInflater inflater = activity.getLayoutInflater();
 		Resources resources = activity.getResources();
 		LinearLayout list = (LinearLayout) view.findViewById(R.id.attributes_container);
@@ -184,48 +196,16 @@ public class SessionDialogFragment extends DialogFragment {
 
 			list.addView(attributeView);
 		}
-
-		String question1;
-		if (requesterName == null)
-			question1 = resources.getQuantityString(R.plurals.disclose_question_1, request.getContent().size());
-		else
-			question1 = resources.getQuantityString(R.plurals.disclose_question_named,
-					request.getContent().size(), requesterName);
-		((TextView) view.findViewById(R.id.disclosure_question_1)).setText(question1);
 	}
 
 	// TODO merge with populateDisclosurePart
 	private void populateSigningPart(Activity activity, View view, final SignatureProofRequest request) {
-		LayoutInflater inflater = activity.getLayoutInflater();
-		Resources resources = activity.getResources();
-		LinearLayout list = (LinearLayout) view.findViewById(R.id.attributes_container);
-
-		if (list == null)
-			throw new IllegalArgumentException("Can't populate view: of incorrect type" +
-					" (should be R.layout.dialog_disclosure)");
-
-		final ArrayList<Spinner> spinners = new ArrayList<>(request.getContent().size());
-		AdapterView.OnItemSelectedListener spinnerListener = new AttributeSelectedListener(spinners, choice);
-
-		for (int i = 0; i < request.getContent().size(); ++i) {
-			AttributeDisjunction disjunction = request.getContent().get(i);
-
-			View attributeView = inflater.inflate(R.layout.attribute_picker, list, false);
-			TextView name = (TextView) attributeView.findViewById(R.id.detail_attribute_name);
-			name.setText(disjunction.getLabel());
-
-			Spinner spinner = (Spinner) attributeView.findViewById(R.id.attribute_spinner);
-			spinner.setAdapter(new AttributesPickerAdapter(activity, disjunction, i));
-			spinner.setOnItemSelectedListener(spinnerListener);
-			spinners.add(spinner);
-
-			list.addView(attributeView);
-		}
+		populateSharedPart(activity, view, request);
 
 		String message = request.getMessage();
 		((TextView) view.findViewById(R.id.sign_content)).setText(message);
 
-		String question1 = resources
+		String question1 = activity.getResources()
 				.getQuantityString(R.plurals.sign_question_1, request.getContent().size());
 		((TextView) view.findViewById(R.id.sign_question_1)).setText(question1);
 	}
