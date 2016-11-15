@@ -16,6 +16,7 @@ import org.irmacard.api.common.JwtParser;
 import org.irmacard.api.common.JwtSessionRequest;
 import org.irmacard.api.common.ServiceProviderRequest;
 import org.irmacard.api.common.SessionRequest;
+import org.irmacard.api.common.SignClientRequest;
 import org.irmacard.api.common.SignatureProofRequest;
 import org.irmacard.api.common.exceptions.ApiErrorMessage;
 import org.irmacard.api.common.exceptions.ApiException;
@@ -140,31 +141,7 @@ public class JsonIrmaClient extends IrmaClient implements EnterPINDialogFragment
 	 * Retrieve an {@link IssuingRequest} from the server
 	 */
 	private void startIssuance() {
-		Log.i(TAG, "Retrieving issuing request: " + server);
-
-		handler.onStatusUpdate(Action.ISSUING, Status.COMMUNICATING);
-		final String server = this.server;
-		final JsonHttpClient client = new JsonHttpClient(GsonUtil.getGson());
-
-		switch (protocolVersion) {
-			case "2.0":
-				client.get(IssuingRequest.class, server, new JsonResultHandler<IssuingRequest>() {
-					@Override public void onSuccess(final IssuingRequest request) {
-						continueSession(request, Action.ISSUING);
-					}
-				});
-				break;
-			case "2.1":
-				client.get(JwtSessionRequest.class, server + "jwt", new JsonResultHandler<JwtSessionRequest>() {
-					@Override public void onSuccess(final JwtSessionRequest jwt) {
-						continueSession(jwt, IdentityProviderRequest.class, Action.ISSUING);
-					}
-				});
-				break;
-			default:
-				throw new RuntimeException("Unsupported protocol version: " + protocolVersion);
-		}
-
+		startSession(IssuingRequest.class, IdentityProviderRequest.class);
 	}
 
 	/**
@@ -233,30 +210,7 @@ public class JsonIrmaClient extends IrmaClient implements EnterPINDialogFragment
 	 * ask the user which attributes she wants to disclose.
 	 */
 	private void startDisclosure() {
-		handler.onStatusUpdate(Action.DISCLOSING, Status.COMMUNICATING);
-		Log.i(TAG, "Retrieving disclosure request: " + server);
-
-		JsonHttpClient client = new JsonHttpClient(GsonUtil.getGson());
-
-		// Get the disclosure request
-		switch (protocolVersion) {
-			case "2.0":
-				client.get(DisclosureProofRequest.class, server, new JsonResultHandler<DisclosureProofRequest>() {
-					@Override public void onSuccess(final DisclosureProofRequest request) {
-						continueSession(request, Action.DISCLOSING);
-					}
-				});
-				break;
-			case "2.1":
-				client.get(JwtSessionRequest.class, server + "jwt", new JsonResultHandler<JwtSessionRequest>() {
-					@Override public void onSuccess(final JwtSessionRequest jwt) {
-						continueSession(jwt, ServiceProviderRequest.class, action);
-					}
-				});
-				break;
-			default:
-				throw new RuntimeException("Unsupported protocol version: " + protocolVersion);
-		}
+		startSession(DisclosureProofRequest.class, ServiceProviderRequest.class);
 	}
 
 	/**
@@ -264,13 +218,17 @@ public class JsonIrmaClient extends IrmaClient implements EnterPINDialogFragment
 	 */
 	@Override
 	public void disclose(final DisclosureProofRequest request, DisclosureChoice disclosureChoice) {
-		handler.onStatusUpdate(Action.DISCLOSING, Status.COMMUNICATING);
-		Log.i(TAG, "Sending disclosure proofs to " + server);
+		proofSession(disclosureChoice);
+	}
+
+	private void proofSession(DisclosureChoice disclosureChoice) {
+		handler.onStatusUpdate(action, Status.COMMUNICATING);
+		Log.i(TAG, "Sending disclosure/signature proofs to " + server);
 
 		if(CredentialManager.isDistributed()) {
 			try {
-				this.builder = CredentialManager.generateProofListBuilderForVerification(disclosureChoice);
-			} catch (CredentialsException e) {
+				this.builder = CredentialManager.generateProofListBuilderForVerification(disclosureChoice, action == Action.SIGNING);
+			} catch (CredentialsException|InfoException e) {
 				// TODO!!
 				e.printStackTrace();
 				return;
@@ -279,8 +237,11 @@ public class JsonIrmaClient extends IrmaClient implements EnterPINDialogFragment
 		} else {
 			ProofList proofs;
 			try {
-				proofs = CredentialManager.getProofs(disclosureChoice);
-			} catch (CredentialsException e) {
+				if (action == Action.SIGNING)
+					proofs = CredentialManager.getSignatureProofs(disclosureChoice);
+				else
+					proofs = CredentialManager.getProofs(disclosureChoice);
+			} catch (CredentialsException|InfoException e) {
 				e.printStackTrace();
 				// cancelSession(); TODO why was this removed?
 				fail(e, true);
@@ -296,7 +257,7 @@ public class JsonIrmaClient extends IrmaClient implements EnterPINDialogFragment
 				new JsonResultHandler<DisclosureProofResult.Status>() {
 					@Override public void onSuccess(DisclosureProofResult.Status result) {
 						if (result == DisclosureProofResult.Status.VALID) {
-							handler.onSuccess(Action.DISCLOSING);
+							handler.onSuccess(action);
 						} else { // We successfully computed a proof but server rejects it? That's fishy, report it
 							String feedback = resources.getString(R.string.server_rejected_proof, result.name().toLowerCase());
 							ACRA.getErrorReporter().handleException(new Exception(feedback));
@@ -311,61 +272,49 @@ public class JsonIrmaClient extends IrmaClient implements EnterPINDialogFragment
 	/**
 	 * Retrieve a {@link SignatureProofRequest} from the server, see if we can satisfy it, and if so,
 	 * ask the user which attributes she wants to disclose.
-	 * TODO: merge with Disclosure request?
 	 */
 	private void startSigning() {
-		handler.onStatusUpdate(Action.SIGNING, Status.COMMUNICATING);
-		Log.i(TAG, "Retrieving signing request: " + server);
-
-		JsonHttpClient client = new JsonHttpClient(GsonUtil.getGson());
-
-		// Get the signature request
-		client.get(SignatureProofRequest.class, server, new JsonResultHandler<SignatureProofRequest>() {
-			@Override
-			public void onSuccess(final SignatureProofRequest request) {
-				continueSession(request, Action.DISCLOSING);
-			}
-		});
+		startSession(SignatureProofRequest.class, SignClientRequest.class);
 	}
 
 	/**
 	 * Given a {@link SignatureProofRequest} with selected attributes, create an IRMA signature.
-	 * TODO: maybe merge with disclose() ?
 	 */
 	@Override
 	public void sign(final SignatureProofRequest request, DisclosureChoice disclosureChoice) {
-		handler.onStatusUpdate(Action.SIGNING, Status.COMMUNICATING);
-		Log.i(TAG, "Sending signature to " + server);
-
-		ProofList proofs;
-		try {
-			proofs = CredentialManager.getSignatureProofs(disclosureChoice);
-		} catch (CredentialsException | InfoException e) {
-			e.printStackTrace();
-			cancelSession();
-			fail(e, true);
-			return;
-		}
-
-		JsonHttpClient client = new JsonHttpClient(GsonUtil.getGson());
-		client.post(DisclosureProofResult.Status.class, server + "proofs", proofs,
-				new JsonResultHandler<DisclosureProofResult.Status>() {
-					@Override public void onSuccess(DisclosureProofResult.Status result) {
-						if (result == DisclosureProofResult.Status.VALID) {
-							handler.onSuccess(Action.SIGNING);
-						} else { // We successfully computed a proof but server rejects it? That's fishy, report it
-							String feedback = "Server rejected proof: " + result.name().toLowerCase();
-							ACRA.getErrorReporter().handleException(new Exception(feedback));
-							fail(feedback, false);
-						}
-					}
-				});
+		proofSession(disclosureChoice);
 	}
 
-	// Methods used in both the issuing and disclosure protocols -----------------------------------
+	// Methods used in the issuing, disclosure and signing protocols -------------------------------
 
-	// These templates are getting a little crazy, could also create separate functions for
-	// issuing and disclosing
+	private <T extends SessionRequest, S extends ClientRequest<T>> void startSession(
+			Class<T> requestClass, final Class<S> clientRequestClass) {
+		handler.onStatusUpdate(action, Status.COMMUNICATING);
+		Log.i(TAG, "Starting " + action + ": " + server);
+		JsonHttpClient client = new JsonHttpClient(GsonUtil.getGson());
+
+		// Get the signature request
+
+		switch (protocolVersion) {
+			case "2.0":
+				client.get(requestClass, server, new JsonResultHandler<T>() {
+					@Override public void onSuccess(final T request) {
+						continueSession(request, action);
+					}
+				});
+				break;
+			case "2.1":
+				client.get(JwtSessionRequest.class, server + "jwt", new JsonResultHandler<JwtSessionRequest>() {
+					@Override public void onSuccess(final JwtSessionRequest jwt) {
+						continueSession(jwt, clientRequestClass, action);
+					}
+				});
+				break;
+			default:
+				throw new RuntimeException("Unsupported protocol version: " + protocolVersion);
+		}
+	}
+
 	private <T extends ClientRequest<S>, S extends SessionRequest> void continueSession(
 			JwtSessionRequest sessionRequest, Class<T> clazz, final Action action) {
 		try {
@@ -614,7 +563,7 @@ public class JsonIrmaClient extends IrmaClient implements EnterPINDialogFragment
 	private void finishDistributedProtocol(ProofP proofp) {
 		ProofList list = builder.createProofList(challenge, proofp);
 
-		if(action == Action.DISCLOSING) {
+		if(action == Action.DISCLOSING || action == Action.SIGNING) {
 			sendDisclosureProofs(list);
 		} else {
 			IssueCommitmentMessage msg = new IssueCommitmentMessage(list, CredentialManager.getNonce2());
