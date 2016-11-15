@@ -71,8 +71,8 @@
 
     <string name="sign_question_0">The following message will be signed:</string>
     <plurals name="sign_question_1">
-        <item quantity="one">With the highlighted attributes of the following credential:</item>
-        <item quantity="other">With the highlighted attributes of the following credentials:</item>
+        <item quantity="one">With the following attribute:</item>
+        <item quantity="other">With the following attributes:</item>
     </plurals>
     <string name="sign_question_2">Are you sure you want to sign this message with these attributes?</string>
 

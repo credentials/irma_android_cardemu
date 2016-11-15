@@ -8,7 +8,7 @@
     <TextView
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:textSize="16sp"
+        android:textSize="14sp"
         android:textColor="#000"
         android:text="@string/sign_question_0"
         android:id="@+id/sign_question_0"
@@ -17,17 +17,18 @@
     <TextView
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:textSize="16sp"
+        android:textSize="14sp"
         android:textColor="#000"
-        android:textStyle="italic"
+        android:textStyle="bold"
         android:text="Message"
         android:id="@+id/sign_content"
-        android:paddingBottom="@dimen/detail_small_vspace"/>
+        android:paddingBottom="@dimen/detail_small_vspace"
+        android:layout_marginLeft="@dimen/detail_small_vspace"/>
 
     <TextView
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:textSize="16sp"
+        android:textSize="14sp"
         android:textColor="#000"
         android:text="First part of signature question here"
         android:id="@+id/sign_question_1"
@@ -43,7 +44,7 @@
     <TextView
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:textSize="16sp"
+        android:textSize="14sp"
         android:textColor="#000"
         android:text="@string/sign_question_2"
         android:id="@+id/sign_question_2"
