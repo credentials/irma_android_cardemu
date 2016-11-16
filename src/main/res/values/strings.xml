@@ -70,6 +70,7 @@
 
 
     <string name="sign_question_0">The following message will be signed:</string>
+    <string name="sign_question_0_named">The following message will be signed and sent to %s:</string>
     <plurals name="sign_question_1">
         <item quantity="one">With the following attribute:</item>
         <item quantity="other">With the following attributes:</item>

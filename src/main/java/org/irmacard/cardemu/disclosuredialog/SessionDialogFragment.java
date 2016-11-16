@@ -202,11 +202,18 @@ public class SessionDialogFragment extends DialogFragment {
 	private void populateSigningPart(Activity activity, View view, final SignatureProofRequest request) {
 		populateSharedPart(activity, view, request);
 
-		String message = request.getMessage();
-		((TextView) view.findViewById(R.id.sign_content)).setText(message);
+		((TextView) view.findViewById(R.id.sign_content)).setText(request.getMessage());
+
+		String question0;
+		if (requesterName == null)
+			question0 = activity.getResources().getString(R.string.sign_question_0);
+		else
+			question0 = activity.getResources().getString(R.string.sign_question_0_named, requesterName);
 
 		String question1 = activity.getResources()
 				.getQuantityString(R.plurals.sign_question_1, request.getContent().size());
+
+		((TextView) view.findViewById(R.id.sign_question_0)).setText(question0);
 		((TextView) view.findViewById(R.id.sign_question_1)).setText(question1);
 	}
 
