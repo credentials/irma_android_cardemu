@@ -8,18 +8,18 @@ import com.google.gson.reflect.TypeToken;
 
 import org.acra.ACRA;
 import org.irmacard.api.common.ClientRequest;
-import org.irmacard.api.common.DisclosureProofRequest;
-import org.irmacard.api.common.DisclosureProofResult;
-import org.irmacard.api.common.IdentityProviderRequest;
-import org.irmacard.api.common.IssuingRequest;
 import org.irmacard.api.common.JwtParser;
 import org.irmacard.api.common.JwtSessionRequest;
-import org.irmacard.api.common.ServiceProviderRequest;
 import org.irmacard.api.common.SessionRequest;
-import org.irmacard.api.common.SignClientRequest;
-import org.irmacard.api.common.SignatureProofRequest;
+import org.irmacard.api.common.disclosure.DisclosureProofRequest;
+import org.irmacard.api.common.disclosure.DisclosureProofResult;
+import org.irmacard.api.common.disclosure.ServiceProviderRequest;
 import org.irmacard.api.common.exceptions.ApiErrorMessage;
 import org.irmacard.api.common.exceptions.ApiException;
+import org.irmacard.api.common.issuing.IdentityProviderRequest;
+import org.irmacard.api.common.issuing.IssuingRequest;
+import org.irmacard.api.common.signatures.SignatureClientRequest;
+import org.irmacard.api.common.signatures.SignatureProofRequest;
 import org.irmacard.api.common.util.GsonUtil;
 import org.irmacard.cardemu.CredentialManager;
 import org.irmacard.cardemu.DisclosureChoice;
@@ -274,7 +274,7 @@ public class JsonIrmaClient extends IrmaClient implements EnterPINDialogFragment
 	 * ask the user which attributes she wants to disclose.
 	 */
 	private void startSigning() {
-		startSession(SignatureProofRequest.class, SignClientRequest.class);
+		startSession(SignatureProofRequest.class, SignatureClientRequest.class);
 	}
 
 	/**

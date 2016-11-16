@@ -32,13 +32,19 @@ package org.irmacard.cardemu;
 
 import android.content.SharedPreferences;
 import android.util.Log;
+
 import com.google.gson.Gson;
 import com.google.gson.reflect.TypeToken;
-import org.irmacard.cardemu.store.StoreManager;
-import org.irmacard.api.common.*;
+
+import org.irmacard.api.common.AttributeDisjunction;
+import org.irmacard.api.common.CredentialRequest;
+import org.irmacard.api.common.SessionRequest;
+import org.irmacard.api.common.issuing.IssuingRequest;
+import org.irmacard.api.common.signatures.SignatureProofRequest;
 import org.irmacard.api.common.util.GsonUtil;
 import org.irmacard.cardemu.identifiers.IdemixAttributeIdentifier;
 import org.irmacard.cardemu.identifiers.IdemixCredentialIdentifier;
+import org.irmacard.cardemu.store.StoreManager;
 import org.irmacard.credentials.Attributes;
 import org.irmacard.credentials.CredentialsException;
 import org.irmacard.credentials.idemix.CredentialBuilder;
@@ -51,7 +57,13 @@ import org.irmacard.credentials.idemix.messages.IssueSignatureMessage;
 import org.irmacard.credentials.idemix.proofs.ProofList;
 import org.irmacard.credentials.idemix.proofs.ProofListBuilder;
 import org.irmacard.credentials.idemix.proofs.ProofPCommitmentMap;
-import org.irmacard.credentials.info.*;
+import org.irmacard.credentials.info.AttributeIdentifier;
+import org.irmacard.credentials.info.CredentialDescription;
+import org.irmacard.credentials.info.CredentialIdentifier;
+import org.irmacard.credentials.info.DescriptionStore;
+import org.irmacard.credentials.info.InfoException;
+import org.irmacard.credentials.info.IssuerIdentifier;
+import org.irmacard.credentials.info.KeyException;
 import org.irmacard.credentials.util.log.IssueLogEntry;
 import org.irmacard.credentials.util.log.LogEntry;
 import org.irmacard.credentials.util.log.RemoveLogEntry;
@@ -60,7 +72,14 @@ import org.irmacard.credentials.util.log.VerifyLogEntry;
 import java.lang.reflect.Type;
 import java.math.BigInteger;
 import java.security.SecureRandom;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.Calendar;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.LinkedHashMap;
+import java.util.LinkedList;
+import java.util.List;
+import java.util.Map;
 
 /**
  * Handles issuing, disclosing, and deletion of credentials; keeps track of log entries; and handles (de)

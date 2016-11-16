@@ -4,10 +4,10 @@ import android.util.Log;
 import android.util.Patterns;
 
 import org.irmacard.api.common.ClientQr;
-import org.irmacard.api.common.DisclosureProofRequest;
-import org.irmacard.api.common.IssuingRequest;
-import org.irmacard.api.common.SignatureProofRequest;
+import org.irmacard.api.common.disclosure.DisclosureProofRequest;
 import org.irmacard.api.common.exceptions.ApiErrorMessage;
+import org.irmacard.api.common.issuing.IssuingRequest;
+import org.irmacard.api.common.signatures.SignatureProofRequest;
 import org.irmacard.api.common.util.GsonUtil;
 import org.irmacard.cardemu.DisclosureChoice;
 

@@ -10,12 +10,12 @@ import android.view.View;
 
 import org.irmacard.api.common.AttributeDisjunction;
 import org.irmacard.api.common.AttributeDisjunctionList;
-import org.irmacard.api.common.DisclosureProofRequest;
 import org.irmacard.api.common.DisclosureRequest;
-import org.irmacard.api.common.IssuingRequest;
 import org.irmacard.api.common.SessionRequest;
-import org.irmacard.api.common.SignatureProofRequest;
+import org.irmacard.api.common.disclosure.DisclosureProofRequest;
 import org.irmacard.api.common.exceptions.ApiErrorMessage;
+import org.irmacard.api.common.issuing.IssuingRequest;
+import org.irmacard.api.common.signatures.SignatureProofRequest;
 import org.irmacard.api.common.util.GsonUtil;
 import org.irmacard.cardemu.CredentialManager;
 import org.irmacard.cardemu.R;

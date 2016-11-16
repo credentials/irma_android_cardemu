@@ -46,7 +46,14 @@ import android.widget.AdapterView;
 import android.widget.LinearLayout;
 import android.widget.Spinner;
 import android.widget.TextView;
-import org.irmacard.api.common.*;
+
+import org.irmacard.api.common.AttributeDisjunction;
+import org.irmacard.api.common.AttributeDisjunctionList;
+import org.irmacard.api.common.CredentialRequest;
+import org.irmacard.api.common.DisclosureRequest;
+import org.irmacard.api.common.disclosure.DisclosureProofRequest;
+import org.irmacard.api.common.issuing.IssuingRequest;
+import org.irmacard.api.common.signatures.SignatureProofRequest;
 import org.irmacard.cardemu.CredentialManager;
 import org.irmacard.cardemu.DisclosureChoice;
 import org.irmacard.cardemu.R;
