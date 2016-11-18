@@ -223,18 +223,18 @@ public class DriversLicenseEnrollActivity extends AbstractNFCEnrollActivity {
 
                 try {
                     if (eDLMessage.getDg1File() == null) {
-                        CardFileInputStream in = passportService.getInputStream((short) 0x0001);
-                        eDLMessage.setDg1File(eDLMessage.readFile(in,0x61));
+                        CardFileInputStream in = passportService.getInputStream(eDLMessage.dg1FileId);
+                        eDLMessage.setDg1File(eDLMessage.readFile(in,eDLMessage.dg1Tag));
                         Log.i(TAG, "Reading DG1");
                         publishProgress();
                     } if (eDLMessage.getSodFile() == null) {
-                        eDLMessage.setSodFile(new SODFile(passportService.getInputStream((short) 0x001d)));
+                        eDLMessage.setSodFile(new SODFile(passportService.getInputStream(eDLMessage.sodFileId)));
                         Log.i(TAG, "reading SOD");
                         publishProgress();
                     } if (eDLMessage.getSodFile() != null) { // We need the SOD file to check if DG14 exists
                         if (eDLMessage.getSodFile().getDataGroupHashes().get(14) != null) { // Checks if DG14 exists
                             if (eDLMessage.getEaFile() == null) {
-                                eDLMessage.setEaFile(eDLMessage.readFile(passportService.getInputStream((short) 0x000e),0x6E));
+                                eDLMessage.setEaFile(eDLMessage.readFile(passportService.getInputStream(eDLMessage.eaFileId),eDLMessage.eaTag));
                                 Log.i(TAG, "reading DG14/ EA File");
                                 publishProgress();
                             }
@@ -244,7 +244,7 @@ public class DriversLicenseEnrollActivity extends AbstractNFCEnrollActivity {
                         }
                     }
                     if (eDLMessage.getAaFile() == null) {
-                        eDLMessage.setAaFile(eDLMessage.readFile(passportService.getInputStream((short) 0x000d),0x6F));
+                        eDLMessage.setAaFile(eDLMessage.readFile(passportService.getInputStream(eDLMessage.aaFileId),eDLMessage.aaTag));
                         Log.i(TAG, "reading DG13/AA File");
                         publishProgress();
                     }

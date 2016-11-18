@@ -209,7 +209,7 @@ public class PassportEnrollActivity extends AbstractNFCEnrollActivity {
 					if (pdm.getSodFile() != null) { // We need the SOD file to check if DG14 exists
 						if (pdm.getSodFile().getDataGroupHashes().get(14) != null) { // Checks if DG14 exists
 							if (pdm.getEaFile() == null) {
-								pdm.setEaFile(pdm.readFile(passportService.getInputStream(PassportService.EF_DG14),0x6E));
+								pdm.setEaFile(pdm.readFile(passportService.getInputStream(PassportService.EF_DG14),pdm.eaTag));
 								Log.i(TAG, "PassportEnrollActivity: reading DG14");
 								publishProgress();
 							}
@@ -219,7 +219,7 @@ public class PassportEnrollActivity extends AbstractNFCEnrollActivity {
 						}
 					}
 					if (pdm.getAaFile() == null) {
-						pdm.setAaFile(pdm.readFile(passportService.getInputStream(PassportService.EF_DG15),0x6F));
+						pdm.setAaFile(pdm.readFile(passportService.getInputStream(PassportService.EF_DG15),pdm.aaTag));
 						Log.i(TAG, "PassportEnrollActivity: reading DG15");
 						publishProgress();
 					}
