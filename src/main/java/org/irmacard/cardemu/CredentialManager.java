@@ -332,10 +332,7 @@ public class CredentialManager {
 	public static ProofListBuilder generateProofListBuilderForVerification(
 			DisclosureChoice disclosureChoice, boolean isSig) throws CredentialsException, InfoException {
 		SessionRequest request = disclosureChoice.getRequest();
-		BigInteger nonce = request.getNonce();
-		if (isSig)
-			nonce = ((SignatureProofRequest) request).getChallenge();
-		ProofListBuilder builder = new ProofListBuilder(request.getContext(), nonce, isSig);
+		ProofListBuilder builder = new ProofListBuilder(request.getContext(), request.getNonce(), isSig);
 		return addProofsToBuilder(disclosureChoice, builder);
 	}
 
