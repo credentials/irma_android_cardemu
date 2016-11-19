@@ -10,7 +10,6 @@ import android.view.View;
 
 import org.irmacard.api.common.AttributeDisjunction;
 import org.irmacard.api.common.AttributeDisjunctionList;
-import org.irmacard.api.common.DisclosureRequest;
 import org.irmacard.api.common.SessionRequest;
 import org.irmacard.api.common.disclosure.DisclosureProofRequest;
 import org.irmacard.api.common.exceptions.ApiErrorMessage;
@@ -63,12 +62,12 @@ public abstract class IrmaClientHandler {
 	}
 
 	public void askForPermission(SessionRequest request, String requesterName) {
-		if (request instanceof DisclosureProofRequest)
-			askForVerificationPermission((DisclosureProofRequest) request, requesterName);
 		if (request instanceof IssuingRequest)
 			askForIssuancePermission((IssuingRequest) request, requesterName);
 		if (request instanceof SignatureProofRequest)
 			askForSignPermission((SignatureProofRequest) request, requesterName);
+		else if (request instanceof DisclosureProofRequest)
+			askForVerificationPermission((DisclosureProofRequest) request, requesterName);
 	}
 
 	/**
@@ -135,7 +134,7 @@ public abstract class IrmaClientHandler {
 	}
 
 	private void showUnsatisfiableRequestDialog(List<AttributeDisjunction> missing,
-												final DisclosureRequest request, final Action action) {
+												final DisclosureProofRequest request, final Action action) {
 		String attrs = "";
 		int count = 0;
 		int max = missing.size();

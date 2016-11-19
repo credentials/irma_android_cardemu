@@ -50,7 +50,6 @@ import android.widget.TextView;
 import org.irmacard.api.common.AttributeDisjunction;
 import org.irmacard.api.common.AttributeDisjunctionList;
 import org.irmacard.api.common.CredentialRequest;
-import org.irmacard.api.common.DisclosureRequest;
 import org.irmacard.api.common.disclosure.DisclosureProofRequest;
 import org.irmacard.api.common.issuing.IssuingRequest;
 import org.irmacard.api.common.signatures.SignatureProofRequest;
@@ -174,7 +173,7 @@ public class SessionDialogFragment extends DialogFragment {
 		((TextView) view.findViewById(R.id.disclosure_question_1)).setText(question1);
 	}
 
-	private void populateSharedPart(Activity activity, View view, final DisclosureRequest request) {
+	private void populateSharedPart(Activity activity, View view, final DisclosureProofRequest request) {
 		LayoutInflater inflater = activity.getLayoutInflater();
 		Resources resources = activity.getResources();
 		LinearLayout list = (LinearLayout) view.findViewById(R.id.attributes_container);
