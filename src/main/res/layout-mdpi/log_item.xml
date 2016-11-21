@@ -47,11 +47,22 @@
     </RelativeLayout>
 
     <TextView
-        android:id="@+id/log_item_datetime"
+        android:id="@+id/log_item_signaturemessage"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:layout_alignLeft="@id/log_heading_box"
         android:layout_below="@id/log_heading_box"
+        android:textIsSelectable="false"
+        android:textSize="16sp"
+        android:textStyle="bold"
+        android:visibility="gone" />
+
+    <TextView
+        android:id="@+id/log_item_datetime"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_alignLeft="@id/log_heading_box"
+        android:layout_below="@id/log_item_signaturemessage"
         android:textIsSelectable="false"
         android:textSize="16sp" />
 

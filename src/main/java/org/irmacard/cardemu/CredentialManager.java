@@ -40,7 +40,6 @@ import org.irmacard.api.common.AttributeDisjunction;
 import org.irmacard.api.common.CredentialRequest;
 import org.irmacard.api.common.SessionRequest;
 import org.irmacard.api.common.issuing.IssuingRequest;
-import org.irmacard.api.common.signatures.SignatureProofRequest;
 import org.irmacard.api.common.util.GsonUtil;
 import org.irmacard.cardemu.identifiers.IdemixAttributeIdentifier;
 import org.irmacard.cardemu.identifiers.IdemixCredentialIdentifier;
@@ -67,6 +66,7 @@ import org.irmacard.credentials.info.KeyException;
 import org.irmacard.credentials.util.log.IssueLogEntry;
 import org.irmacard.credentials.util.log.LogEntry;
 import org.irmacard.credentials.util.log.RemoveLogEntry;
+import org.irmacard.credentials.util.log.SignatureLogEntry;
 import org.irmacard.credentials.util.log.VerifyLogEntry;
 
 import java.lang.reflect.Type;
@@ -318,29 +318,32 @@ public class CredentialManager {
 	 * credential of this identifier.
 	 * @throws CredentialsException if something goes wrong
 	 */
-	public static ProofList getProofs(DisclosureChoice disclosureChoice) throws CredentialsException, InfoException {
-		return generateProofListBuilderForVerification(disclosureChoice, false).build();
+	public static ProofList getProofs(DisclosureChoice disclosureChoice)
+	throws CredentialsException, InfoException {
+		return generateProofListBuilderForDisclosure(disclosureChoice, null).build();
 	}
 
 	/**
 	 + * Same as above method, but generate a signature instead
 	 + */
-	public static ProofList getSignatureProofs(DisclosureChoice disclosureChoice) throws CredentialsException, InfoException {
-		return generateProofListBuilderForVerification(disclosureChoice, true).build();
+	public static ProofList getSignatureProofs(DisclosureChoice disclosureChoice, String message)
+	throws CredentialsException, InfoException {
+		return generateProofListBuilderForDisclosure(disclosureChoice, message).build();
 	}
 
-	public static ProofListBuilder generateProofListBuilderForVerification(
-			DisclosureChoice disclosureChoice, boolean isSig) throws CredentialsException, InfoException {
+	public static ProofListBuilder generateProofListBuilderForDisclosure(
+			DisclosureChoice disclosureChoice, String sigMessage) throws CredentialsException, InfoException {
 		SessionRequest request = disclosureChoice.getRequest();
-		ProofListBuilder builder = new ProofListBuilder(request.getContext(), request.getNonce(), isSig);
-		return addProofsToBuilder(disclosureChoice, builder);
+		ProofListBuilder builder = new ProofListBuilder(request.getContext(), request.getNonce(), sigMessage != null);
+		return addProofsToBuilder(disclosureChoice, builder, sigMessage);
 	}
 
 	/**
 	 * For the selected attribute of each disjunction, add a disclosure proof-commitment to the specified
 	 * proof builder.
 	 */
-	private static ProofListBuilder addProofsToBuilder(DisclosureChoice disclosureChoice, ProofListBuilder builder)
+	private static ProofListBuilder addProofsToBuilder(
+			DisclosureChoice disclosureChoice, ProofListBuilder builder, String sigMessage)
 	throws CredentialsException {
 		Map<IdemixCredentialIdentifier, List<Integer>> toDisclose = groupAttributesById(disclosureChoice);
 
@@ -352,7 +355,8 @@ public class CredentialManager {
 			builder.addProofD(credential, attrs);
 		}
 
-		logs.addAll(0, generateLogEntries(toDisclose));
+		logs.addAll(0, generateLogEntries(toDisclose, sigMessage));
+		save();
 
 		return builder;
 	}
@@ -393,10 +397,13 @@ public class CredentialManager {
 		return toDisclose;
 	}
 
+
+
 	/**
 	 * Log that we disclosed the specified attributes.
 	 */
-	private static List<LogEntry> generateLogEntries(Map<IdemixCredentialIdentifier, List<Integer>> toDisclose) {
+	private static List<LogEntry> generateLogEntries(
+			Map<IdemixCredentialIdentifier, List<Integer>> toDisclose, String sigMessage) {
 		List<LogEntry> logs = new ArrayList<>(toDisclose.size());
 
 		for (IdemixCredentialIdentifier id : toDisclose.keySet()) {
@@ -412,7 +419,10 @@ public class CredentialManager {
 				booleans.put(attrName, attributes.contains(i + 2));
 			}
 
-			logs.add(new VerifyLogEntry(Calendar.getInstance().getTime(), cd, booleans));
+			if (sigMessage == null)
+				logs.add(new VerifyLogEntry(Calendar.getInstance().getTime(), cd, booleans));
+			else
+				logs.add(new SignatureLogEntry(Calendar.getInstance().getTime(), cd, booleans, sigMessage));
 		}
 
 		return logs;
@@ -579,7 +589,7 @@ public class CredentialManager {
 
 		// Add disclosures, if any
 		if (!request.getRequiredAttributes().isEmpty() && disclosureChoice != null)
-			addProofsToBuilder(disclosureChoice, proofsBuilder);
+			addProofsToBuilder(disclosureChoice, proofsBuilder, null);
 
 		return proofsBuilder;
 	}

@@ -225,9 +225,13 @@ public class JsonIrmaClient extends IrmaClient implements EnterPINDialogFragment
 		handler.onStatusUpdate(action, Status.COMMUNICATING);
 		Log.i(TAG, "Sending disclosure/signature proofs to " + server);
 
+		String message = disclosureChoice.getRequest() instanceof SignatureProofRequest ?
+				((SignatureProofRequest) disclosureChoice.getRequest()).getMessage() : null;
+
 		if(CredentialManager.isDistributed()) {
 			try {
-				this.builder = CredentialManager.generateProofListBuilderForVerification(disclosureChoice, action == Action.SIGNING);
+				this.builder = CredentialManager.generateProofListBuilderForDisclosure(
+						disclosureChoice, message);
 			} catch (CredentialsException|InfoException e) {
 				// TODO!!
 				e.printStackTrace();
@@ -238,7 +242,7 @@ public class JsonIrmaClient extends IrmaClient implements EnterPINDialogFragment
 			ProofList proofs;
 			try {
 				if (action == Action.SIGNING)
-					proofs = CredentialManager.getSignatureProofs(disclosureChoice);
+					proofs = CredentialManager.getSignatureProofs(disclosureChoice, message);
 				else
 					proofs = CredentialManager.getProofs(disclosureChoice);
 			} catch (CredentialsException|InfoException e) {

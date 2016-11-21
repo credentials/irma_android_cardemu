@@ -49,6 +49,7 @@ import org.irmacard.cardemu.store.AndroidFileReader;
 import org.irmacard.credentials.util.log.IssueLogEntry;
 import org.irmacard.credentials.util.log.LogEntry;
 import org.irmacard.credentials.util.log.RemoveLogEntry;
+import org.irmacard.credentials.util.log.SignatureLogEntry;
 import org.irmacard.credentials.util.log.VerifyLogEntry;
 
 import java.text.SimpleDateFormat;
@@ -143,11 +144,19 @@ public class LogListAdapter extends PagingBaseAdapter<LogEntry> {
 
 				attributesList.addView(item_view);
 			}
-		} else if(log instanceof RemoveLogEntry) {
+		}
+		if (log instanceof SignatureLogEntry) {
+			header_text = activity.getString(R.string.signed);
+			TextView sigMessage = (TextView) view.findViewById(R.id.log_item_signaturemessage);
+			sigMessage.setText(activity.getString(R.string.message, ((SignatureLogEntry) log).getMessage()));
+			sigMessage.setVisibility(View.VISIBLE);
+		}
+		if (log instanceof RemoveLogEntry) {
 			header_text = activity.getString(R.string.removed);
 			actionImageResource = R.drawable.irma_icon_missing_064px;
 			actorLogo.setImageResource(R.drawable.irma_logo_150);
-		} else if(log instanceof IssueLogEntry) {
+		}
+		if (log instanceof IssueLogEntry) {
 			header_text = activity.getString(R.string.issued);
 			actionImageResource = R.drawable.irma_icon_warning_064px;
 			if (log.getCredential().getIssuerDescription() != null) {

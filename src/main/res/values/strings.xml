@@ -160,6 +160,8 @@
     <string name="more_information">More Information</string>
     <string name="posession_credential">possession of credential</string>
     <string name="verified">Verified</string>
+    <string name="signed">Signed</string>
+    <string name="message">Message: %s</string>
     <string name="disclosed">disclosed</string>
     <string name="hidden">hidden</string>
     <string name="removed">Removed</string>
