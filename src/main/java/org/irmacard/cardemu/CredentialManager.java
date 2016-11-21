@@ -79,8 +79,6 @@ public class CredentialManager {
 	private static Type logsType = new TypeToken<List<LogEntry>>() {}.getType();
 
 	private static SharedPreferences settings;
-	private static DescriptionStore descriptionStore;
-	private static IdemixKeyStore keyStore;
 
 	private static final String TAG = "CredentialManager";
 	public static final String CREDENTIAL_STORAGE = "credentials";
@@ -106,9 +104,6 @@ public class CredentialManager {
 
 	public static void init(SharedPreferences s) throws CredentialsException {
 		settings = s;
-
-		descriptionStore = DescriptionStore.getInstance();
-		keyStore = IdemixKeyStore.getInstance();
 
 		load();
 	}
@@ -281,7 +276,7 @@ public class CredentialManager {
 	 */
 	public static void deleteAll() {
 		for (CredentialIdentifier id : credentials.keySet()) {
-			CredentialDescription cd = descriptionStore.getCredentialDescription(id);
+			CredentialDescription cd = DescriptionStore.getInstance().getCredentialDescription(id);
 			if (cd == null)
 				continue;
 			for (int i=0; i<credentials.get(id).size(); ++i)
@@ -380,7 +375,7 @@ public class CredentialManager {
 		for (IdemixCredentialIdentifier id : toDisclose.keySet()) {
 			List<Integer> attributes = toDisclose.get(id);
 
-			CredentialDescription cd = descriptionStore.getCredentialDescription(id.getIdentifier());
+			CredentialDescription cd = DescriptionStore.getInstance().getCredentialDescription(id.getIdentifier());
 			if (cd == null)
 				continue;
 			HashMap<String, Boolean> booleans = new HashMap<>(cd.getAttributeNames().size());
@@ -410,15 +405,15 @@ public class CredentialManager {
 		for (CredentialIdentifier credential : credentials.keySet()) {
 			IssuerIdentifier issuer = credential.getIssuerIdentifier();
 
-			if (descriptionStore.getCredentialDescription(credential) == null)
+			if (DescriptionStore.getInstance().getCredentialDescription(credential) == null)
 				creds.add(credential);
-			if (descriptionStore.getIssuerDescription(issuer) == null)
+			if (DescriptionStore.getInstance().getIssuerDescription(issuer) == null)
 				issuers.add(issuer);
 
 			ArrayList<IdemixCredential> list = credentials.get(credential);
 			for (IdemixCredential cred : list) {
 				int counter = cred.getKeyCounter();
-				if (!keyStore.containsPublicKey(issuer, counter))
+				if (!IdemixKeyStore.getInstance().containsPublicKey(issuer, counter))
 					keys.put(issuer, counter);
 			}
 		}
