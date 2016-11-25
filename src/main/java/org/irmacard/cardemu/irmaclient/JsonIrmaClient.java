@@ -61,7 +61,6 @@ public class JsonIrmaClient extends IrmaClient implements EnterPINDialogFragment
 
 	// Some specific distributed issuance/verification state
 	private ProofListBuilder builder;
-	private BigInteger challenge;
 
 	public JsonIrmaClient(String server, IrmaClientHandler handler, String protocolVersion) {
 		super(handler);
@@ -533,13 +532,14 @@ public class JsonIrmaClient extends IrmaClient implements EnterPINDialogFragment
 	 * cloud server, and ask for the response c * m + w (where m is the cloud's private key and w its
 	 * randomness used previously in its commitment). If successful, combine our responses with that
 	 * of the cloud server, and continue the protocol normally using
-	 * {@link #finishDistributedProtocol(ProofP)}.
+	 * {@link #finishDistributedProtocol(ProofP, BigInteger)}.
 	 * @param plistcom List of commitments of the cloud for each public key
 	 */
 	private void obtainCloudProofP(ProofPCommitmentMap plistcom) {
 		ProofListBuilder.Commitment com = builder.calculateCommitments();
 		com.mergeProofPCommitments(plistcom);
-		challenge = com.calculateChallenge(builder.getContext(), builder.getNonce());
+		final BigInteger challenge = com.calculateChallenge(
+				builder.getContext(), builder.getNonce(), action == Action.SIGNING);
 
 		if (action == Action.ISSUING) {
 			CredentialManager.addPublicSKs(plistcom);
@@ -553,7 +553,7 @@ public class JsonIrmaClient extends IrmaClient implements EnterPINDialogFragment
 		client.post(ProofP.class, CredentialManager.getCloudServer() + "/prove/getResponse", challenge, new JsonResultHandler<ProofP>() {
 			@Override public void onSuccess(ProofP result) {
 				Log.i(TAG, "Unbelievable, also received a ProofP from the server");
-				JsonIrmaClient.this.finishDistributedProtocol(result);
+				JsonIrmaClient.this.finishDistributedProtocol(result, challenge);
 			}
 		});
 	}
@@ -564,7 +564,7 @@ public class JsonIrmaClient extends IrmaClient implements EnterPINDialogFragment
 	 * {@link #sendIssueCommitmentMessage(IssueCommitmentMessage)}.
 	 * @param proofp The cloud's proof of its part of the secret key
 	 */
-	private void finishDistributedProtocol(ProofP proofp) {
+	private void finishDistributedProtocol(ProofP proofp, BigInteger challenge) {
 		ProofList list = builder.createProofList(challenge, proofp);
 
 		if(action == Action.DISCLOSING || action == Action.SIGNING) {
