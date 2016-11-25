@@ -8,6 +8,7 @@ import android.view.View;
 import org.irmacard.cardemu.IRMApp;
 import org.irmacard.cardemu.R;
 import org.irmacard.cardemu.SchemeManagerDetailActivity;
+import org.irmacard.cardemu.SchemeManagerHandler;
 import org.irmacard.credentials.info.SchemeManager;
 
 /** Represents a scheme manager. */
@@ -43,7 +44,7 @@ public class SchemeManagerPreference extends Preference {
 		if (deleteView != null) {
 			deleteView.setOnClickListener(new View.OnClickListener() {
 				@Override public void onClick(View v) {
-					SchemeManagersPreferenceFragment.confirmAndDeleteManager(manager, getContext(), new Runnable() {
+					SchemeManagerHandler.confirmAndDeleteManager(manager, getContext(), new Runnable() {
 						@Override public void run() {
 							fragment.repopulate();
 						}

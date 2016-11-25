@@ -5,7 +5,7 @@ import android.os.Bundle;
 import android.view.MenuItem;
 import android.view.View;
 import android.widget.TextView;
-import org.irmacard.cardemu.preferences.SchemeManagersPreferenceFragment;
+
 import org.irmacard.credentials.info.DescriptionStore;
 import org.irmacard.credentials.info.SchemeManager;
 
@@ -33,7 +33,7 @@ public class SchemeManagerDetailActivity extends Activity {
 	}
 
 	public void onDeleteButtonClick(View view) {
-		SchemeManagersPreferenceFragment.confirmAndDeleteManager(manager, this, new Runnable() {
+		SchemeManagerHandler.confirmAndDeleteManager(manager, this, new Runnable() {
 			@Override public void run() {
 				finish();
 			}

@@ -63,6 +63,8 @@ import android.widget.TextView;
 import com.google.zxing.integration.android.IntentIntegrator;
 import com.google.zxing.integration.android.IntentResult;
 
+import org.irmacard.api.common.IrmaQr;
+import org.irmacard.api.common.SchemeManagerQr;
 import org.irmacard.api.common.exceptions.ApiErrorMessage;
 import org.irmacard.api.common.util.GsonUtil;
 import org.irmacard.cardemu.credentialdetails.CredentialDetailActivity;
@@ -554,14 +556,32 @@ public class MainActivity extends Activity {
 			if (contents == null)
 				return;
 
-			// FIXME: this is a bit of a hack, can we do more consistent branching?
-			if(contents.contains("cloud_enroll")) {
-				Log.i(TAG, "Running cloud enroll from qr code!");
-				askCloudEnrollPermission(contents);
-			} else {
-				launchedFromBrowser = false;
-				onlineEnrolling = false;
-				IrmaClient.NewSession(contents, irmaClientHandler);
+			IrmaQr qr;
+			try {
+				qr = GsonUtil.getGson().fromJson(contents, IrmaQr.class);
+			} catch(Exception e) {
+				irmaClientHandler.onFailure(IrmaClient.Action.UNKNOWN, "Not an IRMA session", null, "Content: " + contents);
+				return;
+			}
+
+			switch (qr.getType()) {
+				case "schememanager":
+					Log.i(TAG, "Adding new scheme manager from qr code!");
+					new SchemeManagerHandler().confirmAndDownloadManager(
+							GsonUtil.getGson().fromJson(contents, SchemeManagerQr.class).getUrl(), this, null);
+					break;
+				case "cloud":
+					Log.i(TAG, "Running cloud enroll from qr code!");
+					askCloudEnrollPermission(contents);
+					break;
+				case "disclosing":
+				case "signing":
+				case "issuing":
+				default:
+					launchedFromBrowser = false;
+					onlineEnrolling = false;
+					IrmaClient.NewSession(contents, irmaClientHandler);
+					break;
 			}
 		}
 	}
@@ -572,8 +592,13 @@ public class MainActivity extends Activity {
 	 * this also deletes the credentials and does the enrolling.
 	 */
 	private void askCloudEnrollPermission(final String qrcontents) {
+		CloudQR cloudqr = GsonUtil.getGson().fromJson(qrcontents, CloudQR.class);
+		askCloudEnrollPermission(cloudqr);
+	}
+
+	private void askCloudEnrollPermission(final CloudQR qr) {
 		if (CredentialManager.isEmpty()) {
-			cloudEnroll(qrcontents);
+			cloudEnroll(qr);
 		} else {
 			new AlertDialog.Builder(this)
 					.setTitle(R.string.confirm_delete_all_title)
@@ -582,7 +607,7 @@ public class MainActivity extends Activity {
 					.setPositiveButton(android.R.string.ok, new DialogInterface.OnClickListener() {
 						@Override public void onClick(DialogInterface dialog, int which) {
 							CredentialManager.deleteAll();
-							cloudEnroll(qrcontents);
+							cloudEnroll(qr);
 							updateCredentialList();
 						}
 					})
@@ -590,10 +615,8 @@ public class MainActivity extends Activity {
 		}
 	}
 
-	private void cloudEnroll(String qrcontents) {
-		Log.i(TAG, "Gotten qr code for cloud enroll: " + qrcontents);
-		final CloudQR qr = GsonUtil.getGson().fromJson(qrcontents, CloudQR.class);
-		Log.i(TAG, "Parsed: " + qr.getUsername() + " " + qr.getUrl());
+	private void cloudEnroll(final CloudQR qr) {
+		Log.i(TAG, "Clound enroll: " + qr.getUsername() + " " + qr.getUrl());
 
 		JsonHttpClient client = new JsonHttpClient(GsonUtil.getGson());
 
