@@ -12,7 +12,7 @@
         android:summary="@string/screenshots_long" />
 
     <header
-        android:fragment="org.irmacard.cardemu.preferences.CloudPreferenceFragment"
-        android:title="Cloud server"
-        android:summary="Cloud server settings" />
+        android:fragment="org.irmacard.cardemu.preferences.KeysharePreferenceFragment"
+        android:title="Keyshare server"
+        android:summary="Keyshare server settings" />
 </preference-headers>

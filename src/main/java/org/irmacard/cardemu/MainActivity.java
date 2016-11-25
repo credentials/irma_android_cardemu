@@ -81,8 +81,8 @@ import org.irmacard.cardemu.preferences.IRMAPreferenceActivity;
 import org.irmacard.cardemu.selfenrol.EnrollSelectActivity;
 import org.irmacard.cardemu.store.AndroidFileReader;
 import org.irmacard.cardemu.store.StoreManager;
-import org.irmacard.cloud.common.CloudQR;
-import org.irmacard.cloud.common.UserMessage;
+import org.irmacard.keyshare.common.KeyshareQr;
+import org.irmacard.keyshare.common.UserMessage;
 import org.irmacard.credentials.Attributes;
 import org.irmacard.credentials.CredentialsException;
 import org.irmacard.credentials.idemix.info.IdemixKeyStore;
@@ -570,9 +570,9 @@ public class MainActivity extends Activity {
 					new SchemeManagerHandler().confirmAndDownloadManager(
 							GsonUtil.getGson().fromJson(contents, SchemeManagerQr.class).getUrl(), this, null);
 					break;
-				case "cloud":
-					Log.i(TAG, "Running cloud enroll from qr code!");
-					askCloudEnrollPermission(contents);
+				case "keyshare":
+					Log.i(TAG, "Running keyshare enroll from qr code!");
+					askKeyshareEnrollPermission(contents);
 					break;
 				case "disclosing":
 				case "signing":
@@ -588,26 +588,26 @@ public class MainActivity extends Activity {
 
 	/**
 	 * If we currently have any credentials, ask the user if she is OK with losing them,
-	 * as cloud enrolling would invalidate them. If she consents or if there are no credentials,
+	 * as keyshare enrolling would invalidate them. If she consents or if there are no credentials,
 	 * this also deletes the credentials and does the enrolling.
 	 */
-	private void askCloudEnrollPermission(final String qrcontents) {
-		CloudQR cloudqr = GsonUtil.getGson().fromJson(qrcontents, CloudQR.class);
-		askCloudEnrollPermission(cloudqr);
+	private void askKeyshareEnrollPermission(final String qrcontents) {
+		KeyshareQr keyshareqr = GsonUtil.getGson().fromJson(qrcontents, KeyshareQr.class);
+		askKeyshareEnrollPermission(keyshareqr);
 	}
 
-	private void askCloudEnrollPermission(final CloudQR qr) {
+	private void askKeyshareEnrollPermission(final KeyshareQr qr) {
 		if (CredentialManager.isEmpty()) {
-			cloudEnroll(qr);
+			keyshareEnroll(qr);
 		} else {
 			new AlertDialog.Builder(this)
 					.setTitle(R.string.confirm_delete_all_title)
-					.setMessage(R.string.link_cloud_question)
+					.setMessage(R.string.link_keyshare_question)
 					.setNegativeButton(android.R.string.cancel, null)
 					.setPositiveButton(android.R.string.ok, new DialogInterface.OnClickListener() {
 						@Override public void onClick(DialogInterface dialog, int which) {
 							CredentialManager.deleteAll();
-							cloudEnroll(qr);
+							keyshareEnroll(qr);
 							updateCredentialList();
 						}
 					})
@@ -615,8 +615,8 @@ public class MainActivity extends Activity {
 		}
 	}
 
-	private void cloudEnroll(final CloudQR qr) {
-		Log.i(TAG, "Clound enroll: " + qr.getUsername() + " " + qr.getUrl());
+	private void keyshareEnroll(final KeyshareQr qr) {
+		Log.i(TAG, "Keyshare enroll: " + qr.getUsername() + " " + qr.getUrl());
 
 		JsonHttpClient client = new JsonHttpClient(GsonUtil.getGson());
 
@@ -627,13 +627,13 @@ public class MainActivity extends Activity {
 				Log.i(TAG, "Enrollment call was successful, " + result);
 				if(result.isEnrolled()) {
 					CredentialManager.setDistributed(true);
-					CredentialManager.setCloudServer(qr.getUrl());
-					CredentialManager.setCloudUsername(qr.getUsername());
+					CredentialManager.setKeyshareServer(qr.getUrl());
+					CredentialManager.setKeyshareUsername(qr.getUsername());
 					CredentialManager.save();
-					setFeedback("Linked to cloud server", "success");
-					Log.i(TAG, "Enrollment with cloud server successful!");
+					setFeedback("Linked to keyshare server", "success");
+					Log.i(TAG, "Enrollment with keyshare server successful!");
 				} else {
-					setFeedback("Linking to cloud server failed", "warning");
+					setFeedback("Linking to keyshare server failed", "warning");
 					Log.i(TAG, "Something went wrong with confirming enrolment");
 				}
 			}
@@ -644,7 +644,7 @@ public class MainActivity extends Activity {
 				// TODO: funny seems that exception is always null
 				if(exception != null)
 					exception.printStackTrace();
-				setFeedback("Error linking to cloud server", "error");
+				setFeedback("Error linking to keyshare server", "error");
 				Log.e(TAG, "Confirming enrolment failed");
 			}
 		});

@@ -107,13 +107,13 @@ public class CredentialManager {
 	private static final String DISTRIBUTED_FLAG = "distributedFlag";
 
 	// TODO: not sure if this is a nice place, but at least this I can reach
-	private static final String CLOUD_USERNAME = "CloudUsername";
-	private static final String CLOUD_SERVER = "CloudServer";
-	private static final String CLOUD_TOKEN = "CloudToken";
+	private static final String KEYSHARE_USERNAME = "KeyshareUsername";
+	private static final String KEYSHARE_SERVER = "KeyshareServer";
+	private static final String KEYSHARE_TOKEN = "KeyshareToken";
 
-	private static String cloudUsername;
-	private static String cloudServer;
-	private static String cloudToken;
+	private static String keyshareUsername;
+	private static String keyshareServer;
+	private static String keyshareToken;
 
 	// Issuing state
 	private static List<CredentialBuilder> credentialBuilders;
@@ -141,9 +141,9 @@ public class CredentialManager {
 				.putString(CREDENTIAL_STORAGE, credentialsJson)
 				.putString(LOG_STORAGE, logsJson)
 				.putBoolean(DISTRIBUTED_FLAG, isDistributed)
-				.putString(CLOUD_USERNAME, cloudUsername)
-				.putString(CLOUD_SERVER, cloudServer)
-				.putString(CLOUD_TOKEN, cloudToken)
+				.putString(KEYSHARE_USERNAME, keyshareUsername)
+				.putString(KEYSHARE_SERVER, keyshareServer)
+				.putString(KEYSHARE_TOKEN, keyshareToken)
 				.apply();
 	}
 
@@ -158,9 +158,9 @@ public class CredentialManager {
 		String logsJson = settings.getString(LOG_STORAGE, "");
 		setDistributed(settings.getBoolean(DISTRIBUTED_FLAG, false));
 
-		cloudUsername = settings.getString(CLOUD_USERNAME, "");
-		cloudServer = settings.getString(CLOUD_SERVER, "");
-		cloudToken = settings.getString(CLOUD_TOKEN, "");
+		keyshareUsername = settings.getString(KEYSHARE_USERNAME, "");
+		keyshareServer = settings.getString(KEYSHARE_SERVER, "");
+		keyshareToken = settings.getString(KEYSHARE_TOKEN, "");
 
 		if (!credentialsJson.equals("")) {
 			try {
@@ -552,7 +552,7 @@ public class CredentialManager {
 	 * Compute compute a ProofList Builder for the first step of the distributed issuing protocol:
 	 * like {@link #getIssueCommitments(IssuingRequest request, DisclosureChoice disclosureChoice)}
 	 * it contains the commitments to the secret key and v_prime and the commitments of the
-	 * corresponding proofs of correctness. The cloud server still needs to be used to integrate the
+	 * corresponding proofs of correctness. The keyshare server still needs to be used to integrate the
 	 * other parts of the secret key.
 	 *
 	 * @param request The request containing the description of the credentials that will be issued
@@ -660,30 +660,30 @@ public class CredentialManager {
 		}
 	}
 
-	public static void setCloudUsername(String username) {
-		cloudUsername = username;
+	public static void setKeyshareUsername(String username) {
+		keyshareUsername = username;
 	}
 
-	public static String getCloudUsername() {
-		return cloudUsername;
+	public static String getKeyshareUsername() {
+		return keyshareUsername;
 	}
 
-	public static void setCloudServer(String server) {
-		Log.i(TAG, "Setting cloud server to :" + server);
-		cloudServer = server;
+	public static void setKeyshareServer(String server) {
+		Log.i(TAG, "Setting keyshare server to :" + server);
+		keyshareServer = server;
 	}
 
-	public static String getCloudServer() {
-		Log.i(TAG, "Returning server:" + cloudServer);
-		return cloudServer;
+	public static String getKeyshareServer() {
+		Log.i(TAG, "Returning server:" + keyshareServer);
+		return keyshareServer;
 	}
 
-	public static void setCloudToken(String token) {
-		cloudToken = token;
+	public static void setKeyshareToken(String token) {
+		keyshareToken = token;
 	}
 
-	public static String getCloudToken() {
-		return cloudToken;
+	public static String getKeyshareToken() {
+		return keyshareToken;
 	}
 
 	public static void setDistributed(boolean distributed) {
@@ -698,11 +698,11 @@ public class CredentialManager {
 		return nonce2;
 	}
 
-	public static void unlinkFromCloud() {
+	public static void unlinkFromKeyshareServer() {
 		isDistributed = false;
-		cloudServer = "";
-		cloudToken = "";
-		cloudUsername = "";
+		keyshareServer = "";
+		keyshareToken = "";
+		keyshareUsername = "";
 
 		deleteAll();
 		save();

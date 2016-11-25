@@ -29,10 +29,10 @@ import org.irmacard.cardemu.httpclient.HttpResultHandler;
 import org.irmacard.cardemu.httpclient.JsonHttpClient;
 import org.irmacard.cardemu.pindialog.EnterPINDialogFragment;
 import org.irmacard.cardemu.store.StoreManager;
-import org.irmacard.cloud.common.AuthorizationResult;
-import org.irmacard.cloud.common.CloudResult;
-import org.irmacard.cloud.common.IRMAHeaders;
-import org.irmacard.cloud.common.PinTokenMessage;
+import org.irmacard.keyshare.common.AuthorizationResult;
+import org.irmacard.keyshare.common.KeyshareResult;
+import org.irmacard.keyshare.common.IRMAHeaders;
+import org.irmacard.keyshare.common.PinTokenMessage;
 import org.irmacard.credentials.CredentialsException;
 import org.irmacard.credentials.idemix.messages.IssueCommitmentMessage;
 import org.irmacard.credentials.idemix.messages.IssueSignatureMessage;
@@ -165,7 +165,7 @@ public class JsonIrmaClient extends IrmaClient implements EnterPINDialogFragment
 				e.printStackTrace();
 				return;
 			}
-			startCloudProtocol();
+			startKeyshareProtocol();
 
 		} else {
 			IssueCommitmentMessage msg;
@@ -236,7 +236,7 @@ public class JsonIrmaClient extends IrmaClient implements EnterPINDialogFragment
 				e.printStackTrace();
 				return;
 			}
-			startCloudProtocol();
+			startKeyshareProtocol();
 		} else {
 			ProofList proofs;
 			try {
@@ -380,30 +380,30 @@ public class JsonIrmaClient extends IrmaClient implements EnterPINDialogFragment
 		server = null;
 	}
 
-	// Cloud methods -------------------------------------------------------------------------------
+	// Keyshare methods -------------------------------------------------------------------------------
 
 	/**
-	 * Starts the cloud-part of the issuing or disclosure protocol.
-	 * Ask the user for her PIN if necessary (i.e., if our cloud JWT is absent or expired). We allow
-	 * the user as much attempts as the cloud server allows. The entered pin is checked using
-	 * {@link #verifyPinAtCloud(String)}. After this (if successful) we use the valid JWT to get the
-	 *  cloud's {@link ProofP} through {@link #continueProtocolWithAuthorization()}.
+	 * Starts the keyshare-part of the issuing or disclosure protocol.
+	 * Ask the user for her PIN if necessary (i.e., if our keyshare JWT is absent or expired). We allow
+	 * the user as much attempts as the keyshare server allows. The entered pin is checked using
+	 * {@link #verifyPinAtKeyshareServer(String)}. After this (if successful) we use the valid JWT to get the
+	 *  keyshare's {@link ProofP} through {@link #continueProtocolWithAuthorization()}.
 	 */
-	private void startCloudProtocol() {
+	private void startKeyshareProtocol() {
 		obtainValidAuthorizationToken(-1);
 	}
 
 	/**
-	 * Same as {@link #startCloudProtocol()}, but allowing the user the specified amount
+	 * Same as {@link #startKeyshareProtocol()}, but allowing the user the specified amount
 	 * of tries.
 	 */
 	private void obtainValidAuthorizationToken(final int tries) {
 		JsonHttpClient client = new JsonHttpClient(GsonUtil.getGson());
 
-		client.setExtraHeader(IRMAHeaders.USERNAME, CredentialManager.getCloudUsername());
-		client.setExtraHeader(IRMAHeaders.AUTHORIZATION, CredentialManager.getCloudToken());
+		client.setExtraHeader(IRMAHeaders.USERNAME, CredentialManager.getKeyshareUsername());
+		client.setExtraHeader(IRMAHeaders.AUTHORIZATION, CredentialManager.getKeyshareToken());
 
-		String url = CredentialManager.getCloudServer() + "/users/isAuthorized";
+		String url = CredentialManager.getKeyshareServer() + "/users/isAuthorized";
 		client.post(AuthorizationResult.class, url, "", new HttpResultHandler<AuthorizationResult>() {
 			@Override
 			public void onSuccess(AuthorizationResult result) {
@@ -418,7 +418,7 @@ public class JsonIrmaClient extends IrmaClient implements EnterPINDialogFragment
 					handler.verifyPin(tries, JsonIrmaClient.this);
 				} else {
 					Log.i(TAG, "Authorization is blocked!!!");
-					fail("Cloud authorization blocked", true);
+					fail("Keyshare authorization blocked", true);
 				}
 			}
 
@@ -435,7 +435,7 @@ public class JsonIrmaClient extends IrmaClient implements EnterPINDialogFragment
 
 	@Override
 	public void onPinEntered(String pin) {
-		verifyPinAtCloud(pin);
+		verifyPinAtKeyshareServer(pin);
 	}
 
 	@Override
@@ -444,25 +444,25 @@ public class JsonIrmaClient extends IrmaClient implements EnterPINDialogFragment
 	}
 
 	/**
-	 * Given a pin, ask the server if it is correct; if it is, store and use the returned cloud JWT
+	 * Given a pin, ask the server if it is correct; if it is, store and use the returned keyshare JWT
 	 * in {@link #continueProtocolWithAuthorization()}; if it is not, ask for the pin again using
 	 * {@link #obtainValidAuthorizationToken(int)} (which afterwards calls us again).
 	 */
-	private void verifyPinAtCloud(String pin) {
+	private void verifyPinAtKeyshareServer(String pin) {
 		JsonHttpClient client = new JsonHttpClient(GsonUtil.getGson());
-		client.setExtraHeader(IRMAHeaders.USERNAME, CredentialManager.getCloudUsername());
-		client.setExtraHeader(IRMAHeaders.AUTHORIZATION, CredentialManager.getCloudToken());
+		client.setExtraHeader(IRMAHeaders.USERNAME, CredentialManager.getKeyshareUsername());
+		client.setExtraHeader(IRMAHeaders.AUTHORIZATION, CredentialManager.getKeyshareToken());
 
-		PinTokenMessage msg = new PinTokenMessage(CredentialManager.getCloudUsername(), pin);
+		PinTokenMessage msg = new PinTokenMessage(CredentialManager.getKeyshareUsername(), pin);
 
-		String url = CredentialManager.getCloudServer() + "/users/verify/pin";
-		client.post(CloudResult.class, url, msg, new HttpResultHandler<CloudResult>() {
+		String url = CredentialManager.getKeyshareServer() + "/users/verify/pin";
+		client.post(KeyshareResult.class, url, msg, new HttpResultHandler<KeyshareResult>() {
 			@Override
-			public void onSuccess(CloudResult result) {
+			public void onSuccess(KeyshareResult result) {
 				Log.i(TAG, "PIN Verification call was successful, " + result);
-				if(result.getStatus().equals(CloudResult.STATUS_SUCCESS)) {
+				if(result.getStatus().equals(KeyshareResult.STATUS_SUCCESS)) {
 					Log.i(TAG, "Verification with PIN verified, yay!");
-					CredentialManager.setCloudToken(result.getMessage());
+					CredentialManager.setKeyshareToken(result.getMessage());
 					continueProtocolWithAuthorization();
 				} else {
 					Log.i(TAG, "Something went wrong verifying the pin");
@@ -473,7 +473,7 @@ public class JsonIrmaClient extends IrmaClient implements EnterPINDialogFragment
 							obtainValidAuthorizationToken(remainingTries);
 						else {
 							Log.i(TAG, "Authorization is blocked!!!");
-							fail("Cloud authorization blocked", true);
+							fail("Keyshare authorization blocked", true);
 						}
 					}
 				}
@@ -482,7 +482,7 @@ public class JsonIrmaClient extends IrmaClient implements EnterPINDialogFragment
 			@Override
 			public void onError(HttpClientException exception) {
 				// TODO: handle properly
-				// setFeedback("Failed to verify PIN with Cloud Server", "error");
+				// setFeedback("Failed to verify PIN with Keyshare Server", "error");
 				if(exception != null)
 					exception.printStackTrace();
 				Log.e(TAG, "Pin verification failed");
@@ -493,28 +493,28 @@ public class JsonIrmaClient extends IrmaClient implements EnterPINDialogFragment
 	/**
 	 * Generate our randomizers for the proofs of knowledge of our part of the secret key, and (possibly)
 	 * hidden attributes; afterwards continue the protocol with
-	 * {@link #obtainCloudProofPCommitments(List)}.
+	 * {@link #obtainKeyshareProofPCommitments(List)}.
 	 */
 	private void continueProtocolWithAuthorization() {
 		builder.generateRandomizers();
 		List<PublicKeyIdentifier> pkids = builder.getPublicKeyIdentifiers();
-		Log.i(TAG, "Trying to obtain commitments from cloud server now!");
-		obtainCloudProofPCommitments(pkids);
+		Log.i(TAG, "Trying to obtain commitments from keyshare server now!");
+		obtainKeyshareProofPCommitments(pkids);
 	}
 
 	/**
-	 * Ask the cloud server for R_0^w mod n, with w being its randomness, and n the moduli
+	 * Ask the keyshare server for R_0^w mod n, with w being its randomness, and n the moduli
 	 * of each of the specified public keys; if successful, continue by calculating the challenge and
-	 * asking for the responses by {@link #obtainCloudProofP(ProofPCommitmentMap)}.
+	 * asking for the responses by {@link #obtainKeyshareProofP(ProofPCommitmentMap)}.
 	 * @param pkids List of public keys; for the n of each of these, we ask for R_0^w mod n
 	 */
-	private void obtainCloudProofPCommitments(final List<PublicKeyIdentifier> pkids) {
+	private void obtainKeyshareProofPCommitments(final List<PublicKeyIdentifier> pkids) {
 		final JsonHttpClient client = new JsonHttpClient(GsonUtil.getGson());
-		client.setExtraHeader(IRMAHeaders.USERNAME, CredentialManager.getCloudUsername());
-		client.setExtraHeader(IRMAHeaders.AUTHORIZATION, CredentialManager.getCloudToken());
+		client.setExtraHeader(IRMAHeaders.USERNAME, CredentialManager.getKeyshareUsername());
+		client.setExtraHeader(IRMAHeaders.AUTHORIZATION, CredentialManager.getKeyshareToken());
 
-		Log.i(TAG, "Posting to the cloud server now!");
-		client.post(ProofPCommitmentMap.class, CredentialManager.getCloudServer() + "/prove/getCommitments", pkids, new JsonResultHandler<ProofPCommitmentMap>() {
+		Log.i(TAG, "Posting to the keyshare server now!");
+		client.post(ProofPCommitmentMap.class, CredentialManager.getKeyshareServer() + "/prove/getCommitments", pkids, new JsonResultHandler<ProofPCommitmentMap>() {
 			@Override public void onSuccess(ProofPCommitmentMap result) {
 				Log.i(TAG, "Unbelievable, it actually worked:");
 				for(PublicKeyIdentifier pkid : pkids) {
@@ -522,20 +522,20 @@ public class JsonIrmaClient extends IrmaClient implements EnterPINDialogFragment
 				}
 				Log.i(TAG, "Calling next function in this protocol class:" + JsonIrmaClient.this);
 
-				obtainCloudProofP(result);
+				obtainKeyshareProofP(result);
 			}
 		});
 	}
 
 	/**
-	 * Calculate the challenge c using our commitments and that of the cloud server, post that to the
-	 * cloud server, and ask for the response c * m + w (where m is the cloud's private key and w its
+	 * Calculate the challenge c using our commitments and that of the keyshare server, post that to the
+	 * keyshare server, and ask for the response c * m + w (where m is the keyshare's private key and w its
 	 * randomness used previously in its commitment). If successful, combine our responses with that
-	 * of the cloud server, and continue the protocol normally using
+	 * of the keyshare server, and continue the protocol normally using
 	 * {@link #finishDistributedProtocol(ProofP, BigInteger)}.
-	 * @param plistcom List of commitments of the cloud for each public key
+	 * @param plistcom List of commitments of the keyshare for each public key
 	 */
-	private void obtainCloudProofP(ProofPCommitmentMap plistcom) {
+	private void obtainKeyshareProofP(ProofPCommitmentMap plistcom) {
 		ProofListBuilder.Commitment com = builder.calculateCommitments();
 		com.mergeProofPCommitments(plistcom);
 		final BigInteger challenge = com.calculateChallenge(
@@ -546,11 +546,11 @@ public class JsonIrmaClient extends IrmaClient implements EnterPINDialogFragment
 		}
 
 		final JsonHttpClient client = new JsonHttpClient(GsonUtil.getGson());
-		client.setExtraHeader(IRMAHeaders.USERNAME, CredentialManager.getCloudUsername());
-		client.setExtraHeader(IRMAHeaders.AUTHORIZATION, CredentialManager.getCloudToken());
+		client.setExtraHeader(IRMAHeaders.USERNAME, CredentialManager.getKeyshareUsername());
+		client.setExtraHeader(IRMAHeaders.AUTHORIZATION, CredentialManager.getKeyshareToken());
 
-		Log.i(TAG, "Posting challenge to the cloud server now!");
-		client.post(ProofP.class, CredentialManager.getCloudServer() + "/prove/getResponse", challenge, new JsonResultHandler<ProofP>() {
+		Log.i(TAG, "Posting challenge to the keyshare server now!");
+		client.post(ProofP.class, CredentialManager.getKeyshareServer() + "/prove/getResponse", challenge, new JsonResultHandler<ProofP>() {
 			@Override public void onSuccess(ProofP result) {
 				Log.i(TAG, "Unbelievable, also received a ProofP from the server");
 				JsonIrmaClient.this.finishDistributedProtocol(result, challenge);
@@ -559,10 +559,10 @@ public class JsonIrmaClient extends IrmaClient implements EnterPINDialogFragment
 	}
 
 	/**
-	 * Combine our proofs with that of the cloud server, and continue the protocol normally using
+	 * Combine our proofs with that of the keyshare server, and continue the protocol normally using
 	 * {@link #sendDisclosureProofs(ProofList)} or
 	 * {@link #sendIssueCommitmentMessage(IssueCommitmentMessage)}.
-	 * @param proofp The cloud's proof of its part of the secret key
+	 * @param proofp The keyshare server's proof of its part of the secret key
 	 */
 	private void finishDistributedProtocol(ProofP proofp, BigInteger challenge) {
 		ProofList list = builder.createProofList(challenge, proofp);

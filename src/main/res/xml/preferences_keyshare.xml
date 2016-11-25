@@ -3,6 +3,6 @@
 
     <SwitchPreference
         android:defaultValue="false"
-        android:title="@string/linked_to_cloud"
+        android:title="@string/linked_to_keyshare"
         android:key="is_distributed" />
 </PreferenceScreen>
