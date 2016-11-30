@@ -1,0 +1,38 @@
+<?xml version="1.0" encoding="utf-8"?>
+<ScrollView  xmlns:android="http://schemas.android.com/apk/res/android"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content">
+    <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+                  android:orientation="vertical"
+                  android:layout_width="wrap_content"
+                  android:layout_height="wrap_content"
+                  android:padding="@dimen/detail_medium_vspace"
+                  android:id="@+id/dialog_keyshare_enroll">
+
+        <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:textSize="14sp"
+                android:textColor="#000"
+                android:text="Enter your emailadress and pincode for keyshare server."
+                android:id="@+id/issuance_question"
+                android:paddingBottom="@dimen/detail_small_vspace"/>
+
+        <EditText
+            android:id="@+id/emailaddress"
+            android:layout_width="fill_parent"
+            android:layout_height="wrap_content"
+            android:hint="Email address"
+            android:inputType="textEmailAddress" />
+
+        <EditText
+            android:id="@+id/pincode"
+            android:inputType="numberPassword"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="10dp"
+            android:layout_marginBottom="10dp"
+            android:hint="@string/pinhint" />
+
+    </LinearLayout>
+</ScrollView>

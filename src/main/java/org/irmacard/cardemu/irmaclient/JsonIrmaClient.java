@@ -23,6 +23,7 @@ import org.irmacard.api.common.signatures.SignatureProofRequest;
 import org.irmacard.api.common.util.GsonUtil;
 import org.irmacard.cardemu.CredentialManager;
 import org.irmacard.cardemu.DisclosureChoice;
+import org.irmacard.cardemu.KeyshareServer;
 import org.irmacard.cardemu.R;
 import org.irmacard.cardemu.httpclient.HttpClientException;
 import org.irmacard.cardemu.httpclient.HttpResultHandler;
@@ -58,6 +59,7 @@ public class JsonIrmaClient extends IrmaClient implements EnterPINDialogFragment
 	private String server;
 	private String protocolVersion;
 	private Resources resources;
+	private String schemeManager;
 
 	// Some specific distributed issuance/verification state
 	private ProofListBuilder builder;
@@ -158,7 +160,7 @@ public class JsonIrmaClient extends IrmaClient implements EnterPINDialogFragment
 		// Increase timeout for this step as issuance server might take longer for many creds
 		client.setTimeout(15000);
 
-		if (CredentialManager.isDistributed()) {
+		if (CredentialManager.isDistributed(request.getSchemeManager())) {
 			try {
 				this.builder = CredentialManager.generateProofListBuilderForIssuance(request, disclosureChoice);
 			} catch (InfoException|CredentialsException|KeyException e) {
@@ -227,7 +229,7 @@ public class JsonIrmaClient extends IrmaClient implements EnterPINDialogFragment
 		String message = disclosureChoice.getRequest() instanceof SignatureProofRequest ?
 				((SignatureProofRequest) disclosureChoice.getRequest()).getMessage() : null;
 
-		if(CredentialManager.isDistributed()) {
+		if(CredentialManager.isDistributed(disclosureChoice.getRequest().getSchemeManager())) {
 			try {
 				this.builder = CredentialManager.generateProofListBuilderForDisclosure(
 						disclosureChoice, message);
@@ -344,6 +346,8 @@ public class JsonIrmaClient extends IrmaClient implements EnterPINDialogFragment
 			return;
 		}
 
+		schemeManager = request.getSchemeManager();
+
 		// If necessary, update the stores; afterwards, ask the user for permission to continue
 		StoreManager.download(request, new StoreManager.DownloadHandler() {
 			@Override public void onSuccess() {
@@ -400,10 +404,11 @@ public class JsonIrmaClient extends IrmaClient implements EnterPINDialogFragment
 	private void obtainValidAuthorizationToken(final int tries) {
 		JsonHttpClient client = new JsonHttpClient(GsonUtil.getGson());
 
-		client.setExtraHeader(IRMAHeaders.USERNAME, CredentialManager.getKeyshareUsername());
-		client.setExtraHeader(IRMAHeaders.AUTHORIZATION, CredentialManager.getKeyshareToken());
+		KeyshareServer kss = CredentialManager.getKeyshareServer(schemeManager);
+		client.setExtraHeader(IRMAHeaders.USERNAME, kss.getUsername());
+		client.setExtraHeader(IRMAHeaders.AUTHORIZATION, kss.getToken());
 
-		String url = CredentialManager.getKeyshareServer() + "/users/isAuthorized";
+		String url = kss.getUrl() + "/users/isAuthorized";
 		client.post(AuthorizationResult.class, url, "", new HttpResultHandler<AuthorizationResult>() {
 			@Override
 			public void onSuccess(AuthorizationResult result) {
@@ -450,19 +455,20 @@ public class JsonIrmaClient extends IrmaClient implements EnterPINDialogFragment
 	 */
 	private void verifyPinAtKeyshareServer(String pin) {
 		JsonHttpClient client = new JsonHttpClient(GsonUtil.getGson());
-		client.setExtraHeader(IRMAHeaders.USERNAME, CredentialManager.getKeyshareUsername());
-		client.setExtraHeader(IRMAHeaders.AUTHORIZATION, CredentialManager.getKeyshareToken());
+		final KeyshareServer kss = CredentialManager.getKeyshareServer(schemeManager);
+		client.setExtraHeader(IRMAHeaders.USERNAME, kss.getUsername());
+		client.setExtraHeader(IRMAHeaders.AUTHORIZATION, kss.getToken());
 
-		PinTokenMessage msg = new PinTokenMessage(CredentialManager.getKeyshareUsername(), pin);
+		PinTokenMessage msg = new PinTokenMessage(kss.getUsername(), pin);
 
-		String url = CredentialManager.getKeyshareServer() + "/users/verify/pin";
+		String url = kss.getUrl() + "/users/verify/pin";
 		client.post(KeyshareResult.class, url, msg, new HttpResultHandler<KeyshareResult>() {
 			@Override
 			public void onSuccess(KeyshareResult result) {
 				Log.i(TAG, "PIN Verification call was successful, " + result);
 				if(result.getStatus().equals(KeyshareResult.STATUS_SUCCESS)) {
 					Log.i(TAG, "Verification with PIN verified, yay!");
-					CredentialManager.setKeyshareToken(result.getMessage());
+					kss.setToken(result.getMessage());
 					continueProtocolWithAuthorization();
 				} else {
 					Log.i(TAG, "Something went wrong verifying the pin");
@@ -510,11 +516,12 @@ public class JsonIrmaClient extends IrmaClient implements EnterPINDialogFragment
 	 */
 	private void obtainKeyshareProofPCommitments(final List<PublicKeyIdentifier> pkids) {
 		final JsonHttpClient client = new JsonHttpClient(GsonUtil.getGson());
-		client.setExtraHeader(IRMAHeaders.USERNAME, CredentialManager.getKeyshareUsername());
-		client.setExtraHeader(IRMAHeaders.AUTHORIZATION, CredentialManager.getKeyshareToken());
+		KeyshareServer kss = CredentialManager.getKeyshareServer(schemeManager);
+		client.setExtraHeader(IRMAHeaders.USERNAME, kss.getUsername());
+		client.setExtraHeader(IRMAHeaders.AUTHORIZATION, kss.getToken());
 
 		Log.i(TAG, "Posting to the keyshare server now!");
-		client.post(ProofPCommitmentMap.class, CredentialManager.getKeyshareServer() + "/prove/getCommitments", pkids, new JsonResultHandler<ProofPCommitmentMap>() {
+		client.post(ProofPCommitmentMap.class, kss.getUrl() + "/prove/getCommitments", pkids, new JsonResultHandler<ProofPCommitmentMap>() {
 			@Override public void onSuccess(ProofPCommitmentMap result) {
 				Log.i(TAG, "Unbelievable, it actually worked:");
 				for(PublicKeyIdentifier pkid : pkids) {
@@ -546,11 +553,12 @@ public class JsonIrmaClient extends IrmaClient implements EnterPINDialogFragment
 		}
 
 		final JsonHttpClient client = new JsonHttpClient(GsonUtil.getGson());
-		client.setExtraHeader(IRMAHeaders.USERNAME, CredentialManager.getKeyshareUsername());
-		client.setExtraHeader(IRMAHeaders.AUTHORIZATION, CredentialManager.getKeyshareToken());
+		KeyshareServer kss = CredentialManager.getKeyshareServer(schemeManager);
+		client.setExtraHeader(IRMAHeaders.USERNAME, kss.getUsername());
+		client.setExtraHeader(IRMAHeaders.AUTHORIZATION, kss.getToken());
 
 		Log.i(TAG, "Posting challenge to the keyshare server now!");
-		client.post(ProofP.class, CredentialManager.getKeyshareServer() + "/prove/getResponse", challenge, new JsonResultHandler<ProofP>() {
+		client.post(ProofP.class, kss.getUrl() + "/prove/getResponse", challenge, new JsonResultHandler<ProofP>() {
 			@Override public void onSuccess(ProofP result) {
 				Log.i(TAG, "Unbelievable, also received a ProofP from the server");
 				JsonIrmaClient.this.finishDistributedProtocol(result, challenge);

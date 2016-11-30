@@ -35,6 +35,7 @@ import android.content.Context;
 import android.os.AsyncTask;
 
 import org.irmacard.api.common.SessionRequest;
+import org.irmacard.cardemu.BuildConfig;
 import org.irmacard.credentials.idemix.info.IdemixKeyStore;
 import org.irmacard.credentials.idemix.info.IdemixKeyStoreSerializer;
 import org.irmacard.credentials.info.CredentialDescription;
@@ -199,7 +200,7 @@ public class StoreManager implements DescriptionStoreSerializer, IdemixKeyStoreS
 			@Override protected Exception doInBackground(Void... params) {
 				try {
 					if (schemeManagerUrl != null)
-						DescriptionStore.getInstance().downloadSchemeManager(schemeManagerUrl);
+						DescriptionStore.getInstance().downloadSchemeManager(schemeManagerUrl, BuildConfig.DEBUG);
 
 					if (issuers != null)
 						for (IssuerIdentifier issuer: issuers)

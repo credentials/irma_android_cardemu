@@ -171,7 +171,7 @@
     <string name="schememanager_known_title">Scheme manager already known</string>
     <string name="schememanager_known_text">This scheme manager cannot be added because it is already known.</string>
     <string name="add_schememanager_title">Add scheme manager?</string>
-    <string name="add_schememanager_question">Are you certain that you want to add the scheme manager at %s?</string>
+    <string name="add_schememanager_question">Are you certain that you want to add the scheme manager "%s"?</string>
     <string name="downloading">Downloading…</string>
     <string name="downloading_schememanager_failed_title">Downloading scheme manager failed</string>
     <string name="downloading_schememanager_failed_text">Downloading of the scheme manager failed. Error: %s</string>
@@ -197,8 +197,6 @@
     <string name="pinmessage">Please enter your IRMA pincode</string>
     <string name="linked_to_keyshare">Linked to keyshare server</string>
     <string name="not_linked_to_keyshare">Not linked to keyshare server</string>
-    <string name="unlink_keyshare_question">Unlinking from the keyshare server will also delete all credentials. Proceed?</string>
-    <string name="link_keyshare_question">Linking to this keyshare server will also delete all credentials. Proceed?</string>
     <plurals name="error_tries_left">
         <item quantity="one">Pin Incorrect! You have one try left.</item>
         <item quantity="other">Pin Incorrect! You have %d tries left.</item>

@@ -10,9 +10,4 @@
         android:fragment="org.irmacard.cardemu.preferences.ScreenshotPreferenceFragment"
         android:title="@string/screenshots"
         android:summary="@string/screenshots_long" />
-
-    <header
-        android:fragment="org.irmacard.cardemu.preferences.KeysharePreferenceFragment"
-        android:title="Keyshare server"
-        android:summary="Keyshare server settings" />
 </preference-headers>

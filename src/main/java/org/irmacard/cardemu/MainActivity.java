@@ -69,9 +69,6 @@ import org.irmacard.api.common.exceptions.ApiErrorMessage;
 import org.irmacard.api.common.util.GsonUtil;
 import org.irmacard.cardemu.credentialdetails.CredentialDetailActivity;
 import org.irmacard.cardemu.credentialdetails.CredentialDetailFragment;
-import org.irmacard.cardemu.httpclient.HttpClientException;
-import org.irmacard.cardemu.httpclient.HttpResultHandler;
-import org.irmacard.cardemu.httpclient.JsonHttpClient;
 import org.irmacard.cardemu.identifiers.IdemixCredentialIdentifier;
 import org.irmacard.cardemu.irmaclient.IrmaClient;
 import org.irmacard.cardemu.irmaclient.IrmaClientHandler;
@@ -81,8 +78,6 @@ import org.irmacard.cardemu.preferences.IRMAPreferenceActivity;
 import org.irmacard.cardemu.selfenrol.EnrollSelectActivity;
 import org.irmacard.cardemu.store.AndroidFileReader;
 import org.irmacard.cardemu.store.StoreManager;
-import org.irmacard.keyshare.common.KeyshareQr;
-import org.irmacard.keyshare.common.UserMessage;
 import org.irmacard.credentials.Attributes;
 import org.irmacard.credentials.CredentialsException;
 import org.irmacard.credentials.idemix.info.IdemixKeyStore;
@@ -204,7 +199,7 @@ public class MainActivity extends Activity {
 	}
 
 	private void showErrorDialog(final String title, final String message,
-								 final String techInfo, final boolean showingTechInfo) {
+	                             final String techInfo, final boolean showingTechInfo) {
 		String m = message;
 		if (showingTechInfo && techInfo != null)
 			m += ". " + techInfo;
@@ -570,10 +565,6 @@ public class MainActivity extends Activity {
 					new SchemeManagerHandler().confirmAndDownloadManager(
 							GsonUtil.getGson().fromJson(contents, SchemeManagerQr.class).getUrl(), this, null);
 					break;
-				case "keyshare":
-					Log.i(TAG, "Running keyshare enroll from qr code!");
-					askKeyshareEnrollPermission(contents);
-					break;
 				case "disclosing":
 				case "signing":
 				case "issuing":
@@ -584,70 +575,6 @@ public class MainActivity extends Activity {
 					break;
 			}
 		}
-	}
-
-	/**
-	 * If we currently have any credentials, ask the user if she is OK with losing them,
-	 * as keyshare enrolling would invalidate them. If she consents or if there are no credentials,
-	 * this also deletes the credentials and does the enrolling.
-	 */
-	private void askKeyshareEnrollPermission(final String qrcontents) {
-		KeyshareQr keyshareqr = GsonUtil.getGson().fromJson(qrcontents, KeyshareQr.class);
-		askKeyshareEnrollPermission(keyshareqr);
-	}
-
-	private void askKeyshareEnrollPermission(final KeyshareQr qr) {
-		if (CredentialManager.isEmpty()) {
-			keyshareEnroll(qr);
-		} else {
-			new AlertDialog.Builder(this)
-					.setTitle(R.string.confirm_delete_all_title)
-					.setMessage(R.string.link_keyshare_question)
-					.setNegativeButton(android.R.string.cancel, null)
-					.setPositiveButton(android.R.string.ok, new DialogInterface.OnClickListener() {
-						@Override public void onClick(DialogInterface dialog, int which) {
-							CredentialManager.deleteAll();
-							keyshareEnroll(qr);
-							updateCredentialList();
-						}
-					})
-					.show();
-		}
-	}
-
-	private void keyshareEnroll(final KeyshareQr qr) {
-		Log.i(TAG, "Keyshare enroll: " + qr.getUsername() + " " + qr.getUrl());
-
-		JsonHttpClient client = new JsonHttpClient(GsonUtil.getGson());
-
-		String url = qr.getUrl() + "/web/users/" + qr.getUserID() + "/enroll";
-		client.post(UserMessage.class, url, "", new HttpResultHandler<UserMessage>() {
-			@Override
-			public void onSuccess(UserMessage result) {
-				Log.i(TAG, "Enrollment call was successful, " + result);
-				if(result.isEnrolled()) {
-					CredentialManager.setDistributed(true);
-					CredentialManager.setKeyshareServer(qr.getUrl());
-					CredentialManager.setKeyshareUsername(qr.getUsername());
-					CredentialManager.save();
-					setFeedback("Linked to keyshare server", "success");
-					Log.i(TAG, "Enrollment with keyshare server successful!");
-				} else {
-					setFeedback("Linking to keyshare server failed", "warning");
-					Log.i(TAG, "Something went wrong with confirming enrolment");
-				}
-			}
-
-			@Override
-			public void onError(HttpClientException exception) {
-				// TODO: handle properly
-				// TODO: funny seems that exception is always null
-				if(exception != null)
-					exception.printStackTrace();
-				setFeedback("Error linking to keyshare server", "error");
-				Log.e(TAG, "Confirming enrolment failed");
-			}
-		});
 	}
 
 	@Override

@@ -63,6 +63,7 @@ import org.irmacard.credentials.info.DescriptionStore;
 import org.irmacard.credentials.info.InfoException;
 import org.irmacard.credentials.info.IssuerIdentifier;
 import org.irmacard.credentials.info.KeyException;
+import org.irmacard.credentials.info.SchemeManager;
 import org.irmacard.credentials.util.log.IssueLogEntry;
 import org.irmacard.credentials.util.log.LogEntry;
 import org.irmacard.credentials.util.log.RemoveLogEntry;
@@ -95,36 +96,40 @@ public class CredentialManager {
 			= new TypeToken<HashMap<CredentialIdentifier, IdemixCredential>>() {}.getType();
 	private static Type credentialsType
 			= new TypeToken<HashMap<CredentialIdentifier, ArrayList<IdemixCredential>>>() {}.getType();
-	private static Type logsType = new TypeToken<List<LogEntry>>() {}.getType();
+	private static Type logsType
+			= new TypeToken<List<LogEntry>>() {}.getType();
+	private static Type keyshareServersType
+			= new TypeToken<LinkedHashMap<String, KeyshareServer>>(){}.getType();
 
 	private static SharedPreferences settings;
 
 	private static final String TAG = "CredentialManager";
-	public static final String CREDENTIAL_STORAGE = "credentials";
+	public  static final String CREDENTIAL_STORAGE = "credentials";
 	private static final String LOG_STORAGE = "logs";
+	private static final String KEYSHARE_STORAGE = "keyshare";
+	private static final String KEYSHARE_USERNAME =  "KeyshareUsername";
 
-	// TODO: compare this with the global preference, one needs to go
-	private static final String DISTRIBUTED_FLAG = "distributedFlag";
-
-	// TODO: not sure if this is a nice place, but at least this I can reach
-	private static final String KEYSHARE_USERNAME = "KeyshareUsername";
-	private static final String KEYSHARE_SERVER = "KeyshareServer";
-	private static final String KEYSHARE_TOKEN = "KeyshareToken";
-
-	private static String keyshareUsername;
-	private static String keyshareServer;
-	private static String keyshareToken;
+	private static String keyshareUsername = "";
+	private static LinkedHashMap<String, KeyshareServer> keyshareServers = new LinkedHashMap<>();
 
 	// Issuing state
 	private static List<CredentialBuilder> credentialBuilders;
 	private static BigInteger nonce2;
 
-	private static boolean isDistributed = true;
-
 	public static void init(SharedPreferences s) throws CredentialsException {
 		settings = s;
 
 		load();
+	}
+
+	// TODO FIXME REMOVE
+	private static void clear() {
+		keyshareServers.clear();
+		credentials.clear();
+		logs.clear();
+		save();
+		for (SchemeManager manager : DescriptionStore.getInstance().getSchemeManagers())
+			IRMApp.getStoreManager().removeSchemeManager(manager.getName());
 	}
 
 	/**
@@ -136,14 +141,13 @@ public class CredentialManager {
 		Gson gson = GsonUtil.getGson();
 		String credentialsJson = gson.toJson(credentials, credentialsType);
 		String logsJson = gson.toJson(logs, logsType);
+		String keyshareServersJson = GsonUtil.getGson().toJson(keyshareServers);
 
 		settings.edit()
 				.putString(CREDENTIAL_STORAGE, credentialsJson)
 				.putString(LOG_STORAGE, logsJson)
-				.putBoolean(DISTRIBUTED_FLAG, isDistributed)
+				.putString(KEYSHARE_STORAGE, keyshareServersJson)
 				.putString(KEYSHARE_USERNAME, keyshareUsername)
-				.putString(KEYSHARE_SERVER, keyshareServer)
-				.putString(KEYSHARE_TOKEN, keyshareToken)
 				.apply();
 	}
 
@@ -153,14 +157,13 @@ public class CredentialManager {
 	public static void load() throws CredentialsException {
 		Log.i(TAG, "Loading credentials");
 
+		keyshareUsername = settings.getString(KEYSHARE_USERNAME, "");
+
 		Gson gson = GsonUtil.getGson();
 		String credentialsJson = settings.getString(CREDENTIAL_STORAGE, "");
 		String logsJson = settings.getString(LOG_STORAGE, "");
-		setDistributed(settings.getBoolean(DISTRIBUTED_FLAG, false));
+		String keyshareServersJson = settings.getString(KEYSHARE_STORAGE, "");
 
-		keyshareUsername = settings.getString(KEYSHARE_USERNAME, "");
-		keyshareServer = settings.getString(KEYSHARE_SERVER, "");
-		keyshareToken = settings.getString(KEYSHARE_TOKEN, "");
 
 		if (!credentialsJson.equals("")) {
 			try {
@@ -176,16 +179,21 @@ public class CredentialManager {
 			credentials = new HashMap<>();
 		}
 
+		if (!keyshareServersJson.equals("")) {
+			try {
+				keyshareServers = gson.fromJson(keyshareServersJson, keyshareServersType);
+			} catch (Exception e) { /* ignore */ }
+		}
+		if (keyshareServers == null)
+			keyshareServers = new LinkedHashMap<>();
+
 		if (!logsJson.equals("")) {
 			try {
 				logs = gson.fromJson(logsJson, logsType);
-			} catch (Exception e) {
-				logs = new LinkedList<>();
-			}
+			} catch (Exception e) { /* ignore */ }
 		}
-		if (logs == null) {
+		if (logs == null)
 			logs = new LinkedList<>();
-		}
 	}
 
 	/**
@@ -576,7 +584,7 @@ public class CredentialManager {
 
 		for (CredentialRequest cred : request.getCredentials()) {
 			CredentialBuilder cb;
-			if(isDistributed())
+			if(isDistributed(request.getSchemeManager()))
 				cb = new DistributedCredentialBuilder(
 						cred.getPublicKey(), cred.convertToBigIntegers(), request.getContext(), nonce2);
 			else
@@ -668,44 +676,22 @@ public class CredentialManager {
 		return keyshareUsername;
 	}
 
-	public static void setKeyshareServer(String server) {
-		Log.i(TAG, "Setting keyshare server to :" + server);
-		keyshareServer = server;
+	public static boolean isDistributed(String schemeManager) {
+		String kss = DescriptionStore.getInstance().getSchemeManager(schemeManager).getKeyshareServer();
+		return kss != null && kss.length() > 0;
 	}
 
-	public static String getKeyshareServer() {
-		Log.i(TAG, "Returning server:" + keyshareServer);
-		return keyshareServer;
+	public static void addKeyshareServer(String schemeManager, KeyshareServer server) {
+		keyshareServers.put(schemeManager, server);
+		save();
 	}
 
-	public static void setKeyshareToken(String token) {
-		keyshareToken = token;
-	}
-
-	public static String getKeyshareToken() {
-		return keyshareToken;
-	}
-
-	public static void setDistributed(boolean distributed) {
-		isDistributed = distributed;
-	}
-
-	public static boolean isDistributed() {
-		return isDistributed;
+	public static KeyshareServer getKeyshareServer(String schememanager) {
+		return keyshareServers.get(schememanager);
 	}
 
 	public static BigInteger getNonce2() {
 		return nonce2;
-	}
-
-	public static void unlinkFromKeyshareServer() {
-		isDistributed = false;
-		keyshareServer = "";
-		keyshareToken = "";
-		keyshareUsername = "";
-
-		deleteAll();
-		save();
 	}
 
 	public static boolean isEmpty() {

@@ -47,7 +47,7 @@ public class SchemeManagersPreferenceFragment
 	// https://developer.android.com/reference/android/content/SharedPreferences.html#registerOnSharedPreferenceChangeListener%28android.content.SharedPreferences.OnSharedPreferenceChangeListener%29
 	@Override
 	public boolean onPreferenceChange(Preference preference, Object newValue) {
-		downloader.confirmAndDownloadManager((String) newValue, getPreferenceScreen().getContext(), new Runnable() {
+		downloader.confirmAndDownloadManager((String) newValue, getActivity(), new Runnable() {
 			@Override public void run() {
 				repopulate();
 			}
