@@ -35,7 +35,6 @@ import android.content.Context;
 import android.os.AsyncTask;
 
 import org.irmacard.api.common.SessionRequest;
-import org.irmacard.cardemu.BuildConfig;
 import org.irmacard.credentials.idemix.info.IdemixKeyStore;
 import org.irmacard.credentials.idemix.info.IdemixKeyStoreSerializer;
 import org.irmacard.credentials.info.CredentialDescription;
@@ -54,7 +53,7 @@ import java.util.Map;
 
 /**
  * Manager for {@link DescriptionStore} and {@link IdemixKeyStore}: handles downloading new items
- * asynchroniously, and serializing them to storage.
+ * asynchroniously, and serializing them to storage. (See {@link SchemeManagerHandler} for scheme managers.)
  */
 @SuppressWarnings("unused")
 public class StoreManager implements DescriptionStoreSerializer, IdemixKeyStoreSerializer {
@@ -184,24 +183,9 @@ public class StoreManager implements DescriptionStoreSerializer, IdemixKeyStoreS
 	                            final Iterable<CredentialIdentifier> credentials,
 	                            final Map<IssuerIdentifier, Integer> keys,
 	                            final DownloadHandler handler) {
-		download(null, issuers, credentials, keys, handler);
-	}
-
-	public static void downloadSchemeManager(final String url, final DownloadHandler handler) {
-		download(url, null, null, null, handler);
-	}
-
-	private static void download(final String schemeManagerUrl,
-	                             final Iterable<IssuerIdentifier> issuers,
-	                             final Iterable<CredentialIdentifier> credentials,
-	                             final Map<IssuerIdentifier, Integer> keys,
-	                             final DownloadHandler handler) {
 		new AsyncTask<Void,Void,Exception>() {
 			@Override protected Exception doInBackground(Void... params) {
 				try {
-					if (schemeManagerUrl != null)
-						DescriptionStore.getInstance().downloadSchemeManager(schemeManagerUrl, BuildConfig.DEBUG);
-
 					if (issuers != null)
 						for (IssuerIdentifier issuer: issuers)
 							if (DescriptionStore.getInstance().getIssuerDescription(issuer) == null)
@@ -245,6 +229,6 @@ public class StoreManager implements DescriptionStoreSerializer, IdemixKeyStoreS
 	 * @param handler Handler to communicate results to
 	 */
 	public static void download(final SessionRequest request, final DownloadHandler handler) {
-		download(null, request.getIssuerList(), request.getCredentialList(), request.getPublicKeyList(), handler);
+		download(request.getIssuerList(), request.getCredentialList(), request.getPublicKeyList(), handler);
 	}
 }

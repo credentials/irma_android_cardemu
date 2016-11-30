@@ -13,6 +13,7 @@ import android.view.View;
 import android.widget.EditText;
 
 import org.irmacard.api.common.util.GsonUtil;
+import org.irmacard.cardemu.BuildConfig;
 import org.irmacard.cardemu.IRMApp;
 import org.irmacard.cardemu.R;
 import org.irmacard.cardemu.httpclient.HttpClientException;
@@ -26,7 +27,11 @@ import org.irmacard.keyshare.common.UserMessage;
 
 import java.io.IOException;
 
-
+/**
+ * Contains static methods for adding and removing scheme managers and keyshare servers,
+ * see e.g. {@link #confirmAndDownloadManager(String, Activity, Runnable)}. (For issuers, keys and
+ * credential types, see {@link StoreManager}.)
+ */
 public class SchemeManagerHandler {
     public interface KeyserverInputHandler {
         void done(String email, String pin);
@@ -51,6 +56,13 @@ public class SchemeManagerHandler {
                 .show();
     }
 
+    /**
+     * Enroll to the keyshare server at the specified url for the spefified scheme manager.
+     * @param email Emailadress to use
+     * @param pin Pincode to use
+     * @param activity Used for showing any error messages
+     * @param runnable Run afterwards if successful
+     */
     public static void enrollCloudServer(final String schemeManager,
                                          final String url,
                                          final String email,
@@ -68,9 +80,6 @@ public class SchemeManagerHandler {
             }
 
             @Override public void onError(HttpClientException e) {
-                // Don't keep the scheme manager if we didn't manage to enroll to its cloud server
-                if (IRMApp.getStoreManager().canRemoveSchemeManager(schemeManager))
-                    DescriptionStore.getInstance().removeSchemeManager(schemeManager);
                 showError(activity,
                         activity.getString(R.string.downloading_schememanager_failed_title),
                         activity.getString(R.string.downloading_schememanager_failed_text, e.getMessage()));
@@ -78,6 +87,15 @@ public class SchemeManagerHandler {
         });
     }
 
+    /**
+     * Starting point for scheme manager installation:
+     * Downloads the scheme manager description at the specified url, parse it, ask the user if she
+     * consents to installing it, and if so, proceed to
+     * {@link #installManagerAndKeyshareServer(SchemeManager, Activity, Runnable)}.
+     * @param url Where to find the scheme manager
+     * @param activity For dialogs
+     * @param runnable Run afterwards
+     */
     public static void confirmAndDownloadManager(final String url,
                                                  final Activity activity,
                                                  final Runnable runnable) {
@@ -92,8 +110,10 @@ public class SchemeManagerHandler {
         new AsyncTask<Void,SchemeManager,Exception>() {
             @Override protected Exception doInBackground(Void... params) {
                 try {
-                    SchemeManager manager = new SchemeManager(
-                            DescriptionStore.doHttpRequest(url + "/description.xml"));
+                    SchemeManager manager = DescriptionStore.getInstance()
+                            .downloadSchemeManager(url, BuildConfig.DEBUG);
+
+                    // We use onProgressUpdate() for success, and onPostExecute() for errors.
                     publishProgress(manager);
                     return null;
                 } catch (IOException|InfoException e) {
@@ -102,6 +122,7 @@ public class SchemeManagerHandler {
                 }
             }
 
+            /** Use the just successfully downloaded manager to ask the user if she consents to installing it */
             @Override protected void onProgressUpdate(final SchemeManager... values) {
                 final SchemeManager manager = values[0];
 
@@ -112,7 +133,7 @@ public class SchemeManagerHandler {
                         .setNegativeButton(android.R.string.no, null)
                         .setPositiveButton(android.R.string.yes, new DialogInterface.OnClickListener() {
                             @Override public void onClick(DialogInterface dialog, int which) {
-                                downloadManager(manager, activity, runnable);
+                                installManagerAndKeyshareServer(manager, activity, runnable);
                             }
                         })
                         .show();
@@ -142,56 +163,62 @@ public class SchemeManagerHandler {
         }
     }
 
-    private static void downloadManager(final SchemeManager manager, final Activity activity,
-                                        final Runnable runnable) {
+    /**
+     * If the scheme manager has no keyshare server, then install it immediately. Else: <br/>
+     * - ask the user for her email address and pin <br/>
+     * - use that to enroll to the keyshare server <br/>
+     * - if success, then install the scheme manager.
+     * @param manager Manager to install
+     * @param activity Activity for showing dialogs
+     * @param runnable Will be run afterwards in case of success
+     */
+    private static void installManagerAndKeyshareServer(final SchemeManager manager,
+                                                        final Activity activity,
+                                                        final Runnable runnable) {
         if (manager.hasKeyshareServer()) {
             getKeyserverEnrollInput(activity, new KeyserverInputHandler() {
                 @Override public void done(String email, String pin) {
-                    downloadManager(manager, activity, runnable, email, pin);
+                    final ProgressDialog progressDialog = new ProgressDialog(activity);
+                    progressDialog.setMessage(activity.getString(R.string.downloading));
+                    progressDialog.setProgressStyle(ProgressDialog.STYLE_SPINNER);
+                    progressDialog.setIndeterminate(true);
+                    progressDialog.setCancelable(false);
+                    progressDialog.setCanceledOnTouchOutside(false);
+                    progressDialog.show();
+
+                    enrollCloudServer(manager.getName(), manager.getKeyshareServer(),
+                        email, pin, activity, new Runnable() {
+                            @Override
+                            public void run() {
+                                progressDialog.dismiss();
+                                installManager(manager);
+                                if (runnable != null) runnable.run();
+                            }
+                        }
+                    );
                 }
             });
         } else {
-            downloadManager(manager, activity, runnable, null, null);
+            installManager(manager);
         }
     }
 
-    private static void downloadManager(final SchemeManager manager, final Activity activity,
-                                        final Runnable runnable, final String email, final String pin) {
-        final ProgressDialog progressDialog = new ProgressDialog(activity);
-        progressDialog.setMessage(activity.getString(R.string.downloading));
-        progressDialog.setProgressStyle(ProgressDialog.STYLE_SPINNER);
-        progressDialog.setIndeterminate(true);
-        progressDialog.setCancelable(false);
-        progressDialog.setCanceledOnTouchOutside(false);
-        progressDialog.show();
-
-        StoreManager.downloadSchemeManager(manager.getUrl(), new StoreManager.DownloadHandler() {
-            @Override public void onSuccess() {
-                if (manager.hasKeyshareServer())
-                    enrollCloudServer(manager.getName(), manager.getKeyshareServer(), email, pin, activity,
-                            new Runnable() {
-                                @Override public void run() {
-                                    progressDialog.dismiss();
-                                    if (runnable != null)
-                                        runnable.run();
-                                }
-                            });
-                else {
-                    progressDialog.dismiss();
-                    if (runnable != null)
-                        runnable.run();
-                }
-            }
-            @Override public void onError(Exception e) {
-                progressDialog.cancel();
-                showError(activity,
-                        activity.getString(R.string.downloading_schememanager_failed_title),
-                        activity.getString(R.string.downloading_schememanager_failed_text, e.getMessage())
-                );
-            }
-        });
+    /**
+     * Add the given scheme manager to the description store.
+     */
+    private static void installManager(final SchemeManager manager) {
+        try {
+            DescriptionStore.getInstance().addSchemeManager(manager);
+        } catch (InfoException e) {
+            e.printStackTrace();
+        }
     }
 
+    /**
+     * Show a dialog asking the user for her email address and pincode
+     * (to enroll to a keyshare server, which is not done here). The specified
+     * handler is called afterwards (not when the user cancels).
+     */
     @SuppressLint("InflateParams")
     public static void getKeyserverEnrollInput(Activity activity, final KeyserverInputHandler handler) {
         LayoutInflater inflater = activity.getLayoutInflater();
@@ -202,7 +229,6 @@ public class SchemeManagerHandler {
 
         AlertDialog dialog = new AlertDialog.Builder(activity)
                 .setView(view)
-                .setCancelable(false)
                 .setPositiveButton("Save", new DialogInterface.OnClickListener() {
                     @Override public void onClick(DialogInterface dialog, int which) {
                         String email = emailView.getText().toString();
@@ -212,6 +238,7 @@ public class SchemeManagerHandler {
                         handler.done(email, pin);
                     }
                 })
+                .setNegativeButton(android.R.string.cancel, null)
                 .create();
         dialog.setCanceledOnTouchOutside(false);
         dialog.show();
