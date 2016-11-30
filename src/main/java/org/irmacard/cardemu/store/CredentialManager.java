@@ -123,14 +123,14 @@ public class CredentialManager {
 		load();
 	}
 
-	// TODO FIXME REMOVE
-	private static void clear() {
+	public static void clear() {
 		keyshareServers.clear();
 		credentials.clear();
 		logs.clear();
 		save();
 		for (SchemeManager manager : DescriptionStore.getInstance().getSchemeManagers())
-			IRMApp.getStoreManager().removeSchemeManager(manager.getName());
+			if (IRMApp.getStoreManager().canRemoveSchemeManager(manager.getName()))
+				IRMApp.getStoreManager().removeSchemeManager(manager.getName());
 	}
 
 	/**
@@ -678,8 +678,9 @@ public class CredentialManager {
 	}
 
 	public static boolean isDistributed(String schemeManager) {
-		String kss = DescriptionStore.getInstance().getSchemeManager(schemeManager).getKeyshareServer();
-		return kss != null && kss.length() > 0;
+		return DescriptionStore.getInstance()
+				.getSchemeManager(schemeManager)
+				.hasKeyshareServer();
 	}
 
 	public static void addKeyshareServer(String schemeManager, KeyshareServer server) {

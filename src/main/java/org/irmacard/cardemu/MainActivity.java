@@ -611,6 +611,7 @@ public class MainActivity extends Activity {
 	@Override
 	public boolean onPrepareOptionsMenu(Menu menu) {
 		menu.findItem(R.id.menu_manual_session).setVisible(BuildConfig.DEBUG);
+		menu.findItem(R.id.menu_delete_everything).setVisible(BuildConfig.DEBUG);
 		return true;
 	}
 
@@ -645,6 +646,10 @@ public class MainActivity extends Activity {
 					deleteAllCredentials();
 					updateCredentialList();
 				}
+				return true;
+			case R.id.menu_delete_everything:
+				CredentialManager.clear();
+				updateCredentialList();
 				return true;
 			case R.id.menu_manual_session:
 				startManualSession();

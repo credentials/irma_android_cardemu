@@ -7,6 +7,7 @@ import android.support.annotation.NonNull;
 import android.view.MenuItem;
 import android.webkit.URLUtil;
 
+import org.irmacard.cardemu.BuildConfig;
 import org.irmacard.cardemu.R;
 import org.irmacard.cardemu.store.SchemeManagerHandler;
 
@@ -67,8 +68,9 @@ public class IRMAPreferenceActivity extends PreferenceActivity {
 
 		Intent intent = getIntent();
 		String url = intent.getStringExtra("url");
-		// TODO only accept HTTPS
-		if (url == null || url.length() == 0 || !(URLUtil.isHttpsUrl(url) || URLUtil.isHttpUrl(url)) )
+
+		if (url == null || url.length() == 0 ||
+				!(URLUtil.isHttpsUrl(url) || (BuildConfig.DEBUG && URLUtil.isHttpUrl(url))) )
 			return; // Nothing to do
 
 		/*

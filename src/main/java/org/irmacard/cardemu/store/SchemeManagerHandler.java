@@ -66,7 +66,8 @@ public class SchemeManagerHandler {
 
             @Override public void onError(HttpClientException e) {
                 // Don't keep the scheme manager if we didn't manage to enroll to its cloud server
-                DescriptionStore.getInstance().removeSchemeManager(schemeManager);
+                if (IRMApp.getStoreManager().canRemoveSchemeManager(schemeManager))
+                    DescriptionStore.getInstance().removeSchemeManager(schemeManager);
                 showError(activity,
                         activity.getString(R.string.downloading_schememanager_failed_title),
                         activity.getString(R.string.downloading_schememanager_failed_text, e.getMessage()));
@@ -156,7 +157,7 @@ public class SchemeManagerHandler {
                                  final Runnable runnable) {
         cancelFeedback = false; // If we're here, the activity is still alive so that it can getEnrollInput feedback
 
-        if (manager.getKeyshareServer().length() > 0) {
+        if (manager.hasKeyshareServer()) {
             KeyshareIntroDialog.getEnrollInput(activity, new KeyshareIntroDialog.KeyshareIntroDialogHandler() {
                 @Override
                 public void done(String email, String pin) {
@@ -179,7 +180,7 @@ public class SchemeManagerHandler {
 
         StoreManager.downloadSchemeManager(manager.getUrl(), new StoreManager.DownloadHandler() {
             @Override public void onSuccess() {
-                if (manager.getKeyshareServer().length() > 0)
+                if (manager.hasKeyshareServer())
                     enrollCloudServer(activity, manager.getName(), manager.getKeyshareServer(), email, pin);
 
                 if (cancelFeedback)
