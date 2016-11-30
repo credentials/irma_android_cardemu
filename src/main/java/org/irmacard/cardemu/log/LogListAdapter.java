@@ -119,7 +119,7 @@ public class LogListAdapter extends PagingBaseAdapter<LogEntry> {
 			attributesDisclosed = vlog.getAttributesDisclosed();
 
 			// This is not so nice, rather used a Listview here, but it is not possible
-			// to easily make it not scrollable and getEnrollInput all the items.
+			// to easily make it not scrollable and show all the items.
 			for (String attr : attributesDisclosed.keySet()) {
 				View item_view = inflater.inflate(R.layout.log_disclosure_item, null);
 

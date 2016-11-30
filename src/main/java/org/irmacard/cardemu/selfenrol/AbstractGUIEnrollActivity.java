@@ -113,9 +113,9 @@ public abstract class AbstractGUIEnrollActivity extends Activity{
 
         // See if it is an ApiError code
         if (errormsgId < errors.length) {
-            if (errors[errormsgId] != ApiError.EXCEPTION) // Contains detailed message, getEnrollInput it
+            if (errors[errormsgId] != ApiError.EXCEPTION) // Contains detailed message, show it
                 errormsg = getString(R.string.server_reported, errors[errormsgId].getDescription());
-            else // Unspecified error, getEnrollInput generic message
+            else // Unspecified error, show generic message
                 errormsg = getString(R.string.error_enroll_serverdied);
         }
         else { // See if it is a string from strings.xml
@@ -136,11 +136,11 @@ public abstract class AbstractGUIEnrollActivity extends Activity{
     /**
      * Show the error screen.
      *
-     * @param errormsg The message to getEnrollInput.
-     * @param rightButtonString The text that the right button should getEnrollInput.
+     * @param errormsg The message to show.
+     * @param rightButtonString The text that the right button should show.
      * @param leftButtonScreen The screen that we shoul;d go to when the right button is clicked. Pass 0 if the
      *                         activity should be canceled.
-     * @param leftButtonString The text that the left button should getEnrollInput. Pass null if this button should be hidden.
+     * @param leftButtonString The text that the left button should show. Pass null if this button should be hidden.
      * @param rightButtonScreen The screen that we should go to when the left button is clicked.
      */
     protected void showErrorScreen(String errormsg, final String rightButtonString, final int rightButtonScreen,

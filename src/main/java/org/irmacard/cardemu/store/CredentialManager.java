@@ -683,6 +683,10 @@ public class CredentialManager {
 				.hasKeyshareServer();
 	}
 
+	public static boolean isEnrolledToKeyshareServer(String schemeManager) {
+		return keyshareServers.containsKey(schemeManager);
+	}
+
 	public static void addKeyshareServer(String schemeManager, KeyshareServer server) {
 		keyshareServers.put(schemeManager, server);
 		save();

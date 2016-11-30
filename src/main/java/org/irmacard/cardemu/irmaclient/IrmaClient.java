@@ -36,14 +36,14 @@ public abstract class IrmaClient {
 
 	/**
 	 * Perform a disclosure.
-	 * @param request The request containing the attributes to getEnrollInput (each of its disjunctions should have
+	 * @param request The request containing the attributes to show (each of its disjunctions should have
 	 *                a selected attribute).
 	 */
 	abstract public void disclose(DisclosureProofRequest request, DisclosureChoice disclosureChoice);
 
 	/**
 	 * Perform a signature session.
-	 * @param request The request containing the attributes to getEnrollInput (each of its disjunctions should have
+	 * @param request The request containing the attributes to show (each of its disjunctions should have
 	 *                a selected attribute), and required conditions.
 	 */
 	abstract public void sign(final SignatureProofRequest request, DisclosureChoice disclosureChoice);

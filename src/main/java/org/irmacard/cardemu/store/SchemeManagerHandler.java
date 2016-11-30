@@ -1,5 +1,6 @@
 package org.irmacard.cardemu.store;
 
+import android.annotation.SuppressLint;
 import android.app.Activity;
 import android.app.AlertDialog;
 import android.app.ProgressDialog;
@@ -7,6 +8,9 @@ import android.content.Context;
 import android.content.DialogInterface;
 import android.os.AsyncTask;
 import android.util.Log;
+import android.view.LayoutInflater;
+import android.view.View;
+import android.widget.EditText;
 
 import org.irmacard.api.common.util.GsonUtil;
 import org.irmacard.cardemu.IRMApp;
@@ -14,10 +18,6 @@ import org.irmacard.cardemu.R;
 import org.irmacard.cardemu.httpclient.HttpClientException;
 import org.irmacard.cardemu.httpclient.HttpResultHandler;
 import org.irmacard.cardemu.httpclient.JsonHttpClient;
-import org.irmacard.cardemu.store.CredentialManager;
-import org.irmacard.cardemu.store.KeyshareIntroDialog;
-import org.irmacard.cardemu.store.KeyshareServer;
-import org.irmacard.cardemu.store.StoreManager;
 import org.irmacard.credentials.info.DescriptionStore;
 import org.irmacard.credentials.info.InfoException;
 import org.irmacard.credentials.info.SchemeManager;
@@ -28,7 +28,7 @@ import java.io.IOException;
 
 
 public class SchemeManagerHandler {
-    // If the activity is paused or killed, then it can't getEnrollInput any feedback; we keep track of this here
+    // If the activity is paused or killed, then it can't show any feedback; we keep track of this here
     private boolean cancelFeedback = false;
 
     public static void confirmAndDeleteManager(final SchemeManager manager,
@@ -155,12 +155,11 @@ public class SchemeManagerHandler {
 
     private void downloadManager(final SchemeManager manager, final Activity activity,
                                  final Runnable runnable) {
-        cancelFeedback = false; // If we're here, the activity is still alive so that it can getEnrollInput feedback
+        cancelFeedback = false; // If we're here, the activity is still alive so that it can show feedback
 
         if (manager.hasKeyshareServer()) {
-            KeyshareIntroDialog.getEnrollInput(activity, new KeyshareIntroDialog.KeyshareIntroDialogHandler() {
-                @Override
-                public void done(String email, String pin) {
+            getKeyserverEnrollInput(activity, new KeyserverInputHandler() {
+                @Override public void done(String email, String pin) {
                     downloadManager(manager, activity, runnable, email, pin);
                 }
             });
@@ -183,6 +182,7 @@ public class SchemeManagerHandler {
                 if (manager.hasKeyshareServer())
                     enrollCloudServer(activity, manager.getName(), manager.getKeyshareServer(), email, pin);
 
+                // TODO move this to enrollCloudServer() if appropriate
                 if (cancelFeedback)
                     return;
 
@@ -201,5 +201,34 @@ public class SchemeManagerHandler {
                 );
             }
         });
+    }
+
+    public interface KeyserverInputHandler {
+        void done(String email, String pin);
+    }
+
+    @SuppressLint("InflateParams")
+    public static void getKeyserverEnrollInput(Activity activity, final KeyserverInputHandler handler) {
+        LayoutInflater inflater = activity.getLayoutInflater();
+        View view = inflater.inflate(R.layout.dialog_keyshare_enroll, null);
+
+        final EditText emailView = (EditText) view.findViewById(R.id.emailaddress);
+        final EditText pinView = (EditText) view.findViewById(R.id.pincode);
+
+        AlertDialog dialog = new AlertDialog.Builder(activity)
+                .setView(view)
+                .setCancelable(false)
+                .setPositiveButton("Save", new DialogInterface.OnClickListener() {
+                    @Override public void onClick(DialogInterface dialog, int which) {
+                        String email = emailView.getText().toString();
+                        String pin = pinView.getText().toString();
+
+                        CredentialManager.setKeyshareUsername(email);
+                        handler.done(email, pin);
+                    }
+                })
+                .create();
+        dialog.setCanceledOnTouchOutside(false);
+        dialog.show();
     }
 }

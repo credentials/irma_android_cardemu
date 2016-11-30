@@ -88,6 +88,7 @@ import org.irmacard.credentials.info.DescriptionStore;
 import org.irmacard.credentials.info.DescriptionStoreDeserializer;
 import org.irmacard.credentials.info.FileReader;
 import org.irmacard.credentials.info.InfoException;
+import org.irmacard.credentials.info.SchemeManager;
 import org.irmacard.credentials.util.log.LogEntry;
 
 import java.util.ArrayList;
@@ -844,6 +845,21 @@ public class MainActivity extends Activity {
 				throw new RuntimeException(e);
 			else
 				setState(State.KEY_STORE_LOADED);
+
+
+			for (SchemeManager manager : DescriptionStore.getInstance().getSchemeManagers()) {
+				if (manager.hasKeyshareServer()
+						&& !CredentialManager.isEnrolledToKeyshareServer(manager.getName()))
+				{
+					final SchemeManager m = manager;
+					SchemeManagerHandler.getKeyserverEnrollInput(MainActivity.this, new SchemeManagerHandler.KeyserverInputHandler() {
+						@Override public void done(String email, String pin) {
+							SchemeManagerHandler.enrollCloudServer(
+									MainActivity.this, m.getName(), m.getKeyshareServer(), email, pin);
+						}
+					});
+				}
+			}
 		}
 	}
 }
