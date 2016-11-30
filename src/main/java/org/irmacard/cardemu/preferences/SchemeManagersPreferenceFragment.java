@@ -7,7 +7,7 @@ import android.preference.PreferenceFragment;
 import android.preference.PreferenceScreen;
 
 import org.irmacard.cardemu.R;
-import org.irmacard.cardemu.SchemeManagerHandler;
+import org.irmacard.cardemu.store.SchemeManagerHandler;
 import org.irmacard.credentials.info.DescriptionStore;
 import org.irmacard.credentials.info.SchemeManager;
 

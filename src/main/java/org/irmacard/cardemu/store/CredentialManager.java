@@ -28,7 +28,7 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-package org.irmacard.cardemu;
+package org.irmacard.cardemu.store;
 
 import android.content.SharedPreferences;
 import android.util.Log;
@@ -41,9 +41,10 @@ import org.irmacard.api.common.CredentialRequest;
 import org.irmacard.api.common.SessionRequest;
 import org.irmacard.api.common.issuing.IssuingRequest;
 import org.irmacard.api.common.util.GsonUtil;
+import org.irmacard.cardemu.DisclosureChoice;
+import org.irmacard.cardemu.IRMApp;
 import org.irmacard.cardemu.identifiers.IdemixAttributeIdentifier;
 import org.irmacard.cardemu.identifiers.IdemixCredentialIdentifier;
-import org.irmacard.cardemu.store.StoreManager;
 import org.irmacard.credentials.Attributes;
 import org.irmacard.credentials.CredentialsException;
 import org.irmacard.credentials.idemix.CredentialBuilder;

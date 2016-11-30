@@ -1,4 +1,4 @@
-package org.irmacard.cardemu;
+package org.irmacard.cardemu.store;
 
 import android.app.Activity;
 import android.app.AlertDialog;
@@ -9,10 +9,14 @@ import android.os.AsyncTask;
 import android.util.Log;
 
 import org.irmacard.api.common.util.GsonUtil;
+import org.irmacard.cardemu.IRMApp;
+import org.irmacard.cardemu.R;
 import org.irmacard.cardemu.httpclient.HttpClientException;
 import org.irmacard.cardemu.httpclient.HttpResultHandler;
 import org.irmacard.cardemu.httpclient.JsonHttpClient;
+import org.irmacard.cardemu.store.CredentialManager;
 import org.irmacard.cardemu.store.KeyshareIntroDialog;
+import org.irmacard.cardemu.store.KeyshareServer;
 import org.irmacard.cardemu.store.StoreManager;
 import org.irmacard.credentials.info.DescriptionStore;
 import org.irmacard.credentials.info.InfoException;

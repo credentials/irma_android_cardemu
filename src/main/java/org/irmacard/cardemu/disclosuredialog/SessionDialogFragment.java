@@ -53,7 +53,7 @@ import org.irmacard.api.common.CredentialRequest;
 import org.irmacard.api.common.disclosure.DisclosureProofRequest;
 import org.irmacard.api.common.issuing.IssuingRequest;
 import org.irmacard.api.common.signatures.SignatureProofRequest;
-import org.irmacard.cardemu.CredentialManager;
+import org.irmacard.cardemu.store.CredentialManager;
 import org.irmacard.cardemu.DisclosureChoice;
 import org.irmacard.cardemu.R;
 import org.irmacard.cardemu.identifiers.IdemixAttributeIdentifier;

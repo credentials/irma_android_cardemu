@@ -77,6 +77,8 @@ import org.irmacard.cardemu.log.LogFragment;
 import org.irmacard.cardemu.preferences.IRMAPreferenceActivity;
 import org.irmacard.cardemu.selfenrol.EnrollSelectActivity;
 import org.irmacard.cardemu.store.AndroidFileReader;
+import org.irmacard.cardemu.store.CredentialManager;
+import org.irmacard.cardemu.store.SchemeManagerHandler;
 import org.irmacard.cardemu.store.StoreManager;
 import org.irmacard.credentials.Attributes;
 import org.irmacard.credentials.CredentialsException;

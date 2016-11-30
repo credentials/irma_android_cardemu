@@ -42,7 +42,7 @@ import android.widget.TextView;
 
 import org.irmacard.api.common.AttributeDisjunction;
 import org.irmacard.api.common.disclosure.DisclosureProofRequest;
-import org.irmacard.cardemu.CredentialManager;
+import org.irmacard.cardemu.store.CredentialManager;
 import org.irmacard.cardemu.R;
 import org.irmacard.cardemu.identifiers.IdemixAttributeIdentifier;
 import org.irmacard.cardemu.identifiers.IdemixCredentialIdentifier;

@@ -16,7 +16,7 @@ import org.irmacard.api.common.exceptions.ApiErrorMessage;
 import org.irmacard.api.common.issuing.IssuingRequest;
 import org.irmacard.api.common.signatures.SignatureProofRequest;
 import org.irmacard.api.common.util.GsonUtil;
-import org.irmacard.cardemu.CredentialManager;
+import org.irmacard.cardemu.store.CredentialManager;
 import org.irmacard.cardemu.R;
 import org.irmacard.cardemu.disclosuredialog.DisclosureInformationActivity;
 import org.irmacard.cardemu.disclosuredialog.SessionDialogFragment;

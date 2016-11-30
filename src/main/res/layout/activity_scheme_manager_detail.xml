@@ -6,7 +6,7 @@
     android:paddingRight="@dimen/detail_small_vspace"
     android:paddingTop="@dimen/detail_small_vspace"
     android:paddingBottom="@dimen/detail_small_vspace"
-    tools:context="org.irmacard.cardemu.SchemeManagerDetailActivity">
+    tools:context="org.irmacard.cardemu.store.SchemeManagerDetailActivity">
 
     <TextView
         android:id="@+id/manager_name"

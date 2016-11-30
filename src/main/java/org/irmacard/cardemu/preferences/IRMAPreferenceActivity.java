@@ -8,7 +8,7 @@ import android.view.MenuItem;
 import android.webkit.URLUtil;
 
 import org.irmacard.cardemu.R;
-import org.irmacard.cardemu.SchemeManagerHandler;
+import org.irmacard.cardemu.store.SchemeManagerHandler;
 
 import java.util.List;
 

@@ -7,8 +7,8 @@ import android.support.annotation.NonNull;
 import android.view.View;
 import org.irmacard.cardemu.IRMApp;
 import org.irmacard.cardemu.R;
-import org.irmacard.cardemu.SchemeManagerDetailActivity;
-import org.irmacard.cardemu.SchemeManagerHandler;
+import org.irmacard.cardemu.store.SchemeManagerDetailActivity;
+import org.irmacard.cardemu.store.SchemeManagerHandler;
 import org.irmacard.credentials.info.SchemeManager;
 
 /** Represents a scheme manager. */

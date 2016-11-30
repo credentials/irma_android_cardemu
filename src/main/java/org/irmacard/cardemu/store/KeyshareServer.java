@@ -1,4 +1,4 @@
-package org.irmacard.cardemu;
+package org.irmacard.cardemu.store;
 
 public class KeyshareServer {
     private String url;

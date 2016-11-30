@@ -1,4 +1,4 @@
-package org.irmacard.cardemu;
+package org.irmacard.cardemu.store;
 
 import android.app.Activity;
 import android.os.Bundle;
@@ -6,6 +6,8 @@ import android.view.MenuItem;
 import android.view.View;
 import android.widget.TextView;
 
+import org.irmacard.cardemu.IRMApp;
+import org.irmacard.cardemu.R;
 import org.irmacard.credentials.info.DescriptionStore;
 import org.irmacard.credentials.info.SchemeManager;
 
