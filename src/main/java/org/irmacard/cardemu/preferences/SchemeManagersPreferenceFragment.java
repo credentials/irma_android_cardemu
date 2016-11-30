@@ -16,7 +16,6 @@ import org.irmacard.credentials.info.SchemeManager;
  */
 public class SchemeManagersPreferenceFragment
 		extends PreferenceFragment implements Preference.OnPreferenceChangeListener {
-	private SchemeManagerHandler downloader = new SchemeManagerHandler();
 
 	@Override
 	public void onCreate(Bundle savedInstanceState) {
@@ -28,18 +27,9 @@ public class SchemeManagersPreferenceFragment
 	}
 
 	@Override
-	public void onPause() {
-		super.onPause();
-		if (downloader != null)
-			downloader.setCancelFeedback(false);
-	}
-
-	@Override
 	public void onResume() {
 		super.onResume();
 		repopulate();
-		if (downloader != null)
-			downloader.setCancelFeedback(true);
 	}
 
 	// We explicitly implement Preference.OnPreferenceChangeListener here instead of using an
@@ -47,7 +37,7 @@ public class SchemeManagersPreferenceFragment
 	// https://developer.android.com/reference/android/content/SharedPreferences.html#registerOnSharedPreferenceChangeListener%28android.content.SharedPreferences.OnSharedPreferenceChangeListener%29
 	@Override
 	public boolean onPreferenceChange(Preference preference, Object newValue) {
-		downloader.confirmAndDownloadManager((String) newValue, getActivity(), new Runnable() {
+		SchemeManagerHandler.confirmAndDownloadManager((String) newValue, getActivity(), new Runnable() {
 			@Override public void run() {
 				repopulate();
 			}

@@ -28,8 +28,9 @@ import java.io.IOException;
 
 
 public class SchemeManagerHandler {
-    // If the activity is paused or killed, then it can't show any feedback; we keep track of this here
-    private boolean cancelFeedback = false;
+    public interface KeyserverInputHandler {
+        void done(String email, String pin);
+    }
 
     public static void confirmAndDeleteManager(final SchemeManager manager,
                                                final Context context,
@@ -50,18 +51,20 @@ public class SchemeManagerHandler {
                 .show();
     }
 
-    public static void enrollCloudServer(final Activity activity,
-                                         final String schemeManager,
+    public static void enrollCloudServer(final String schemeManager,
                                          final String url,
                                          final String email,
-                                         final String pin) {
+                                         final String pin,
+                                         final Activity activity,
+                                         final Runnable runnable) {
         final JsonHttpClient client = new JsonHttpClient(GsonUtil.getGson());
         UserLoginMessage loginMessage = new UserLoginMessage(email, null, pin);
 
         client.post(UserMessage.class, url + "/web/users/selfenroll", loginMessage, new HttpResultHandler<UserMessage>() {
             @Override public void onSuccess(UserMessage result) {
                 CredentialManager.addKeyshareServer(schemeManager, new KeyshareServer(url, email));
-                showSuccess(activity, "Successfully installed", "Succesfully linked against keyshare server.");
+                if (runnable != null)
+                    runnable.run();
             }
 
             @Override public void onError(HttpClientException e) {
@@ -75,7 +78,9 @@ public class SchemeManagerHandler {
         });
     }
 
-    public void confirmAndDownloadManager(final String url, final Activity activity, final Runnable runnable) {
+    public static void confirmAndDownloadManager(final String url,
+                                                 final Activity activity,
+                                                 final Runnable runnable) {
         if (DescriptionStore.getInstance().containsSchemeManager(url)) {
             showError(activity,
                     activity.getString(R.string.schememanager_known_title),
@@ -137,26 +142,8 @@ public class SchemeManagerHandler {
         }
     }
 
-    private static void showSuccess(Activity activity, String title, String message) {
-        try {
-            new AlertDialog.Builder(activity)
-                    .setTitle(title)
-                    .setMessage(message)
-                    .setPositiveButton(android.R.string.ok, null)
-                    .show();
-        } catch (Exception e) {
-            /* ignore */
-        }
-    }
-
-    public void setCancelFeedback(boolean cancelFeedback) {
-        this.cancelFeedback = cancelFeedback;
-    }
-
-    private void downloadManager(final SchemeManager manager, final Activity activity,
-                                 final Runnable runnable) {
-        cancelFeedback = false; // If we're here, the activity is still alive so that it can show feedback
-
+    private static void downloadManager(final SchemeManager manager, final Activity activity,
+                                        final Runnable runnable) {
         if (manager.hasKeyshareServer()) {
             getKeyserverEnrollInput(activity, new KeyserverInputHandler() {
                 @Override public void done(String email, String pin) {
@@ -168,32 +155,34 @@ public class SchemeManagerHandler {
         }
     }
 
-    private void downloadManager(final SchemeManager manager, final Activity activity,
-                                 final Runnable runnable, final String email, final String pin) {
+    private static void downloadManager(final SchemeManager manager, final Activity activity,
+                                        final Runnable runnable, final String email, final String pin) {
         final ProgressDialog progressDialog = new ProgressDialog(activity);
         progressDialog.setMessage(activity.getString(R.string.downloading));
         progressDialog.setProgressStyle(ProgressDialog.STYLE_SPINNER);
         progressDialog.setIndeterminate(true);
+        progressDialog.setCancelable(false);
         progressDialog.setCanceledOnTouchOutside(false);
         progressDialog.show();
 
         StoreManager.downloadSchemeManager(manager.getUrl(), new StoreManager.DownloadHandler() {
             @Override public void onSuccess() {
                 if (manager.hasKeyshareServer())
-                    enrollCloudServer(activity, manager.getName(), manager.getKeyshareServer(), email, pin);
-
-                // TODO move this to enrollCloudServer() if appropriate
-                if (cancelFeedback)
-                    return;
-
-                progressDialog.dismiss();
-                if (runnable != null)
-                    runnable.run();
+                    enrollCloudServer(manager.getName(), manager.getKeyshareServer(), email, pin, activity,
+                            new Runnable() {
+                                @Override public void run() {
+                                    progressDialog.dismiss();
+                                    if (runnable != null)
+                                        runnable.run();
+                                }
+                            });
+                else {
+                    progressDialog.dismiss();
+                    if (runnable != null)
+                        runnable.run();
+                }
             }
             @Override public void onError(Exception e) {
-                if (cancelFeedback)
-                    return;
-
                 progressDialog.cancel();
                 showError(activity,
                         activity.getString(R.string.downloading_schememanager_failed_title),
@@ -201,10 +190,6 @@ public class SchemeManagerHandler {
                 );
             }
         });
-    }
-
-    public interface KeyserverInputHandler {
-        void done(String email, String pin);
     }
 
     @SuppressLint("InflateParams")

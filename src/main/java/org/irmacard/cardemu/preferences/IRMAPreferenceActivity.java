@@ -104,7 +104,7 @@ public class IRMAPreferenceActivity extends PreferenceActivity {
 				break;
 			case Intent.ACTION_RUN:
 				// We received an intent opening the scheme managers fragment; do the downloading now
-				new SchemeManagerHandler().confirmAndDownloadManager(url, this, null);
+				SchemeManagerHandler.confirmAndDownloadManager(url, this, null);
 				break;
 		}
 	}

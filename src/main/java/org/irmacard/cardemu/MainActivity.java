@@ -565,7 +565,7 @@ public class MainActivity extends Activity {
 			switch (qr.getType()) {
 				case "schememanager":
 					Log.i(TAG, "Adding new scheme manager from qr code!");
-					new SchemeManagerHandler().confirmAndDownloadManager(
+					SchemeManagerHandler.confirmAndDownloadManager(
 							GsonUtil.getGson().fromJson(contents, SchemeManagerQr.class).getUrl(), this, null);
 					break;
 				case "disclosing":
@@ -855,7 +855,7 @@ public class MainActivity extends Activity {
 					SchemeManagerHandler.getKeyserverEnrollInput(MainActivity.this, new SchemeManagerHandler.KeyserverInputHandler() {
 						@Override public void done(String email, String pin) {
 							SchemeManagerHandler.enrollCloudServer(
-									MainActivity.this, m.getName(), m.getKeyshareServer(), email, pin);
+									m.getName(), m.getKeyshareServer(), email, pin, MainActivity.this, null);
 						}
 					});
 				}
