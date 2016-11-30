@@ -57,9 +57,25 @@
         android:text="@android:string/unknownName" />
 
     <TextView
+        android:id="@+id/manager_keyshare"
+        style="@style/DetailHeading.Table"
+        android:layout_below="@id/manager_description_value"
+        android:layout_marginTop="@dimen/detail_medium_vspace"
+        android:text="Keyshare server" />
+
+    <TextView
+        android:id="@+id/manager_keyshare_value"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_toRightOf="@id/manager_keyshare"
+        android:layout_alignBaseline="@id/manager_keyshare"
+        android:textIsSelectable="true"
+        android:text="(none)" />
+
+    <TextView
         android:id="@+id/manager_contact"
         style="@style/DetailHeading.Table"
-        android:layout_below="@id/manager_description"
+        android:layout_below="@id/manager_keyshare"
         android:layout_marginTop="@dimen/detail_medium_vspace"
         android:text="@string/contact" />
 

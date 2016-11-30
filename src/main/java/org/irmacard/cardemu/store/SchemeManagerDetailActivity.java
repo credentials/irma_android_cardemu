@@ -29,6 +29,8 @@ public class SchemeManagerDetailActivity extends Activity {
 		((TextView) findViewById(R.id.manager_url_value)).setText(manager.getUrl());
 		((TextView) findViewById(R.id.manager_description_value)).setText(manager.getDescription());
 		((TextView) findViewById(R.id.manager_contact_value)).setText(manager.getContactInfo());
+		if (manager.hasKeyshareServer())
+			((TextView) findViewById(R.id.manager_keyshare_value)).setText(manager.getKeyshareServer());
 
 		findViewById(R.id.trash_manager).setVisibility(
 				IRMApp.getStoreManager().canRemoveSchemeManager(managerName) ? View.VISIBLE : View.INVISIBLE);
