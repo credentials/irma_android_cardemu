@@ -8,6 +8,7 @@ import com.google.gson.reflect.TypeToken;
 
 import org.acra.ACRA;
 import org.irmacard.api.common.ClientRequest;
+import org.irmacard.api.common.CredentialRequest;
 import org.irmacard.api.common.JwtParser;
 import org.irmacard.api.common.JwtSessionRequest;
 import org.irmacard.api.common.SessionRequest;
@@ -21,19 +22,15 @@ import org.irmacard.api.common.issuing.IssuingRequest;
 import org.irmacard.api.common.signatures.SignatureClientRequest;
 import org.irmacard.api.common.signatures.SignatureProofRequest;
 import org.irmacard.api.common.util.GsonUtil;
-import org.irmacard.cardemu.store.CredentialManager;
 import org.irmacard.cardemu.DisclosureChoice;
-import org.irmacard.cardemu.store.KeyshareServer;
 import org.irmacard.cardemu.R;
 import org.irmacard.cardemu.httpclient.HttpClientException;
 import org.irmacard.cardemu.httpclient.HttpResultHandler;
 import org.irmacard.cardemu.httpclient.JsonHttpClient;
 import org.irmacard.cardemu.pindialog.EnterPINDialogFragment;
+import org.irmacard.cardemu.store.CredentialManager;
+import org.irmacard.cardemu.store.KeyshareServer;
 import org.irmacard.cardemu.store.StoreManager;
-import org.irmacard.keyshare.common.AuthorizationResult;
-import org.irmacard.keyshare.common.KeyshareResult;
-import org.irmacard.keyshare.common.IRMAHeaders;
-import org.irmacard.keyshare.common.PinTokenMessage;
 import org.irmacard.credentials.CredentialsException;
 import org.irmacard.credentials.idemix.messages.IssueCommitmentMessage;
 import org.irmacard.credentials.idemix.messages.IssueSignatureMessage;
@@ -44,6 +41,10 @@ import org.irmacard.credentials.idemix.proofs.ProofPCommitmentMap;
 import org.irmacard.credentials.info.InfoException;
 import org.irmacard.credentials.info.KeyException;
 import org.irmacard.credentials.info.PublicKeyIdentifier;
+import org.irmacard.keyshare.common.AuthorizationResult;
+import org.irmacard.keyshare.common.IRMAHeaders;
+import org.irmacard.keyshare.common.KeyshareResult;
+import org.irmacard.keyshare.common.PinTokenMessage;
 
 import java.io.IOException;
 import java.lang.reflect.Type;
@@ -329,6 +330,13 @@ public class JsonIrmaClient extends IrmaClient implements EnterPINDialogFragment
 
 			request.setNonce(sessionRequest.getNonce());
 			request.setContext(sessionRequest.getContext());
+
+			if (request instanceof IssuingRequest) {
+				for (CredentialRequest cred : ((IssuingRequest) request).getCredentials())
+					cred.setKeyCounter(
+							sessionRequest.getPublicKeys().get(cred.getIdentifier().getIssuerIdentifier()));
+			}
+
 			continueSession(request, action, jwtParser.getJwtIssuer());
 		} catch (ApiException e) {
 			fail(e, true);
