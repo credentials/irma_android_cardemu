@@ -127,6 +127,7 @@ public class CredentialManager {
 		keyshareServers.clear();
 		credentials.clear();
 		logs.clear();
+		keyshareUsername = "";
 		save();
 		for (SchemeManager manager : DescriptionStore.getInstance().getSchemeManagers())
 			if (IRMApp.getStoreManager().canRemoveSchemeManager(manager.getName()))
@@ -703,6 +704,13 @@ public class CredentialManager {
 
 	public static KeyshareServer getKeyshareServer(String schememanager) {
 		return keyshareServers.get(schememanager);
+	}
+
+	public static KeyshareServer getAnyKeyshareServer() {
+		if (keyshareServers == null || keyshareServers.size() == 0)
+			return null;
+
+		return keyshareServers.values().iterator().next();
 	}
 
 	public static BigInteger getNonce2() {

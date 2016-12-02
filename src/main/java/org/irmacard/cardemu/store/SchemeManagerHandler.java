@@ -3,7 +3,6 @@ package org.irmacard.cardemu.store;
 import android.annotation.SuppressLint;
 import android.app.Activity;
 import android.app.AlertDialog;
-import android.app.ProgressDialog;
 import android.content.Context;
 import android.content.DialogInterface;
 import android.os.AsyncTask;
@@ -19,6 +18,7 @@ import org.irmacard.cardemu.R;
 import org.irmacard.cardemu.httpclient.HttpClientException;
 import org.irmacard.cardemu.httpclient.HttpResultHandler;
 import org.irmacard.cardemu.httpclient.JsonHttpClient;
+import org.irmacard.cardemu.pindialog.EnterPINDialogFragment;
 import org.irmacard.credentials.info.DescriptionStore;
 import org.irmacard.credentials.info.InfoException;
 import org.irmacard.credentials.info.SchemeManager;
@@ -208,32 +208,50 @@ public class SchemeManagerHandler {
     }
 
     /**
-     * Show a dialog asking the user for her email address and pincode
-     * (to enroll to a keyshare server, which is not done here). The specified
-     * handler is called afterwards (not when the user cancels).
+     * Get an email address and pin to enroll to a keyshare server (which is not done here).
+     * If the user is already enrolled to a keyshare server, we reuse the emailaddress from that
+     * server, and ask the user only for a pin (which we verify at the server). Otherwise, we also
+     * ask her emailaddress. The specified handler is called afterwards (not if the user cancels
+     * or if an error occurs).
      */
     @SuppressLint("InflateParams")
     public static void getKeyserverEnrollInput(Activity activity, final KeyserverInputHandler handler) {
-        LayoutInflater inflater = activity.getLayoutInflater();
-        View view = inflater.inflate(R.layout.dialog_keyshare_enroll, null);
-
-        final EditText emailView = (EditText) view.findViewById(R.id.emailaddress);
-        final EditText pinView = (EditText) view.findViewById(R.id.pincode);
-
-        AlertDialog dialog = new AlertDialog.Builder(activity)
-                .setView(view)
-                .setPositiveButton("Save", new DialogInterface.OnClickListener() {
-                    @Override public void onClick(DialogInterface dialog, int which) {
-                        String email = emailView.getText().toString();
-                        String pin = pinView.getText().toString();
-
-                        CredentialManager.setKeyshareUsername(email);
-                        handler.done(email, pin);
+        if (CredentialManager.getKeyshareUsername().length() > 0) {
+            EnterPINDialogFragment.verifyPin(
+                    CredentialManager.getAnyKeyshareServer(), activity,
+                    new EnterPINDialogFragment.PINDialogListener() {
+                        @Override public void onPinEntered(String pincode) {
+                            handler.done(CredentialManager.getKeyshareUsername(), pincode);
+                        }
+                        @Override public void onPinCancelled() { /* ignore */ }
+                        @Override public void onPinError() { /* ignore */ }
                     }
-                })
-                .setNegativeButton(android.R.string.cancel, null)
-                .create();
-        dialog.setCanceledOnTouchOutside(false);
-        dialog.show();
+            );
+        }
+
+        else {
+            LayoutInflater inflater = activity.getLayoutInflater();
+            View view = inflater.inflate(R.layout.dialog_keyshare_enroll, null);
+
+            final EditText emailView = (EditText) view.findViewById(R.id.emailaddress);
+            final EditText pinView = (EditText) view.findViewById(R.id.pincode);
+
+            AlertDialog dialog = new AlertDialog.Builder(activity)
+                    .setView(view)
+                    .setPositiveButton("Save", new DialogInterface.OnClickListener() {
+                        @Override
+                        public void onClick(DialogInterface dialog, int which) {
+                            String email = emailView.getText().toString();
+                            String pin = pinView.getText().toString();
+
+                            CredentialManager.setKeyshareUsername(email);
+                            handler.done(email, pin);
+                        }
+                    })
+                    .setNegativeButton(android.R.string.cancel, null)
+                    .create();
+            dialog.setCanceledOnTouchOutside(false);
+            dialog.show();
+        }
     }
 }
