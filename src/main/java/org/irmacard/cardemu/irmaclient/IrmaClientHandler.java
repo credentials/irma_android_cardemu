@@ -24,6 +24,7 @@ import org.irmacard.cardemu.irmaclient.IrmaClient.Action;
 import org.irmacard.cardemu.irmaclient.IrmaClient.Status;
 import org.irmacard.cardemu.pindialog.EnterPINDialogFragment;
 import org.irmacard.cardemu.pindialog.EnterPINDialogFragment.PINDialogListener;
+import org.irmacard.cardemu.store.KeyshareServer;
 
 import java.util.List;
 
@@ -184,12 +185,12 @@ public abstract class IrmaClientHandler {
 	}
 
 	/**
-	 * Ask for a PIN using {@link EnterPINDialogFragment}.
-	 * @param tries The amount of tries allowed to the user
+	 * Ask for a PIN using {@link EnterPINDialogFragment}, retrying as much as the
+	 * keyshare server allows.
+	 * @param kss Verify pin at this keyshare server
 	 * @param listener Will receive the PIN
      */
-	public void verifyPin(int tries, PINDialogListener listener) {
-		DialogFragment newFragment = EnterPINDialogFragment.getInstance(tries, listener);
-		newFragment.show(activity.getFragmentManager(), "pin-entry");
+	public void verifyPin(KeyshareServer kss, PINDialogListener listener) {
+		EnterPINDialogFragment.verifyPin(kss, activity, listener);
 	}
 }

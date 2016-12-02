@@ -31,11 +31,13 @@
 package org.irmacard.cardemu.pindialog;
 
 import android.annotation.SuppressLint;
+import android.app.Activity;
 import android.app.AlertDialog;
 import android.app.Dialog;
 import android.app.DialogFragment;
 import android.content.DialogInterface;
 import android.os.Bundle;
+import android.util.Log;
 import android.view.KeyEvent;
 import android.view.LayoutInflater;
 import android.view.View;
@@ -45,7 +47,18 @@ import android.widget.EditText;
 import android.widget.TextView;
 import android.widget.TextView.OnEditorActionListener;
 
+import org.irmacard.api.common.util.GsonUtil;
 import org.irmacard.cardemu.R;
+import org.irmacard.cardemu.httpclient.HttpClientException;
+import org.irmacard.cardemu.httpclient.HttpResultHandler;
+import org.irmacard.cardemu.httpclient.JsonHttpClient;
+import org.irmacard.cardemu.irmaclient.JsonIrmaClient;
+import org.irmacard.cardemu.store.CredentialManager;
+import org.irmacard.cardemu.store.KeyshareServer;
+import org.irmacard.keyshare.common.AuthorizationResult;
+import org.irmacard.keyshare.common.IRMAHeaders;
+import org.irmacard.keyshare.common.KeyshareResult;
+import org.irmacard.keyshare.common.PinTokenMessage;
 
 public class EnterPINDialogFragment extends DialogFragment {
     private static final String EXTRA_TRIES = "irma_library.EnterPINDialogFragment.tries";
@@ -53,13 +66,68 @@ public class EnterPINDialogFragment extends DialogFragment {
     public interface PINDialogListener {
         void onPinEntered(String pincode);
         void onPinCancelled();
+        void onPinError();
     }
 
     private PINDialogListener mListener;
     private int tries;
     private AlertDialog dialog;
 
-    public static EnterPINDialogFragment getInstance(int tries, PINDialogListener listener) {
+    public static void verifyPin(KeyshareServer kss,
+                                 Activity activity,
+                                 PINDialogListener handler) {
+        verifyPin(kss, activity, handler, -1);
+    }
+
+    private static void verifyPin(final KeyshareServer kss,
+                                  final Activity activity,
+                                  final PINDialogListener handler,
+                                  final int tries) {
+        getInstance(tries, new PINDialogListener() {
+            @Override public void onPinEntered(final String pincode) {
+                JsonHttpClient client = new JsonHttpClient(GsonUtil.getGson());
+                client.setExtraHeader(IRMAHeaders.USERNAME, kss.getUsername());
+                client.setExtraHeader(IRMAHeaders.AUTHORIZATION, kss.getToken());
+                String url = kss.getUrl() + "/users/verify/pin";
+
+                PinTokenMessage msg = new PinTokenMessage(kss.getUsername(), pincode);
+                client.post(KeyshareResult.class, url, msg, new HttpResultHandler<KeyshareResult>() {
+                    @Override
+                    public void onSuccess(KeyshareResult result) {
+                        if(result.getStatus().equals(KeyshareResult.STATUS_SUCCESS)) {
+                            kss.setToken(result.getMessage());
+                            handler.onPinEntered(pincode);
+                        } else {
+                            String msg = result.getMessage();
+                            if(msg != null) {
+                                int remainingTries = Integer.valueOf(msg);
+                                if (remainingTries > 0)
+                                    verifyPin(kss, activity, handler, remainingTries);
+                                else
+                                    handler.onPinError();
+                            }
+                        }
+                    }
+
+                    @Override
+                    public void onError(HttpClientException exception) {
+                        if(exception != null)
+                            exception.printStackTrace();
+                        handler.onPinError();
+                    }
+                });
+            }
+
+            @Override public void onPinCancelled() {
+                handler.onPinCancelled();
+            }
+            @Override public void onPinError() {
+                handler.onPinError();
+            }
+        }).show(activity.getFragmentManager(), "irma-pin");
+    }
+
+    private static EnterPINDialogFragment getInstance(int tries, PINDialogListener listener) {
         EnterPINDialogFragment f = new EnterPINDialogFragment();
         f.mListener = listener;
 

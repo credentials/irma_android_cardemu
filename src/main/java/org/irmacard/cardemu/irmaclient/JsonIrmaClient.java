@@ -43,8 +43,6 @@ import org.irmacard.credentials.info.KeyException;
 import org.irmacard.credentials.info.PublicKeyIdentifier;
 import org.irmacard.keyshare.common.AuthorizationResult;
 import org.irmacard.keyshare.common.IRMAHeaders;
-import org.irmacard.keyshare.common.KeyshareResult;
-import org.irmacard.keyshare.common.PinTokenMessage;
 
 import java.io.IOException;
 import java.lang.reflect.Type;
@@ -397,19 +395,11 @@ public class JsonIrmaClient extends IrmaClient implements EnterPINDialogFragment
 	/**
 	 * Starts the keyshare-part of the issuing or disclosure protocol.
 	 * Ask the user for her PIN if necessary (i.e., if our keyshare JWT is absent or expired). We allow
-	 * the user as much attempts as the keyshare server allows. The entered pin is checked using
-	 * {@link #verifyPinAtKeyshareServer(String)}. After this (if successful) we use the valid JWT to get the
-	 *  keyshare's {@link ProofP} through {@link #continueProtocolWithAuthorization()}.
+	 * the user as much attempts as the keyshare server allows.
+	 * After this (if successful) we use the valid JWT to get the
+	 * keyshare's {@link ProofP} through {@link #continueProtocolWithAuthorization()}.
 	 */
 	private void startKeyshareProtocol() {
-		obtainValidAuthorizationToken(-1);
-	}
-
-	/**
-	 * Same as {@link #startKeyshareProtocol()}, but allowing the user the specified amount
-	 * of tries.
-	 */
-	private void obtainValidAuthorizationToken(final int tries) {
 		JsonHttpClient client = new JsonHttpClient(GsonUtil.getGson());
 
 		KeyshareServer kss = CredentialManager.getKeyshareServer(schemeManager);
@@ -428,7 +418,7 @@ public class JsonIrmaClient extends IrmaClient implements EnterPINDialogFragment
 					Log.i(TAG, "Token has expired, should get proper auth!");
 					// Let the handler ask the user for the pin; afterwards it will call onPinEntered() or
 					/// onPinCancelled()
-					handler.verifyPin(tries, JsonIrmaClient.this);
+					handler.verifyPin(CredentialManager.getKeyshareServer(schemeManager), JsonIrmaClient.this);
 				} else {
 					Log.i(TAG, "Authorization is blocked!!!");
 					fail("Keyshare authorization blocked", true);
@@ -448,7 +438,7 @@ public class JsonIrmaClient extends IrmaClient implements EnterPINDialogFragment
 
 	@Override
 	public void onPinEntered(String pin) {
-		verifyPinAtKeyshareServer(pin);
+		continueProtocolWithAuthorization();
 	}
 
 	@Override
@@ -456,52 +446,9 @@ public class JsonIrmaClient extends IrmaClient implements EnterPINDialogFragment
 		fail("Pin entry cancelled", true);
 	}
 
-	/**
-	 * Given a pin, ask the server if it is correct; if it is, store and use the returned keyshare JWT
-	 * in {@link #continueProtocolWithAuthorization()}; if it is not, ask for the pin again using
-	 * {@link #obtainValidAuthorizationToken(int)} (which afterwards calls us again).
-	 */
-	private void verifyPinAtKeyshareServer(String pin) {
-		JsonHttpClient client = new JsonHttpClient(GsonUtil.getGson());
-		final KeyshareServer kss = CredentialManager.getKeyshareServer(schemeManager);
-		client.setExtraHeader(IRMAHeaders.USERNAME, kss.getUsername());
-		client.setExtraHeader(IRMAHeaders.AUTHORIZATION, kss.getToken());
-
-		PinTokenMessage msg = new PinTokenMessage(kss.getUsername(), pin);
-
-		String url = kss.getUrl() + "/users/verify/pin";
-		client.post(KeyshareResult.class, url, msg, new HttpResultHandler<KeyshareResult>() {
-			@Override
-			public void onSuccess(KeyshareResult result) {
-				Log.i(TAG, "PIN Verification call was successful, " + result);
-				if(result.getStatus().equals(KeyshareResult.STATUS_SUCCESS)) {
-					Log.i(TAG, "Verification with PIN verified, yay!");
-					kss.setToken(result.getMessage());
-					continueProtocolWithAuthorization();
-				} else {
-					Log.i(TAG, "Something went wrong verifying the pin");
-					String msg = result.getMessage();
-					if(msg != null) {
-						int remainingTries = Integer.valueOf(msg);
-						if (remainingTries > 0)
-							obtainValidAuthorizationToken(remainingTries);
-						else {
-							Log.i(TAG, "Authorization is blocked!!!");
-							fail("Keyshare authorization blocked", true);
-						}
-					}
-				}
-			}
-
-			@Override
-			public void onError(HttpClientException exception) {
-				// TODO: handle properly
-				// setFeedback("Failed to verify PIN with Keyshare Server", "error");
-				if(exception != null)
-					exception.printStackTrace();
-				Log.e(TAG, "Pin verification failed");
-			}
-		});
+	@Override
+	public void onPinError() {
+		fail("Keyshare authentication blocked", true);
 	}
 
 	/**
