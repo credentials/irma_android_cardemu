@@ -228,10 +228,19 @@ public class CredentialManager {
 			ArrayList<IdemixCredential> list = credentials.get(id);
 			int count = list.size();
 			for (int i=0; i<count; ++i)
-				map.put(new IdemixCredentialIdentifier(id, i, count), list.get(i).getAllAttributes());
+				if (storeContains(id))
+					map.put(new IdemixCredentialIdentifier(id, i, count), list.get(i).getAllAttributes());
 		}
 
 		return map;
+	}
+
+	private static boolean storeContains(CredentialIdentifier credid) {
+		DescriptionStore store = DescriptionStore.getInstance();
+
+		return store.getSchemeManager(credid.getSchemeManagerName()) != null
+				&& store.getIssuerDescription(credid.getIssuerIdentifier()) != null
+				&& store.getCredentialDescription(credid) != null;
 	}
 
 	/**
@@ -480,10 +489,10 @@ public class CredentialManager {
 		LinkedHashMap<IdemixAttributeIdentifier, String> map = new LinkedHashMap<>();
 
 		for (AttributeIdentifier attribute : disjunction) {
-			CredentialDescription cd = attribute.getCredentialIdentifier().getCredentialDescription();
-			if (cd == null)
-				continue; // Can't disclose unknown attributes
+			if (!storeContains(attribute.getCredentialIdentifier()))
+				continue;
 
+			CredentialDescription cd = attribute.getCredentialIdentifier().getCredentialDescription();
 			for (CredentialIdentifier credId : credentials.keySet()) {
 				if (!attribute.getCredentialIdentifier().equals(credId))
 					continue;

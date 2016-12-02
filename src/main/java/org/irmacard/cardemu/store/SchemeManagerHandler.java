@@ -175,31 +175,24 @@ public class SchemeManagerHandler {
     private static void installManagerAndKeyshareServer(final SchemeManager manager,
                                                         final Activity activity,
                                                         final Runnable runnable) {
-        if (manager.hasKeyshareServer()) {
+        final Runnable wrappedRunnable = new Runnable() {
+            @Override public void run() {
+                installManager(manager);
+                if (runnable != null)
+                    runnable.run();
+            }
+        };
+
+        if (manager.hasKeyshareServer() // Perhaps we are still enrolled from a previous time we knew this manager
+                && !CredentialManager.isEnrolledToKeyshareServer(manager.getName())) {
             getKeyserverEnrollInput(activity, new KeyserverInputHandler() {
                 @Override public void done(String email, String pin) {
-                    final ProgressDialog progressDialog = new ProgressDialog(activity);
-                    progressDialog.setMessage(activity.getString(R.string.downloading));
-                    progressDialog.setProgressStyle(ProgressDialog.STYLE_SPINNER);
-                    progressDialog.setIndeterminate(true);
-                    progressDialog.setCancelable(false);
-                    progressDialog.setCanceledOnTouchOutside(false);
-                    progressDialog.show();
-
                     enrollCloudServer(manager.getName(), manager.getKeyshareServer(),
-                        email, pin, activity, new Runnable() {
-                            @Override
-                            public void run() {
-                                progressDialog.dismiss();
-                                installManager(manager);
-                                if (runnable != null) runnable.run();
-                            }
-                        }
-                    );
+                        email, pin, activity, wrappedRunnable);
                 }
             });
         } else {
-            installManager(manager);
+            wrappedRunnable.run();
         }
     }
 

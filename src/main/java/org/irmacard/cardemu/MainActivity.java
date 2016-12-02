@@ -566,7 +566,12 @@ public class MainActivity extends Activity {
 				case "schememanager":
 					Log.i(TAG, "Adding new scheme manager from qr code!");
 					SchemeManagerHandler.confirmAndDownloadManager(
-							GsonUtil.getGson().fromJson(contents, SchemeManagerQr.class).getUrl(), this, null);
+							GsonUtil.getGson().fromJson(contents, SchemeManagerQr.class).getUrl(), this,
+							new Runnable() {
+								@Override public void run() {
+									updateCredentialList(false);
+								}
+							});
 					break;
 				case "disclosing":
 				case "signing":
