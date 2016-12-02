@@ -3,7 +3,8 @@ package org.irmacard.cardemu.store;
 public class KeyshareServer {
     private String url;
     private String username;
-    private String token;
+
+    private transient String token;
 
     public KeyshareServer(String url, String username, String token) {
         this.url = url;
