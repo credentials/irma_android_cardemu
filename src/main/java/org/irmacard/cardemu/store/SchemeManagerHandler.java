@@ -27,6 +27,9 @@ import org.irmacard.keyshare.common.UserMessage;
 
 import java.io.IOException;
 
+import de.henku.jpaillier.KeyPair;
+import de.henku.jpaillier.PublicKey;
+
 /**
  * Contains static methods for adding and removing scheme managers and keyshare servers,
  * see e.g. {@link #confirmAndDownloadManager(String, Activity, Runnable)}. (For issuers, keys and
@@ -70,11 +73,12 @@ public class SchemeManagerHandler {
                                          final Activity activity,
                                          final Runnable runnable) {
         final JsonHttpClient client = new JsonHttpClient(GsonUtil.getGson());
-        UserLoginMessage loginMessage = new UserLoginMessage(email, null, pin);
+        final KeyPair keyPair = CredentialManager.getNewKeyshareKeypair();
+        UserLoginMessage loginMessage = new UserLoginMessage(email, null, pin, keyPair.getPublicKey());
 
         client.post(UserMessage.class, url + "/web/users/selfenroll", loginMessage, new HttpResultHandler<UserMessage>() {
             @Override public void onSuccess(UserMessage result) {
-                CredentialManager.addKeyshareServer(schemeManager, new KeyshareServer(url, email));
+                CredentialManager.addKeyshareServer(schemeManager, new KeyshareServer(url, email, keyPair));
                 if (runnable != null)
                     runnable.run();
             }

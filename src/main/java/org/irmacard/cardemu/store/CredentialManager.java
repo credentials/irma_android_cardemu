@@ -31,6 +31,7 @@
 package org.irmacard.cardemu.store;
 
 import android.content.SharedPreferences;
+import android.os.AsyncTask;
 import android.util.Log;
 
 import com.google.gson.Gson;
@@ -83,6 +84,9 @@ import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 
+import de.henku.jpaillier.KeyPair;
+import de.henku.jpaillier.KeyPairBuilder;
+
 /**
  * Handles issuing, disclosing, and deletion of credentials; keeps track of log entries; and handles (de)
  * serialization of credentials and log entries from/to storage.
@@ -101,6 +105,8 @@ public class CredentialManager {
 			= new TypeToken<List<LogEntry>>() {}.getType();
 	private static Type keyshareServersType
 			= new TypeToken<LinkedHashMap<String, KeyshareServer>>(){}.getType();
+	private static Type keyshareKeypairsType
+			= new TypeToken<List<KeyPair>>() {}.getType();
 
 	private static SharedPreferences settings;
 
@@ -109,9 +115,11 @@ public class CredentialManager {
 	private static final String LOG_STORAGE = "logs";
 	private static final String KEYSHARE_STORAGE = "keyshare";
 	private static final String KEYSHARE_USERNAME =  "KeyshareUsername";
+	private static final String KEYSHARE_KEYPAIRS = "KeyshareKeypairs";
 
 	private static String keyshareUsername = "";
 	private static LinkedHashMap<String, KeyshareServer> keyshareServers = new LinkedHashMap<>();
+	private static ArrayList<KeyPair> keyshareKeypairs = new ArrayList<>(3);
 
 	// Issuing state
 	private static List<CredentialBuilder> credentialBuilders;
@@ -119,8 +127,8 @@ public class CredentialManager {
 
 	public static void init(SharedPreferences s) throws CredentialsException {
 		settings = s;
-
 		load();
+		generateKeyshareKeypairs();
 	}
 
 	public static void clear() {
@@ -144,11 +152,13 @@ public class CredentialManager {
 		String credentialsJson = gson.toJson(credentials, credentialsType);
 		String logsJson = gson.toJson(logs, logsType);
 		String keyshareServersJson = GsonUtil.getGson().toJson(keyshareServers);
+		String keysJson = GsonUtil.getGson().toJson(keyshareKeypairs);
 
 		settings.edit()
 				.putString(CREDENTIAL_STORAGE, credentialsJson)
 				.putString(LOG_STORAGE, logsJson)
 				.putString(KEYSHARE_STORAGE, keyshareServersJson)
+				.putString(KEYSHARE_KEYPAIRS, keysJson)
 				.putString(KEYSHARE_USERNAME, keyshareUsername)
 				.apply();
 	}
@@ -165,6 +175,7 @@ public class CredentialManager {
 		String credentialsJson = settings.getString(CREDENTIAL_STORAGE, "");
 		String logsJson = settings.getString(LOG_STORAGE, "");
 		String keyshareServersJson = settings.getString(KEYSHARE_STORAGE, "");
+		String keysJson = settings.getString(KEYSHARE_KEYPAIRS, "");
 
 
 		if (!credentialsJson.equals("")) {
@@ -196,6 +207,14 @@ public class CredentialManager {
 		}
 		if (logs == null)
 			logs = new LinkedList<>();
+
+		if (!keysJson.equals("")) {
+			try {
+				keyshareKeypairs = gson.fromJson(keysJson, keyshareKeypairsType);
+			} catch (Exception e) { /* ignore */ }
+		}
+		if (keyshareKeypairs == null)
+			keyshareKeypairs = new ArrayList<>();
 	}
 
 	/**
@@ -719,5 +738,34 @@ public class CredentialManager {
 
 	public static boolean isEmpty() {
 		return credentials.isEmpty();
+	}
+
+	/**
+	 * Ensure that at least three Paillier keypairs are present. If there are less than three
+	 * then more are generated in a background thread.
+	 */
+	private static void generateKeyshareKeypairs() {
+		new AsyncTask<Void,Void,Void>() {
+			@Override protected Void doInBackground(Void... params) {
+				int count = keyshareKeypairs.size();
+				KeyPair pair;
+				for (int i = count; i < 3; ++i) {
+					pair = new KeyPairBuilder().bits(2048).generateKeyPair();
+					synchronized (KEYSHARE_KEYPAIRS) {
+						keyshareKeypairs.add(pair);
+					}
+				}
+				return null;
+			}
+		}.execute();
+	}
+
+	public static KeyPair getNewKeyshareKeypair() {
+		KeyPair kp;
+		synchronized (KEYSHARE_KEYPAIRS) {
+			kp = keyshareKeypairs.remove(0);
+		}
+		generateKeyshareKeypairs();
+		return kp;
 	}
 }

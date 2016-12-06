@@ -498,22 +498,25 @@ public class JsonIrmaClient extends IrmaClient implements EnterPINDialogFragment
 	 * @param plistcom List of commitments of the keyshare for each public key
 	 */
 	private void obtainKeyshareProofP(ProofPCommitmentMap plistcom) {
+		KeyshareServer kss = CredentialManager.getKeyshareServer(schemeManager);
+
 		ProofListBuilder.Commitment com = builder.calculateCommitments();
 		com.mergeProofPCommitments(plistcom);
 		final BigInteger challenge = com.calculateChallenge(
 				builder.getContext(), builder.getNonce(), action == Action.SIGNING);
+
+		final BigInteger encryptedChallenge = kss.getPublicKey().encrypt(challenge);
 
 		if (action == Action.ISSUING) {
 			CredentialManager.addPublicSKs(plistcom);
 		}
 
 		final JsonHttpClient client = new JsonHttpClient(GsonUtil.getGson());
-		KeyshareServer kss = CredentialManager.getKeyshareServer(schemeManager);
 		client.setExtraHeader(IRMAHeaders.USERNAME, kss.getUsername());
 		client.setExtraHeader(IRMAHeaders.AUTHORIZATION, kss.getToken());
 
 		Log.i(TAG, "Posting challenge to the keyshare server now!");
-		client.post(ProofP.class, kss.getUrl() + "/prove/getResponse", challenge, new JsonResultHandler<ProofP>() {
+		client.post(ProofP.class, kss.getUrl() + "/prove/getResponse", encryptedChallenge, new JsonResultHandler<ProofP>() {
 			@Override public void onSuccess(ProofP result) {
 				Log.i(TAG, "Unbelievable, also received a ProofP from the server");
 				JsonIrmaClient.this.finishDistributedProtocol(result, challenge);
@@ -528,6 +531,7 @@ public class JsonIrmaClient extends IrmaClient implements EnterPINDialogFragment
 	 * @param proofp The keyshare server's proof of its part of the secret key
 	 */
 	private void finishDistributedProtocol(ProofP proofp, BigInteger challenge) {
+		proofp.decrypt(CredentialManager.getKeyshareServer(schemeManager).getKeyPair());
 		ProofList list = builder.createProofList(challenge, proofp);
 
 		if(action == Action.DISCLOSING || action == Action.SIGNING) {
