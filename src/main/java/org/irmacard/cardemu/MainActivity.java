@@ -562,7 +562,9 @@ public class MainActivity extends Activity {
 				return;
 			}
 
-			switch (qr.getType()) {
+			String qrType = qr.getType();
+			if (qrType == null) qrType = "";
+			switch (qrType) {
 				case "schememanager":
 					Log.i(TAG, "Adding new scheme manager from qr code!");
 					SchemeManagerHandler.confirmAndDownloadManager(
