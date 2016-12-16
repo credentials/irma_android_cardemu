@@ -95,6 +95,9 @@ public class StoreManager implements DescriptionStoreSerializer, IdemixKeyStoreS
 
 	@Override
 	public void saveSchemeManager(SchemeManager schemeManager) {
+		if (DescriptionStore.getInstance().containsSchemeManager(schemeManager.getUrl()))
+			return;
+
 		File store = context.getDir("store", Context.MODE_PRIVATE);
 		File path = new File(store, schemeManager.getName());
 		if (!path.mkdirs() && !path.isDirectory())
