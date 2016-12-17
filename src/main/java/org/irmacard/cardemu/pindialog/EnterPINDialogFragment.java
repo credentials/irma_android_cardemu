@@ -52,7 +52,6 @@ import org.irmacard.cardemu.R;
 import org.irmacard.cardemu.httpclient.HttpClientException;
 import org.irmacard.cardemu.httpclient.HttpResultHandler;
 import org.irmacard.cardemu.httpclient.JsonHttpClient;
-import org.irmacard.cardemu.irmaclient.JsonIrmaClient;
 import org.irmacard.cardemu.store.CredentialManager;
 import org.irmacard.cardemu.store.KeyshareServer;
 import org.irmacard.keyshare.common.AuthorizationResult;

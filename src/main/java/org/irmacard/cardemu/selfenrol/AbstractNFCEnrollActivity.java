@@ -201,7 +201,7 @@ public abstract class AbstractNFCEnrollActivity extends AbstractGUIEnrollActivit
                         }
 
                         advanceScreen();
-                        IrmaClient.NewSession(result.getIssueQr(), irmaClientHandler);
+                        new IrmaClient(result.getIssueQr(), irmaClientHandler);
                     }
                 });
     }

@@ -475,7 +475,7 @@ public class MainActivity extends Activity {
 
 		currentSessionUrl = qr;
 		launchedFromBrowser = true;
-		IrmaClient.NewSession(qr, irmaClientHandler);
+		new IrmaClient(qr, irmaClientHandler);
 	}
 
 	public void onMainShapeTouch(View v) {
@@ -581,7 +581,7 @@ public class MainActivity extends Activity {
 				default:
 					launchedFromBrowser = false;
 					onlineEnrolling = false;
-					IrmaClient.NewSession(contents, irmaClientHandler);
+					new IrmaClient(contents, irmaClientHandler);
 					break;
 			}
 		}
@@ -676,7 +676,7 @@ public class MainActivity extends Activity {
 				.setView(inputbox)
 				.setPositiveButton(R.string.start, new DialogInterface.OnClickListener() {
 					@Override public void onClick(DialogInterface dialog, int whichButton) {
-						IrmaClient.NewSession(inputbox.getText().toString(), irmaClientHandler);
+						new IrmaClient(inputbox.getText().toString(), irmaClientHandler);
 					}
 				})
 				.setNegativeButton(android.R.string.cancel, null)
