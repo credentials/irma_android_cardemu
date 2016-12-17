@@ -33,17 +33,27 @@ package org.irmacard.cardemu.httpclient;
 import android.os.AsyncTask;
 import android.util.Log;
 
-import com.google.api.client.http.*;
+import com.google.api.client.http.ByteArrayContent;
+import com.google.api.client.http.GenericUrl;
+import com.google.api.client.http.HttpContent;
+import com.google.api.client.http.HttpRequest;
+import com.google.api.client.http.HttpRequestFactory;
+import com.google.api.client.http.HttpRequestInitializer;
+import com.google.api.client.http.HttpResponse;
+import com.google.api.client.http.HttpResponseException;
 import com.google.api.client.http.javanet.NetHttpTransport;
 import com.google.gson.Gson;
 import com.google.gson.JsonParseException;
+
+import org.irmacard.cardemu.irmaclient.IrmaClientHandler;
 import org.irmacard.credentials.info.DescriptionStore;
 
-import javax.net.ssl.SSLSocketFactory;
 import java.io.IOException;
 import java.lang.reflect.Type;
 import java.util.HashMap;
 import java.util.Map;
+
+import javax.net.ssl.SSLSocketFactory;
 
 /**
  * Convenience class to (a)synchroniously do HTTP GET and PUT requests,
@@ -192,7 +202,7 @@ public class JsonHttpClient {
 	/**
 	 * Worker method
 	 */
-	private <T> T doRequest(Type type, String url, Object object, String authorization, String method)
+	public <T> T doRequest(Type type, String url, Object object, String authorization, String method)
 	throws HttpClientException {
 		HttpContent post = null;
 		Log.d(TAG, "Connecting to: " + url);
@@ -248,11 +258,15 @@ public class JsonHttpClient {
 		doAsyncRequest(type, url, null, "GET", handler);
 	}
 
+	public void delete(String url, HttpResultHandler handler) {
+		doAsyncRequest(Object.class, url, null, "DELETE", handler);
+	}
+
 	/**
 	 * Worker method: wraps {@link #doRequest(Type, String, Object, String, String)} in an
 	 * {@link AsyncTask}.
 	 */
-	private <T> void doAsyncRequest(final Type type, final String url, final Object object, final String method,
+	public <T> void doAsyncRequest(final Type type, final String url, final Object object, final String method,
 	                                final HttpResultHandler<T> handler) {
 		new AsyncTask<Void, Void, HttpClientResult<T>>() {
 			@Override

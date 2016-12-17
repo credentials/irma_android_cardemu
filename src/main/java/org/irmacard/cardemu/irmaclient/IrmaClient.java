@@ -1,7 +1,6 @@
 package org.irmacard.cardemu.irmaclient;
 
 import android.content.res.Resources;
-import android.os.AsyncTask;
 import android.util.Log;
 import android.util.Patterns;
 
@@ -69,7 +68,8 @@ public class IrmaClient implements EnterPINDialogFragment.PINDialogListener {
 	private final static String TAG = "IrmaClient";
 
 	private String server;
-	private JsonHttpClient client = new JsonHttpClient(GsonUtil.getGson());
+	private IrmaTransport transport;
+	private JsonHttpClient keyshareClient;
 	private Action action = Action.UNKNOWN;
 	private IrmaClientHandler handler;
 	private String protocolVersion;
@@ -136,6 +136,8 @@ public class IrmaClient implements EnterPINDialogFragment.PINDialogListener {
 		this.server = url;
 		if (!server.endsWith("/"))
 			server += "/";
+
+		transport = new IrmaHttpTransport(server);
 
 		if (Pattern.matches(".*/verification/[^/]+/?$", server)) {
 			action = Action.DISCLOSING;
@@ -246,7 +248,7 @@ public class IrmaClient implements EnterPINDialogFragment.PINDialogListener {
 
 	private void sendIssueCommitmentMessage(IssueCommitmentMessage msg) {
 		Type t = new TypeToken<ArrayList<IssueSignatureMessage>>(){}.getType();
-		client.post(t, server + "commitments", msg, new JsonResultHandler<ArrayList<IssueSignatureMessage>>() {
+		transport.post(t, "commitments", msg, new JsonResultHandler<ArrayList<IssueSignatureMessage>>() {
 			@Override public void onSuccess(ArrayList<IssueSignatureMessage> result) {
 				try {
 					CredentialManager.constructCredentials(result);
@@ -302,7 +304,7 @@ public class IrmaClient implements EnterPINDialogFragment.PINDialogListener {
 	}
 
 	private void sendDisclosureProofs(ProofList proofs) {
-		client.post(DisclosureProofResult.Status.class, server + "proofs", proofs,
+		transport.post(DisclosureProofResult.Status.class, "proofs", proofs,
 				new JsonResultHandler<DisclosureProofResult.Status>() {
 					@Override public void onSuccess(DisclosureProofResult.Status result) {
 						if (result == DisclosureProofResult.Status.VALID) {
@@ -336,14 +338,14 @@ public class IrmaClient implements EnterPINDialogFragment.PINDialogListener {
 
 		switch (protocolVersion) {
 			case "2.0":
-				client.get(requestClass, server, new JsonResultHandler<T>() {
+				transport.get(requestClass, "", new JsonResultHandler<T>() {
 					@Override public void onSuccess(final T request) {
 						continueSession(request, action);
 					}
 				});
 				break;
 			case "2.1":
-				client.get(JwtSessionRequest.class, server + "jwt", new JsonResultHandler<JwtSessionRequest>() {
+				transport.get(JwtSessionRequest.class, "jwt", new JsonResultHandler<JwtSessionRequest>() {
 					@Override public void onSuccess(final JwtSessionRequest jwt) {
 						continueSession(jwt, clientRequestClass, action);
 					}
@@ -419,18 +421,7 @@ public class IrmaClient implements EnterPINDialogFragment.PINDialogListener {
 	 */
 	private void deleteSession() {
 		Log.i(TAG, "DELETEing " + server);
-
-		new AsyncTask<String,Void,Void>() {
-			@Override protected Void doInBackground(String... params) {
-				try {
-					client.doDelete(params[0]);
-				} catch (HttpClientException e) {
-					e.printStackTrace();
-				}
-				return null;
-			}
-		}.execute(server);
-
+		transport.delete();
 		server = null;
 	}
 
@@ -445,11 +436,12 @@ public class IrmaClient implements EnterPINDialogFragment.PINDialogListener {
 	 */
 	private void startKeyshareProtocol() {
 		KeyshareServer kss = CredentialManager.getKeyshareServer(schemeManager);
-		client.setExtraHeader(IRMAHeaders.USERNAME, kss.getUsername());
-		client.setExtraHeader(IRMAHeaders.AUTHORIZATION, kss.getToken());
+		keyshareClient = new JsonHttpClient(GsonUtil.getGson());
+		keyshareClient.setExtraHeader(IRMAHeaders.USERNAME, kss.getUsername());
+		keyshareClient.setExtraHeader(IRMAHeaders.AUTHORIZATION, kss.getToken());
 
 		String url = kss.getUrl() + "/users/isAuthorized";
-		client.post(AuthorizationResult.class, url, "", new HttpResultHandler<AuthorizationResult>() {
+		keyshareClient.post(AuthorizationResult.class, url, "", new HttpResultHandler<AuthorizationResult>() {
 			@Override
 			public void onSuccess(AuthorizationResult result) {
 				Log.i(TAG, "Successfully retrieved authorization result, " + result);
@@ -513,11 +505,11 @@ public class IrmaClient implements EnterPINDialogFragment.PINDialogListener {
 	 */
 	private void obtainKeyshareProofPCommitments(final List<PublicKeyIdentifier> pkids) {
 		KeyshareServer kss = CredentialManager.getKeyshareServer(schemeManager);
-		client.setExtraHeader(IRMAHeaders.USERNAME, kss.getUsername());
-		client.setExtraHeader(IRMAHeaders.AUTHORIZATION, kss.getToken());
+		keyshareClient.setExtraHeader(IRMAHeaders.USERNAME, kss.getUsername());
+		keyshareClient.setExtraHeader(IRMAHeaders.AUTHORIZATION, kss.getToken());
 
 		Log.i(TAG, "Posting to the keyshare server now!");
-		client.post(ProofPCommitmentMap.class, kss.getUrl() + "/prove/getCommitments", pkids, new JsonResultHandler<ProofPCommitmentMap>() {
+		keyshareClient.post(ProofPCommitmentMap.class, kss.getUrl() + "/prove/getCommitments", pkids, new JsonResultHandler<ProofPCommitmentMap>() {
 			@Override public void onSuccess(ProofPCommitmentMap result) {
 				Log.i(TAG, "Unbelievable, it actually worked:");
 				for(PublicKeyIdentifier pkid : pkids) {
@@ -552,11 +544,11 @@ public class IrmaClient implements EnterPINDialogFragment.PINDialogListener {
 			CredentialManager.addPublicSKs(plistcom);
 		}
 
-		client.setExtraHeader(IRMAHeaders.USERNAME, kss.getUsername());
-		client.setExtraHeader(IRMAHeaders.AUTHORIZATION, kss.getToken());
+		keyshareClient.setExtraHeader(IRMAHeaders.USERNAME, kss.getUsername());
+		keyshareClient.setExtraHeader(IRMAHeaders.AUTHORIZATION, kss.getToken());
 
 		Log.i(TAG, "Posting challenge to the keyshare server now!");
-		client.post(ProofP.class, kss.getUrl() + "/prove/getResponse", encryptedChallenge, new JsonResultHandler<ProofP>() {
+		keyshareClient.post(ProofP.class, kss.getUrl() + "/prove/getResponse", encryptedChallenge, new JsonResultHandler<ProofP>() {
 			@Override public void onSuccess(ProofP result) {
 				Log.i(TAG, "Unbelievable, also received a ProofP from the server");
 				IrmaClient.this.finishDistributedProtocol(result, challenge);
