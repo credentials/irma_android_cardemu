@@ -69,6 +69,7 @@ public class IrmaClient implements EnterPINDialogFragment.PINDialogListener {
 	private final static String TAG = "IrmaClient";
 
 	private String server;
+	private JsonHttpClient client = new JsonHttpClient(GsonUtil.getGson());
 	private Action action = Action.UNKNOWN;
 	private IrmaClientHandler handler;
 	private String protocolVersion;
@@ -207,8 +208,8 @@ public class IrmaClient implements EnterPINDialogFragment.PINDialogListener {
 	// Issuance methods ----------------------------------------------------------------------------
 
 	/**
-	 * Given an {@link IssuingRequest}, compute the first issuing message and post it to the server
-	 * (using the specified {@link JsonHttpClient}). If the server returns corresponding CL signatures,
+	 * Given an {@link IssuingRequest}, compute the first issuing message and post it to the server.
+	 * If the server returns corresponding CL signatures,
 	 * construct and save the new Idemix credentials.
 	 */
 	public void finishIssuance(final IssuingRequest request, final DisclosureChoice disclosureChoice) {
@@ -244,8 +245,6 @@ public class IrmaClient implements EnterPINDialogFragment.PINDialogListener {
 	}
 
 	private void sendIssueCommitmentMessage(IssueCommitmentMessage msg) {
-		final JsonHttpClient client = new JsonHttpClient(GsonUtil.getGson());
-
 		Type t = new TypeToken<ArrayList<IssueSignatureMessage>>(){}.getType();
 		client.post(t, server + "commitments", msg, new JsonResultHandler<ArrayList<IssueSignatureMessage>>() {
 			@Override public void onSuccess(ArrayList<IssueSignatureMessage> result) {
@@ -303,7 +302,6 @@ public class IrmaClient implements EnterPINDialogFragment.PINDialogListener {
 	}
 
 	private void sendDisclosureProofs(ProofList proofs) {
-		JsonHttpClient client = new JsonHttpClient(GsonUtil.getGson());
 		client.post(DisclosureProofResult.Status.class, server + "proofs", proofs,
 				new JsonResultHandler<DisclosureProofResult.Status>() {
 					@Override public void onSuccess(DisclosureProofResult.Status result) {
@@ -333,7 +331,6 @@ public class IrmaClient implements EnterPINDialogFragment.PINDialogListener {
 			Class<T> requestClass, final Class<S> clientRequestClass) {
 		handler.onStatusUpdate(action, Status.COMMUNICATING);
 		Log.i(TAG, "Starting " + action + ": " + server);
-		JsonHttpClient client = new JsonHttpClient(GsonUtil.getGson());
 
 		// Get the signature request
 
@@ -426,7 +423,7 @@ public class IrmaClient implements EnterPINDialogFragment.PINDialogListener {
 		new AsyncTask<String,Void,Void>() {
 			@Override protected Void doInBackground(String... params) {
 				try {
-					new JsonHttpClient(GsonUtil.getGson()).doDelete(params[0]);
+					client.doDelete(params[0]);
 				} catch (HttpClientException e) {
 					e.printStackTrace();
 				}
@@ -447,8 +444,6 @@ public class IrmaClient implements EnterPINDialogFragment.PINDialogListener {
 	 * keyshare's {@link ProofP} through {@link #continueProtocolWithAuthorization()}.
 	 */
 	private void startKeyshareProtocol() {
-		JsonHttpClient client = new JsonHttpClient(GsonUtil.getGson());
-
 		KeyshareServer kss = CredentialManager.getKeyshareServer(schemeManager);
 		client.setExtraHeader(IRMAHeaders.USERNAME, kss.getUsername());
 		client.setExtraHeader(IRMAHeaders.AUTHORIZATION, kss.getToken());
@@ -517,7 +512,6 @@ public class IrmaClient implements EnterPINDialogFragment.PINDialogListener {
 	 * @param pkids List of public keys; for the n of each of these, we ask for R_0^w mod n
 	 */
 	private void obtainKeyshareProofPCommitments(final List<PublicKeyIdentifier> pkids) {
-		final JsonHttpClient client = new JsonHttpClient(GsonUtil.getGson());
 		KeyshareServer kss = CredentialManager.getKeyshareServer(schemeManager);
 		client.setExtraHeader(IRMAHeaders.USERNAME, kss.getUsername());
 		client.setExtraHeader(IRMAHeaders.AUTHORIZATION, kss.getToken());
@@ -558,7 +552,6 @@ public class IrmaClient implements EnterPINDialogFragment.PINDialogListener {
 			CredentialManager.addPublicSKs(plistcom);
 		}
 
-		final JsonHttpClient client = new JsonHttpClient(GsonUtil.getGson());
 		client.setExtraHeader(IRMAHeaders.USERNAME, kss.getUsername());
 		client.setExtraHeader(IRMAHeaders.AUTHORIZATION, kss.getToken());
 
