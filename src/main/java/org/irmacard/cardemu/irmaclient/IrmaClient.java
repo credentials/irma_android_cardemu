@@ -51,6 +51,7 @@ import java.math.BigInteger;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
+import java.util.TreeSet;
 import java.util.regex.Pattern;
 
 public class IrmaClient implements EnterPINDialogFragment.PINDialogListener {
@@ -64,6 +65,7 @@ public class IrmaClient implements EnterPINDialogFragment.PINDialogListener {
 		DISCLOSING, SIGNING, ISSUING, UNKNOWN
 	}
 
+	private static final String[] supportedVersions = {"2.0", "2.1"};
 	private static final int maxJwtAge = 10 * 60 * 1000; // 10 minutes in milliseconds
 	private final static String TAG = "IrmaClient";
 
@@ -102,42 +104,57 @@ public class IrmaClient implements EnterPINDialogFragment.PINDialogListener {
 		start(qr, handler);
 	}
 
+	/**
+	 * Using the version numbers in the specified QR, calculate the highest version number
+	 * that both us and the server supports.
+	 * @throws NumberFormatException
+	 * @throws java.util.NoSuchElementException
+     */
+	private static String calculateProtocolVersion(ClientQr qr) throws NumberFormatException {
+		// Build an interpolated list of supported server versions, e.g.
+		// v: "2.0", vmax: "2.2" ==> {"2.0", "2.1", "2.2"}
+		// We assume the major versions is always the same. vmax may be absent.
+		List<String> serverVersions = new ArrayList<>();
+		String v = qr.getVersion(), vmax = qr.getMaxVersion();
+		if (vmax == null || vmax.length() == 0)
+			vmax = v;
+		int min = Integer.parseInt(v.substring(2));
+		int max = Integer.parseInt(vmax.substring(2));
+		int maj = Integer.parseInt(vmax.substring(0, 1));
+		for (int i = min; i <= max; ++i)
+			serverVersions.add("" + maj + "." + i);
+
+		// Now that we have a list of supported versions for both the server and ourselves,
+		// we choose the highest element of the intersection of these two sets.
+		// (TreeSet is an ordered set and .retainAll() is set intersection.)
+		TreeSet<String> versions = new TreeSet<>(Arrays.asList(supportedVersions));
+		versions.retainAll(serverVersions);
+		return versions.last();
+	}
+
 	private void start(ClientQr qr, IrmaClientHandler handler) {
-		List<String> supportedVersions = Arrays.asList("2.0", "2.1");
-
-		String url = qr.getUrl();
-		String protocolVersion = null;
-
-		if (supportedVersions.contains(qr.getVersion()))
-			protocolVersion = qr.getVersion();
-		if (supportedVersions.contains(qr.getMaxVersion()))
-			protocolVersion = qr.getMaxVersion();
-
-		if (protocolVersion == null) {
-			handler.onFailure(Action.UNKNOWN, "Protocol not supported", null,
-					qr.getVersion() != null ? "Version: " + qr.getVersion() : "No version specified.");
+		try {
+			protocolVersion = calculateProtocolVersion(qr);
+		} catch (Exception e) {
+			handler.onFailure(Action.UNKNOWN, "Invalid QR", null, e.getMessage());
 			return;
 		}
 
 		// Check URL validity
-		if (!Patterns.WEB_URL.matcher(url).matches()) {
+		server = qr.getUrl();
+		if (!Patterns.WEB_URL.matcher(server).matches()) {
 			handler.onFailure(Action.UNKNOWN, "Protocol not supported", null,
 					qr.getUrl() != null ? "URL: " + qr.getUrl() : "No URL specified.");
 			return;
 		}
+		if (!server.endsWith("/"))
+			server += "/";
 
 		// We have a valid URL: let's go!
 		this.handler = handler;
 		this.handler.setIrmaClient(this);
-
-		this.protocolVersion = protocolVersion;
 		this.resources = handler.getActivity().getResources();
-
-		this.server = url;
-		if (!server.endsWith("/"))
-			server += "/";
-
-		transport = new IrmaHttpTransport(server);
+		this.transport = new IrmaHttpTransport(server);
 
 		if (Pattern.matches(".*/verification/[^/]+/?$", server)) {
 			action = Action.DISCLOSING;
@@ -345,6 +362,7 @@ public class IrmaClient implements EnterPINDialogFragment.PINDialogListener {
 				});
 				break;
 			case "2.1":
+			case "2.2":
 				transport.get(JwtSessionRequest.class, "jwt", new JsonResultHandler<JwtSessionRequest>() {
 					@Override public void onSuccess(final JwtSessionRequest jwt) {
 						continueSession(jwt, clientRequestClass, action);
