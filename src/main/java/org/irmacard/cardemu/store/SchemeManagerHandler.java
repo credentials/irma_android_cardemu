@@ -205,7 +205,7 @@ public class SchemeManagerHandler {
      */
     private static void installManager(final SchemeManager manager) {
         try {
-            DescriptionStore.getInstance().addSchemeManager(manager);
+            DescriptionStore.getInstance().addAndSaveSchemeManager(manager);
         } catch (InfoException e) {
             e.printStackTrace();
         }
