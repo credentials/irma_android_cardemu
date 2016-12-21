@@ -65,7 +65,7 @@ public class IrmaClient implements EnterPINDialogFragment.PINDialogListener {
 		DISCLOSING, SIGNING, ISSUING, UNKNOWN
 	}
 
-	private static final String[] supportedVersions = {"2.0", "2.1"};
+	private static final String[] supportedVersions = {"2.0", "2.1", "2.2"};
 	private static final int maxJwtAge = 10 * 60 * 1000; // 10 minutes in milliseconds
 	private final static String TAG = "IrmaClient";
 
@@ -582,12 +582,13 @@ public class IrmaClient implements EnterPINDialogFragment.PINDialogListener {
 	 */
 	private void finishDistributedProtocol(ProofP proofp, BigInteger challenge) {
 		proofp.decrypt(CredentialManager.getKeyshareServer(schemeManager).getKeyPair());
-		ProofList list = builder.createProofList(challenge, proofp);
 
 		if(action == Action.DISCLOSING || action == Action.SIGNING) {
+			ProofList list = builder.createProofList(challenge, proofp);
 			sendDisclosureProofs(list);
 		} else {
-			IssueCommitmentMessage msg = new IssueCommitmentMessage(list, CredentialManager.getNonce2());
+			ProofList list = builder.createProofList(challenge); // Let the receiver merge the proofP in
+			IssueCommitmentMessage msg = new IssueCommitmentMessage(list, CredentialManager.getNonce2(), proofp);
 			sendIssueCommitmentMessage(msg);
 		}
 	}
