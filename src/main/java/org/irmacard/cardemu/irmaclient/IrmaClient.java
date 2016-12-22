@@ -545,7 +545,7 @@ public class IrmaClient implements EnterPINDialogFragment.PINDialogListener {
 	 * keyshare server, and ask for the response c * m + w (where m is the keyshare's private key and w its
 	 * randomness used previously in its commitment). If successful, combine our responses with that
 	 * of the keyshare server, and continue the protocol normally using
-	 * {@link #finishDistributedProtocol(ProofP, BigInteger)}.
+	 * {@link #finishDistributedProtocol(String, BigInteger)}.
 	 * @param plistcom List of commitments of the keyshare for each public key
 	 */
 	private void obtainKeyshareProofP(ProofPCommitmentMap plistcom) {
@@ -566,8 +566,8 @@ public class IrmaClient implements EnterPINDialogFragment.PINDialogListener {
 		keyshareClient.setExtraHeader(IRMAHeaders.AUTHORIZATION, kss.getToken());
 
 		Log.i(TAG, "Posting challenge to the keyshare server now!");
-		keyshareClient.post(ProofP.class, kss.getUrl() + "/prove/getResponse", encryptedChallenge, new JsonResultHandler<ProofP>() {
-			@Override public void onSuccess(ProofP result) {
+		keyshareClient.post(String.class, kss.getUrl() + "/prove/getResponse", encryptedChallenge, new JsonResultHandler<String>() {
+			@Override public void onSuccess(String result) {
 				Log.i(TAG, "Unbelievable, also received a ProofP from the server");
 				IrmaClient.this.finishDistributedProtocol(result, challenge);
 			}
@@ -578,9 +578,12 @@ public class IrmaClient implements EnterPINDialogFragment.PINDialogListener {
 	 * Combine our proofs with that of the keyshare server, and continue the protocol normally using
 	 * {@link #sendDisclosureProofs(ProofList)} or
 	 * {@link #sendIssueCommitmentMessage(IssueCommitmentMessage)}.
-	 * @param proofp The keyshare server's proof of its part of the secret key
+	 * @param jwt Jwt containing the keyshare server's proof of its part of the secret key
 	 */
-	private void finishDistributedProtocol(ProofP proofp, BigInteger challenge) {
+	private void finishDistributedProtocol(String jwt, BigInteger challenge) {
+		JwtParser<ProofP> jwtParser = new JwtParser<>(ProofP.class, true, maxJwtAge, "ProofP", "ProofP");
+		jwtParser.parseJwt(jwt);
+		ProofP proofp = jwtParser.getPayload();
 		proofp.decrypt(CredentialManager.getKeyshareServer(schemeManager).getKeyPair());
 
 		if(action == Action.DISCLOSING || action == Action.SIGNING) {
@@ -588,7 +591,7 @@ public class IrmaClient implements EnterPINDialogFragment.PINDialogListener {
 			sendDisclosureProofs(list);
 		} else {
 			ProofList list = builder.createProofList(challenge); // Let the receiver merge the proofP in
-			IssueCommitmentMessage msg = new IssueCommitmentMessage(list, CredentialManager.getNonce2(), proofp);
+			IssueCommitmentMessage msg = new IssueCommitmentMessage(list, CredentialManager.getNonce2(), jwt);
 			sendIssueCommitmentMessage(msg);
 		}
 	}
