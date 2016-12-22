@@ -281,7 +281,10 @@ public class JsonHttpClient {
 
 			@Override
 			protected void onPostExecute(HttpClientResult<T> result) {
-				if (result.getObject() != null)
+				// Careful: if no exception occured then result.getObject() might still be null
+				// (e.g., in case of a DELETE.) But if an exception did occur, then
+				// result.getException() should never be null.
+				if (result.getException() == null)
 					handler.onSuccess(result.getObject());
 				else
 					handler.onError(result.getException());
