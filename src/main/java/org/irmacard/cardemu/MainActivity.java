@@ -139,7 +139,6 @@ public class MainActivity extends Activity {
 	private long qrScanStartTime;
 
 	// Keep track of last verification url to ensure we handle it only once
-	private String lastSessionUrl = "()";
 	private String currentSessionUrl = "()";
 	private boolean launchedFromBrowser;
 	private boolean onlineEnrolling;
@@ -425,7 +424,6 @@ public class MainActivity extends Activity {
 		Log.i(TAG, "onPause() called");
 
 		settings.edit()
-				.putString("lastSessionUrl", lastSessionUrl)
 				.putString("currentSessionUrl", currentSessionUrl)
 				.putBoolean("onlineEnrolling", onlineEnrolling)
 				.putBoolean("launchedFromBrowser", launchedFromBrowser)
@@ -448,7 +446,6 @@ public class MainActivity extends Activity {
 		super.onResume();
 		Log.i(TAG, "onResume() called");
 
-		lastSessionUrl = settings.getString("lastSessionUrl", "()");
 		currentSessionUrl = settings.getString("currentSessionUrl", "()");
 		onlineEnrolling = settings.getBoolean("onlineEnrolling", false);
 		launchedFromBrowser = settings.getBoolean("launchedFromBrowser", false);
@@ -468,7 +465,7 @@ public class MainActivity extends Activity {
 			return;
 
 		Log.i(TAG, "Received qr in intent: " + qr);
-		if(qr.equals(currentSessionUrl) || qr.equals(lastSessionUrl)) {
+		if(qr.equals(currentSessionUrl)) {
 			Log.i(TAG, "Already processed this qr, ignoring");
 			return;
 		}
@@ -752,9 +749,6 @@ public class MainActivity extends Activity {
 
 		private void finish(boolean returnToBrowser) {
 			setState(State.IDLE);
-
-			lastSessionUrl = currentSessionUrl;
-			currentSessionUrl = "";
 
 			if (!onlineEnrolling && launchedFromBrowser && returnToBrowser)
 				onBackPressed();
