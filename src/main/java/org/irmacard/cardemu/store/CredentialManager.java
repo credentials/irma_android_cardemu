@@ -313,12 +313,11 @@ public class CredentialManager {
 		if (list.remove(get(identifier))) {
 			CredentialDescription cd = identifier.getIdentifier().getCredentialDescription();
 			logs.add(0, new RemoveLogEntry(Calendar.getInstance().getTime(), cd));
+			if (list.size() == 0)
+				credentials.remove(identifier.getIdentifier());
 			if (shouldSave)
 				save();
 		}
-
-		if (list.size() == 0)
-			credentials.remove(identifier.getIdentifier());
 	}
 
 	/**
