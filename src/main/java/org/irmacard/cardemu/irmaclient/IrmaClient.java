@@ -556,7 +556,11 @@ public class IrmaClient implements EnterPINDialogFragment.PINDialogListener {
 		final BigInteger challenge = com.calculateChallenge(
 				builder.getContext(), builder.getNonce(), action == Action.SIGNING);
 
-		final BigInteger encryptedChallenge = kss.getPublicKey().encrypt(challenge);
+		BigInteger kssChallenge;
+		if (action == Action.ISSUING)
+			kssChallenge = challenge;
+		else
+			kssChallenge = kss.getPublicKey().encrypt(challenge);
 
 		if (action == Action.ISSUING) {
 			CredentialManager.addPublicSKs(plistcom);
@@ -566,7 +570,7 @@ public class IrmaClient implements EnterPINDialogFragment.PINDialogListener {
 		keyshareClient.setExtraHeader(IRMAHeaders.AUTHORIZATION, kss.getToken());
 
 		Log.i(TAG, "Posting challenge to the keyshare server now!");
-		keyshareClient.post(String.class, kss.getUrl() + "/prove/getResponse", encryptedChallenge, new JsonResultHandler<String>() {
+		keyshareClient.post(String.class, kss.getUrl() + "/prove/getResponse", kssChallenge, new JsonResultHandler<String>() {
 			@Override public void onSuccess(String result) {
 				Log.i(TAG, "Unbelievable, also received a ProofP from the server");
 				IrmaClient.this.finishDistributedProtocol(result, challenge);
@@ -584,9 +588,9 @@ public class IrmaClient implements EnterPINDialogFragment.PINDialogListener {
 		JwtParser<ProofP> jwtParser = new JwtParser<>(ProofP.class, true, maxJwtAge, "ProofP", "ProofP");
 		jwtParser.parseJwt(jwt);
 		ProofP proofp = jwtParser.getPayload();
-		proofp.decrypt(CredentialManager.getKeyshareServer(schemeManager).getKeyPair());
 
 		if(action == Action.DISCLOSING || action == Action.SIGNING) {
+			proofp.decrypt(CredentialManager.getKeyshareServer(schemeManager).getKeyPair());
 			ProofList list = builder.createProofList(challenge, proofp);
 			sendDisclosureProofs(list);
 		} else {
