@@ -178,32 +178,38 @@ public class SchemeManagerHandler {
     private static void installManagerAndKeyshareServer(final SchemeManager manager,
                                                         final Activity activity,
                                                         final Runnable runnable) {
-        // Will be run either immediately, or after successful keyshare server enrolling
-        final Runnable wrappedRunnable = new Runnable() {
-            @Override public void run() {
-                installManager(manager);
-                if (runnable != null)
-                    runnable.run();
-                new AlertDialog.Builder(activity)
-                        .setTitle(R.string.scheme_manager_added_title)
-                        .setMessage(activity.getString(
-                                R.string.scheme_manager_added_text, manager.getHumanReadableName()))
-                        .setPositiveButton(android.R.string.ok, null)
-                        .show();
-            }
-        };
-
         if (manager.hasKeyshareServer() // Perhaps we are still enrolled from a previous time we knew this manager
                 && !CredentialManager.isEnrolledToKeyshareServer(manager.getName())) {
             getKeyserverEnrollInput(activity, new KeyserverInputHandler() {
-                @Override public void done(String email, String pin) {
+                @Override public void done(final String email, String pin) {
                     enrollKeyshareServer(manager.getName(), manager.getKeyshareServer(),
-                        email, pin, activity, wrappedRunnable);
+                            email, pin, activity, new Runnable() {
+                                @Override public void run() {
+                                    finish(manager, activity, runnable, email);
+                                }
+                            });
                 }
             });
         } else {
-            wrappedRunnable.run();
+            finish(manager, activity, runnable, null);
         }
+    }
+
+    private static void finish(SchemeManager manager, Activity activity, Runnable runnable, String email) {
+        installManager(manager);
+
+        if (email != null)
+            CredentialManager.setKeyshareUsername(email);
+
+        if (runnable != null)
+            runnable.run();
+
+        new AlertDialog.Builder(activity)
+                .setTitle(R.string.scheme_manager_added_title)
+                .setMessage(activity.getString(
+                        R.string.scheme_manager_added_text, manager.getHumanReadableName()))
+                .setPositiveButton(android.R.string.ok, null)
+                .show();
     }
 
     /**
@@ -253,8 +259,6 @@ public class SchemeManagerHandler {
                         public void onClick(DialogInterface dialog, int which) {
                             String email = emailView.getText().toString();
                             String pin = pinView.getText().toString();
-
-                            CredentialManager.setKeyshareUsername(email);
                             handler.done(email, pin);
                         }
                     })
