@@ -28,7 +28,6 @@ import org.irmacard.keyshare.common.UserMessage;
 import java.io.IOException;
 
 import de.henku.jpaillier.KeyPair;
-import de.henku.jpaillier.PublicKey;
 
 /**
  * Contains static methods for adding and removing scheme managers and keyshare servers,
@@ -60,18 +59,18 @@ public class SchemeManagerHandler {
     }
 
     /**
-     * Enroll to the keyshare server at the specified url for the spefified scheme manager.
+     * Enroll to the keyshare server at the specified url for the specified scheme manager.
      * @param email Emailadress to use
      * @param pin Pincode to use
      * @param activity Used for showing any error messages
      * @param runnable Run afterwards if successful
      */
-    public static void enrollCloudServer(final String schemeManager,
-                                         final String url,
-                                         final String email,
-                                         final String pin,
-                                         final Activity activity,
-                                         final Runnable runnable) {
+    public static void enrollKeyshareServer(final String schemeManager,
+                                            final String url,
+                                            final String email,
+                                            final String pin,
+                                            final Activity activity,
+                                            final Runnable runnable) {
         final JsonHttpClient client = new JsonHttpClient(GsonUtil.getGson());
         final KeyPair keyPair = CredentialManager.getNewKeyshareKeypair();
         UserLoginMessage loginMessage = new UserLoginMessage(email, null, pin, keyPair.getPublicKey());
@@ -179,11 +178,18 @@ public class SchemeManagerHandler {
     private static void installManagerAndKeyshareServer(final SchemeManager manager,
                                                         final Activity activity,
                                                         final Runnable runnable) {
+        // Will be run either immediately, or after successful keyshare server enrolling
         final Runnable wrappedRunnable = new Runnable() {
             @Override public void run() {
                 installManager(manager);
                 if (runnable != null)
                     runnable.run();
+                new AlertDialog.Builder(activity)
+                        .setTitle(R.string.scheme_manager_added_title)
+                        .setMessage(activity.getString(
+                                R.string.scheme_manager_added_text, manager.getHumanReadableName()))
+                        .setPositiveButton(android.R.string.ok, null)
+                        .show();
             }
         };
 
@@ -191,7 +197,7 @@ public class SchemeManagerHandler {
                 && !CredentialManager.isEnrolledToKeyshareServer(manager.getName())) {
             getKeyserverEnrollInput(activity, new KeyserverInputHandler() {
                 @Override public void done(String email, String pin) {
-                    enrollCloudServer(manager.getName(), manager.getKeyshareServer(),
+                    enrollKeyshareServer(manager.getName(), manager.getKeyshareServer(),
                         email, pin, activity, wrappedRunnable);
                 }
             });

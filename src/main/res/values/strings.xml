@@ -197,6 +197,8 @@
     <string name="pinmessage">Please enter your IRMA pincode</string>
     <string name="linked_to_keyshare">Linked to keyshare server</string>
     <string name="not_linked_to_keyshare">Not linked to keyshare server</string>
+    <string name="scheme_manager_added_title">Added scheme manager</string>
+    <string name="scheme_manager_added_text">The scheme manager "%s" has been successfully installed.</string>
     <plurals name="error_tries_left">
         <item quantity="one">Pin Incorrect! You have one try left.</item>
         <item quantity="other">Pin Incorrect! You have %d tries left.</item>

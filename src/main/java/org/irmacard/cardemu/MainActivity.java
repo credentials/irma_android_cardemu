@@ -855,7 +855,7 @@ public class MainActivity extends Activity {
 					final SchemeManager m = manager;
 					SchemeManagerHandler.getKeyserverEnrollInput(MainActivity.this, new SchemeManagerHandler.KeyserverInputHandler() {
 						@Override public void done(String email, String pin) {
-							SchemeManagerHandler.enrollCloudServer(
+							SchemeManagerHandler.enrollKeyshareServer(
 									m.getName(), m.getKeyshareServer(), email, pin, MainActivity.this, null);
 						}
 					});
