@@ -89,7 +89,7 @@ public class EnterPINDialogFragment extends DialogFragment {
                 client.setExtraHeader(IRMAHeaders.AUTHORIZATION, kss.getToken());
                 String url = kss.getUrl() + "/users/verify/pin";
 
-                PinTokenMessage msg = new PinTokenMessage(kss.getUsername(), pincode);
+                PinTokenMessage msg = new PinTokenMessage(kss.getUsername(), kss.getHashedPin(pincode));
                 client.post(KeyshareResult.class, url, msg, new HttpResultHandler<KeyshareResult>() {
                     @Override
                     public void onSuccess(KeyshareResult result) {

@@ -73,11 +73,13 @@ public class SchemeManagerHandler {
                                             final Runnable runnable) {
         final JsonHttpClient client = new JsonHttpClient(GsonUtil.getGson());
         final KeyPair keyPair = CredentialManager.getNewKeyshareKeypair();
-        UserLoginMessage loginMessage = new UserLoginMessage(email, null, pin, keyPair.getPublicKey());
+        final KeyshareServer kss = new KeyshareServer(url, email, keyPair);
+        UserLoginMessage loginMessage = new UserLoginMessage(email, null,
+                kss.getHashedPin(pin), keyPair.getPublicKey());
 
         client.post(UserMessage.class, url + "/web/users/selfenroll", loginMessage, new HttpResultHandler<UserMessage>() {
             @Override public void onSuccess(UserMessage result) {
-                CredentialManager.addKeyshareServer(schemeManager, new KeyshareServer(url, email, keyPair));
+                CredentialManager.addKeyshareServer(schemeManager, kss);
                 if (runnable != null)
                     runnable.run();
             }
