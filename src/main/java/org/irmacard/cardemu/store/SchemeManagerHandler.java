@@ -10,6 +10,7 @@ import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.widget.EditText;
+import android.widget.Toast;
 
 import org.irmacard.api.common.util.GsonUtil;
 import org.irmacard.cardemu.BuildConfig;
@@ -233,7 +234,7 @@ public class SchemeManagerHandler {
      * or if an error occurs).
      */
     @SuppressLint("InflateParams")
-    public static void getKeyserverEnrollInput(Activity activity, final KeyserverInputHandler handler) {
+    public static void getKeyserverEnrollInput(final Activity activity, final KeyserverInputHandler handler) {
         if (CredentialManager.getKeyshareUsername().length() > 0) {
             EnterPINDialogFragment.verifyPin(
                     CredentialManager.getAnyKeyshareServer(), activity,
@@ -254,20 +255,34 @@ public class SchemeManagerHandler {
             final EditText emailView = (EditText) view.findViewById(R.id.emailaddress);
             final EditText pinView = (EditText) view.findViewById(R.id.pincode);
 
-            AlertDialog dialog = new AlertDialog.Builder(activity)
+            final AlertDialog dialog = new AlertDialog.Builder(activity)
                     .setView(view)
-                    .setPositiveButton("Save", new DialogInterface.OnClickListener() {
-                        @Override
-                        public void onClick(DialogInterface dialog, int which) {
-                            String email = emailView.getText().toString();
-                            String pin = pinView.getText().toString();
-                            handler.done(email, pin);
-                        }
-                    })
+                    .setPositiveButton(R.string.save, null)
                     .setNegativeButton(android.R.string.cancel, null)
                     .create();
             dialog.setCanceledOnTouchOutside(false);
             dialog.show();
+
+            // By setting the click handler here instead of above, we get to decide ourselves if we
+            // want to dismiss the dialog, so we can keep it if the input did not validate.
+            dialog.getButton(DialogInterface.BUTTON_POSITIVE)
+                    .setOnClickListener(new View.OnClickListener() {
+                @Override public void onClick(View v) {
+                    String email = emailView.getText().toString();
+                    String pin = pinView.getText().toString();
+                    if (!BuildConfig.DEBUG && pin.length() < 5) { // Allow short pins when testing
+                        Toast.makeText(activity, R.string.invalid_pin_error, Toast.LENGTH_SHORT).show();
+                        return;
+                    }
+                    if (!BuildConfig.DEBUG && !android.util.Patterns.EMAIL_ADDRESS.matcher(email).matches()) {
+                        Toast.makeText(activity, R.string.invalid_email_error, Toast.LENGTH_SHORT).show();
+                        return;
+                    }
+
+                    dialog.dismiss();
+                    handler.done(email, pin);
+                }
+            });
         }
     }
 }
