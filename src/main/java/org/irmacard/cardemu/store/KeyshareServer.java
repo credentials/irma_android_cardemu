@@ -12,7 +12,7 @@ import de.henku.jpaillier.PublicKey;
 public class KeyshareServer {
     private String url;
     private String username;
-    private byte[] nonce = new byte[8];
+    private byte[] nonce = new byte[32];
     private KeyPair keyPair;
 
     private transient String token;
