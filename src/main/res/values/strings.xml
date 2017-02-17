@@ -209,6 +209,9 @@
         <b>Important:</b> Carefully remember your PIN! You will need to enter it each time
         you use credentials from this scheme manager. If you forget it, your credentials become unusable.]]></string>
     <string name="email_address">Email address</string>
+    <string name="keyshare_server">Keyshare server</string>
+    <string name="none">(none)</string>
+    <string name="scheme_manager_added_kss">Finish registration by clicking on the link that has been sent to your email address.</string>
     <plurals name="error_tries_left">
         <item quantity="one">Pin Incorrect! You have one try left.</item>
         <item quantity="other">Pin Incorrect! You have %d tries left.</item>

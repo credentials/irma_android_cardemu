@@ -214,10 +214,14 @@ public class SchemeManagerHandler {
         if (runnable != null)
             runnable.run();
 
+        String message = activity.getString(
+                R.string.scheme_manager_added_text, manager.getHumanReadableName());
+        if (manager.hasKeyshareServer())
+            message += " " + activity.getString(R.string.scheme_manager_added_kss);
+
         new AlertDialog.Builder(activity)
                 .setTitle(R.string.scheme_manager_added_title)
-                .setMessage(activity.getString(
-                        R.string.scheme_manager_added_text, manager.getHumanReadableName()))
+                .setMessage(message)
                 .setPositiveButton(android.R.string.ok, null)
                 .show();
     }

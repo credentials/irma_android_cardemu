@@ -61,7 +61,7 @@
         style="@style/DetailHeading.Table"
         android:layout_below="@id/manager_description_value"
         android:layout_marginTop="@dimen/detail_medium_vspace"
-        android:text="Keyshare server" />
+        android:text="@string/keyshare_server" />
 
     <TextView
         android:id="@+id/manager_keyshare_value"
@@ -70,7 +70,9 @@
         android:layout_toRightOf="@id/manager_keyshare"
         android:layout_alignBaseline="@id/manager_keyshare"
         android:textIsSelectable="true"
-        android:text="(none)" />
+        android:autoLink="web"
+        android:linksClickable="true"
+        android:text="@string/none" />
 
     <TextView
         android:id="@+id/manager_contact"
@@ -85,6 +87,9 @@
         android:layout_height="wrap_content"
         android:layout_below="@id/manager_contact"
         android:layout_marginTop="@dimen/detail_small_vspace"
+        android:textIsSelectable="true"
+        android:autoLink="web"
+        android:linksClickable="true"
         android:text="@android:string/unknownName" />
 
     <Button

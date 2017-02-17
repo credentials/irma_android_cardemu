@@ -2,6 +2,8 @@ package org.irmacard.cardemu.store;
 
 import android.app.Activity;
 import android.os.Bundle;
+import android.text.Html;
+import android.text.method.LinkMovementMethod;
 import android.view.MenuItem;
 import android.view.View;
 import android.widget.TextView;
@@ -28,9 +30,16 @@ public class SchemeManagerDetailActivity extends Activity {
 		((TextView) findViewById(R.id.manager_name_value)).setText(manager.getName());
 		((TextView) findViewById(R.id.manager_url_value)).setText(manager.getUrl());
 		((TextView) findViewById(R.id.manager_description_value)).setText(manager.getDescription());
-		((TextView) findViewById(R.id.manager_contact_value)).setText(manager.getContactInfo());
-		if (manager.hasKeyshareServer())
-			((TextView) findViewById(R.id.manager_keyshare_value)).setText(manager.getKeyshareServer());
+
+		TextView v;
+		v = (TextView) findViewById(R.id.manager_contact_value);
+		v.setText(manager.getContactInfo());
+		v.setMovementMethod(LinkMovementMethod.getInstance());
+		if (manager.hasKeyshareServer()) {
+			v = (TextView) findViewById(R.id.manager_keyshare_value);
+			v.setText(manager.getKeyshareWebsite());
+			v.setMovementMethod(LinkMovementMethod.getInstance());
+		}
 
 		findViewById(R.id.trash_manager).setVisibility(
 				IRMApp.getStoreManager().canRemoveSchemeManager(managerName) ? View.VISIBLE : View.INVISIBLE);
