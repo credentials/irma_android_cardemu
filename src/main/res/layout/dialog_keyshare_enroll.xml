@@ -1,6 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <ScrollView  xmlns:android="http://schemas.android.com/apk/res/android"
-        android:layout_width="wrap_content"
+             xmlns:tools="http://schemas.android.com/tools"
+             android:layout_width="wrap_content"
         android:layout_height="wrap_content">
     <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
                   android:orientation="vertical"
@@ -10,19 +11,26 @@
                   android:id="@+id/dialog_keyshare_enroll">
 
         <TextView
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:textSize="14sp"
-                android:textColor="#000"
-                android:text="Enter your emailadress and pincode for keyshare server."
-                android:id="@+id/issuance_question"
-                android:paddingBottom="@dimen/detail_small_vspace"/>
+            android:text="Register"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:id="@+id/keyshare_enroll_title"
+            android:textAppearance="@style/TextAppearance.AppCompat.Title"
+            android:layout_marginBottom="10sp"/>
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:textColor="#000"
+            android:text="@string/keyshare_enroll_description"
+            android:id="@+id/keyshare_enroll_text"
+            android:paddingBottom="@dimen/detail_small_vspace"/>
 
         <EditText
             android:id="@+id/emailaddress"
             android:layout_width="fill_parent"
             android:layout_height="wrap_content"
-            android:hint="Email address"
+            android:hint="@string/email_address"
             android:inputType="textEmailAddress" />
 
         <EditText
@@ -31,7 +39,6 @@
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:layout_marginTop="10dp"
-            android:layout_marginBottom="10dp"
             android:hint="@string/pinhint" />
 
     </LinearLayout>

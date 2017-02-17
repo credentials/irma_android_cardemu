@@ -853,7 +853,7 @@ public class MainActivity extends Activity {
 						&& !CredentialManager.isEnrolledToKeyshareServer(manager.getName()))
 				{
 					final SchemeManager m = manager;
-					SchemeManagerHandler.getKeyserverEnrollInput(MainActivity.this, new SchemeManagerHandler.KeyserverInputHandler() {
+					SchemeManagerHandler.getKeyserverEnrollInput(MainActivity.this, m, new SchemeManagerHandler.KeyserverInputHandler() {
 						@Override public void done(String email, String pin) {
 							SchemeManagerHandler.enrollKeyshareServer(
 									m.getName(), m.getKeyshareServer(), email, pin, MainActivity.this, null);

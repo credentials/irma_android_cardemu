@@ -172,6 +172,7 @@
     <string name="schememanager_known_text">This scheme manager cannot be added because it is already known.</string>
     <string name="add_schememanager_title">Add scheme manager?</string>
     <string name="add_schememanager_question">Are you certain that you want to add the scheme manager "%s"?</string>
+    <string name="add_schememanager_question_kss">You will need to register to it with your email address and your PIN.</string>
     <string name="downloading">Downloading…</string>
     <string name="downloading_schememanager_failed_title">Downloading scheme manager failed</string>
     <string name="downloading_schememanager_failed_text">Downloading of the scheme manager failed. Error: %s</string>
@@ -202,6 +203,12 @@
     <string name="invalid_pin_error">Pin should be at least 5 digits</string>
     <string name="invalid_email_error">Invalid email address</string>
     <string name="save">Save</string>
+    <string name="keyshare_enroll_description"><![CDATA[
+        To use credentials associated to the %s scheme manager,
+        you need to enter your email address and a PIN code to register with its keyshare server.<br/>
+        <b>Important:</b> Carefully remember your PIN! You will need to enter it each time
+        you use credentials from this scheme manager. If you forget it, your credentials become unusable.]]></string>
+    <string name="email_address">Email address</string>
     <plurals name="error_tries_left">
         <item quantity="one">Pin Incorrect! You have one try left.</item>
         <item quantity="other">Pin Incorrect! You have %d tries left.</item>

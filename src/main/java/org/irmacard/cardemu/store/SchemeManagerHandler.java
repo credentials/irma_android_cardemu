@@ -5,11 +5,15 @@ import android.app.Activity;
 import android.app.AlertDialog;
 import android.content.Context;
 import android.content.DialogInterface;
+import android.content.Intent;
+import android.net.Uri;
 import android.os.AsyncTask;
+import android.text.Html;
 import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.widget.EditText;
+import android.widget.TextView;
 import android.widget.Toast;
 
 import org.irmacard.api.common.util.GsonUtil;
@@ -131,11 +135,14 @@ public class SchemeManagerHandler {
             /** Use the just successfully downloaded manager to ask the user if she consents to installing it */
             @Override protected void onProgressUpdate(final SchemeManager... values) {
                 final SchemeManager manager = values[0];
+                String message = activity.getString(
+                        R.string.add_schememanager_question, manager.getHumanReadableName());
+                if (manager.hasKeyshareServer())
+                    message += " " + activity.getString(R.string.add_schememanager_question_kss);
 
                 new AlertDialog.Builder(activity)
                         .setTitle(R.string.add_schememanager_title)
-                        .setMessage(activity.getString(
-                                R.string.add_schememanager_question, manager.getHumanReadableName()))
+                        .setMessage(message)
                         .setNegativeButton(android.R.string.no, null)
                         .setPositiveButton(android.R.string.yes, new DialogInterface.OnClickListener() {
                             @Override public void onClick(DialogInterface dialog, int which) {
@@ -183,7 +190,7 @@ public class SchemeManagerHandler {
                                                         final Runnable runnable) {
         if (manager.hasKeyshareServer() // Perhaps we are still enrolled from a previous time we knew this manager
                 && !CredentialManager.isEnrolledToKeyshareServer(manager.getName())) {
-            getKeyserverEnrollInput(activity, new KeyserverInputHandler() {
+            getKeyserverEnrollInput(activity, manager, new KeyserverInputHandler() {
                 @Override public void done(final String email, String pin) {
                     enrollKeyshareServer(manager.getName(), manager.getKeyshareServer(),
                             email, pin, activity, new Runnable() {
@@ -234,7 +241,9 @@ public class SchemeManagerHandler {
      * or if an error occurs).
      */
     @SuppressLint("InflateParams")
-    public static void getKeyserverEnrollInput(final Activity activity, final KeyserverInputHandler handler) {
+    public static void getKeyserverEnrollInput(final Activity activity,
+                                               final SchemeManager manager,
+                                               final KeyserverInputHandler handler) {
         if (CredentialManager.getKeyshareUsername().length() > 0) {
             EnterPINDialogFragment.verifyPin(
                     CredentialManager.getAnyKeyshareServer(), activity,
@@ -252,6 +261,9 @@ public class SchemeManagerHandler {
             LayoutInflater inflater = activity.getLayoutInflater();
             View view = inflater.inflate(R.layout.dialog_keyshare_enroll, null);
 
+            ((TextView) view.findViewById(R.id.keyshare_enroll_text)).setText(Html.fromHtml(
+                    activity.getString(R.string.keyshare_enroll_description, manager.getHumanReadableName())
+            ));
             final EditText emailView = (EditText) view.findViewById(R.id.emailaddress);
             final EditText pinView = (EditText) view.findViewById(R.id.pincode);
 
@@ -259,14 +271,14 @@ public class SchemeManagerHandler {
                     .setView(view)
                     .setPositiveButton(R.string.save, null)
                     .setNegativeButton(android.R.string.cancel, null)
+                    .setNeutralButton(R.string.more_information, null)
                     .create();
             dialog.setCanceledOnTouchOutside(false);
             dialog.show();
 
             // By setting the click handler here instead of above, we get to decide ourselves if we
             // want to dismiss the dialog, so we can keep it if the input did not validate.
-            dialog.getButton(DialogInterface.BUTTON_POSITIVE)
-                    .setOnClickListener(new View.OnClickListener() {
+            dialog.getButton(DialogInterface.BUTTON_POSITIVE).setOnClickListener(new View.OnClickListener() {
                 @Override public void onClick(View v) {
                     String email = emailView.getText().toString();
                     String pin = pinView.getText().toString();
@@ -281,6 +293,14 @@ public class SchemeManagerHandler {
 
                     dialog.dismiss();
                     handler.done(email, pin);
+                }
+            });
+
+            dialog.getButton(DialogInterface.BUTTON_NEUTRAL).setOnClickListener(new View.OnClickListener() {
+                @Override public void onClick(View v) {
+                    Intent i = new Intent(Intent.ACTION_VIEW);
+                    i.setData(Uri.parse("https://privacybydesign.foundation/irma-begin/"));
+                    activity.startActivity(i);
                 }
             });
         }
