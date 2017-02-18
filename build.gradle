@@ -100,7 +100,7 @@ dependencies {
     compile('org.irmacard.api:irma_api_common:0.7.3') {
         exclude group: 'org.apache.httpcomponents', module: 'httpclient'
     }
-    compile('org.irmacard.keyshare:irma_keyshare_common:0.0.2') {
+    compile('org.irmacard.keyshare:irma_keyshare_common:0.0.3') {
         exclude group: 'org.apache.httpcomponents', module: 'httpclient'
     }
 }

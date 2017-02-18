@@ -23,6 +23,7 @@ import org.irmacard.cardemu.R;
 import org.irmacard.cardemu.httpclient.HttpClientException;
 import org.irmacard.cardemu.httpclient.HttpResultHandler;
 import org.irmacard.cardemu.httpclient.JsonHttpClient;
+import org.irmacard.cardemu.irmaclient.IrmaClient;
 import org.irmacard.cardemu.pindialog.EnterPINDialogFragment;
 import org.irmacard.credentials.info.DescriptionStore;
 import org.irmacard.credentials.info.InfoException;
@@ -33,6 +34,8 @@ import org.irmacard.keyshare.common.UserMessage;
 import java.io.IOException;
 
 import de.henku.jpaillier.KeyPair;
+
+import static org.irmacard.cardemu.pindialog.EnterPINDialogFragment.PINDialogListener;
 
 /**
  * Contains static methods for adding and removing scheme managers and keyshare servers,
@@ -249,14 +252,15 @@ public class SchemeManagerHandler {
                                                final SchemeManager manager,
                                                final KeyserverInputHandler handler) {
         if (CredentialManager.getKeyshareUsername().length() > 0) {
-            EnterPINDialogFragment.verifyPin(
+            IrmaClient.verifyPin(
                     CredentialManager.getAnyKeyshareServer(), activity,
-                    new EnterPINDialogFragment.PINDialogListener() {
+                    new PINDialogListener() {
                         @Override public void onPinEntered(String pincode) {
                             handler.done(CredentialManager.getKeyshareUsername(), pincode);
                         }
                         @Override public void onPinCancelled() { /* ignore */ }
-                        @Override public void onPinError() { /* ignore */ }
+                        @Override public void onPinError(HttpClientException e) { /* ignore */ }
+                        @Override public void onPinBlocked() { /* ignore */ }
                     }
             );
         }

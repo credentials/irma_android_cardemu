@@ -1,5 +1,6 @@
 package org.irmacard.cardemu.irmaclient;
 
+import android.app.Activity;
 import android.content.res.Resources;
 import android.util.Log;
 import android.util.Patterns;
@@ -44,6 +45,11 @@ import org.irmacard.credentials.info.KeyException;
 import org.irmacard.credentials.info.PublicKeyIdentifier;
 import org.irmacard.keyshare.common.AuthorizationResult;
 import org.irmacard.keyshare.common.IRMAHeaders;
+import org.irmacard.keyshare.common.KeyshareResult;
+import org.irmacard.keyshare.common.PinTokenMessage;
+import org.irmacard.keyshare.common.exceptions.KeyshareError;
+import org.irmacard.keyshare.common.exceptions.KeyshareErrorMessage;
+import org.irmacard.keyshare.common.exceptions.KeyshareException;
 
 import java.io.IOException;
 import java.lang.reflect.Type;
@@ -54,7 +60,9 @@ import java.util.List;
 import java.util.TreeSet;
 import java.util.regex.Pattern;
 
-public class IrmaClient implements EnterPINDialogFragment.PINDialogListener {
+import static org.irmacard.cardemu.pindialog.EnterPINDialogFragment.PINDialogListener;
+
+public class IrmaClient implements PINDialogListener {
 	/** Specifies the current state of the instance. */
 	public enum Status {
 		CONNECTED, COMMUNICATING, DONE
@@ -459,7 +467,7 @@ public class IrmaClient implements EnterPINDialogFragment.PINDialogListener {
 		keyshareClient.setExtraHeader(IRMAHeaders.AUTHORIZATION, kss.getToken());
 
 		String url = kss.getUrl() + "/users/isAuthorized";
-		keyshareClient.post(AuthorizationResult.class, url, "", new HttpResultHandler<AuthorizationResult>() {
+		keyshareClient.post(AuthorizationResult.class, url, "", new KeyshareResultHandler<AuthorizationResult>() {
 			@Override
 			public void onSuccess(AuthorizationResult result) {
 				Log.i(TAG, "Successfully retrieved authorization result, " + result);
@@ -470,20 +478,14 @@ public class IrmaClient implements EnterPINDialogFragment.PINDialogListener {
 					Log.i(TAG, "Token has expired, should get proper auth!");
 					// Let the handler ask the user for the pin; afterwards it will call onPinEntered() or
 					/// onPinCancelled()
-					handler.verifyPin(CredentialManager.getKeyshareServer(schemeManager), IrmaClient.this);
+					verifyPin(
+							CredentialManager.getKeyshareServer(schemeManager),
+							handler.getActivity(),
+							IrmaClient.this
+					);
 				} else {
-					Log.i(TAG, "Authorization is blocked!!!");
-					fail("Keyshare authorization blocked", true);
+					handleKeyshareError(new HttpClientException(0, "Unrecognized authorization status"));
 				}
-			}
-
-			@Override
-			public void onError(HttpClientException exception) {
-				// TODO: handle properly
-				fail("Failed to test authorization status", true);
-				if(exception != null)
-					exception.printStackTrace();
-				Log.e(TAG, "Pin verification returned error");
 			}
 		});
 	}
@@ -499,8 +501,13 @@ public class IrmaClient implements EnterPINDialogFragment.PINDialogListener {
 	}
 
 	@Override
-	public void onPinError() {
-		fail("Keyshare authentication blocked", true);
+	public void onPinError(HttpClientException e) {
+		handleKeyshareError(e);
+	}
+
+	@Override public void onPinBlocked() {
+		handleBlockedByKeyshareServer(new KeyshareErrorMessage(
+				new KeyshareException(KeyshareError.USER_BLOCKED)));
 	}
 
 	/**
@@ -527,7 +534,8 @@ public class IrmaClient implements EnterPINDialogFragment.PINDialogListener {
 		keyshareClient.setExtraHeader(IRMAHeaders.AUTHORIZATION, kss.getToken());
 
 		Log.i(TAG, "Posting to the keyshare server now!");
-		keyshareClient.post(ProofPCommitmentMap.class, kss.getUrl() + "/prove/getCommitments", pkids, new JsonResultHandler<ProofPCommitmentMap>() {
+		keyshareClient.post(ProofPCommitmentMap.class, kss.getUrl() + "/prove/getCommitments", pkids,
+				new KeyshareResultHandler<ProofPCommitmentMap>() {
 			@Override public void onSuccess(ProofPCommitmentMap result) {
 				Log.i(TAG, "Unbelievable, it actually worked:");
 				for(PublicKeyIdentifier pkid : pkids) {
@@ -570,7 +578,8 @@ public class IrmaClient implements EnterPINDialogFragment.PINDialogListener {
 		keyshareClient.setExtraHeader(IRMAHeaders.AUTHORIZATION, kss.getToken());
 
 		Log.i(TAG, "Posting challenge to the keyshare server now!");
-		keyshareClient.post(String.class, kss.getUrl() + "/prove/getResponse", kssChallenge, new JsonResultHandler<String>() {
+		keyshareClient.post(String.class, kss.getUrl() + "/prove/getResponse", kssChallenge,
+				new KeyshareResultHandler<String>() {
 			@Override public void onSuccess(String result) {
 				Log.i(TAG, "Unbelievable, also received a ProofP from the server");
 				IrmaClient.this.finishDistributedProtocol(result, challenge);
@@ -600,6 +609,64 @@ public class IrmaClient implements EnterPINDialogFragment.PINDialogListener {
 		}
 	}
 
+	// Error handling ------------------------------------------------------------------------------
+
+	public static KeyshareErrorMessage tryParseKeyshareError(HttpClientException exception) {
+		try {
+			return  GsonUtil.getGson().fromJson(exception.getMessage(), KeyshareErrorMessage.class);
+		} catch (Exception e) {
+			return null;
+		}
+	}
+
+	private void handleKeyshareError(HttpClientException exception) {
+		KeyshareErrorMessage msg = tryParseKeyshareError(exception);
+		if (handleBlockedByKeyshareServer(msg))
+			return;
+
+		String feedback = "Keyshare protocol failed";
+		if (exception.status != 0)
+			feedback += ": " + exception.status;
+
+		if (msg != null) {
+			feedback += ": " + msg.getError().getDescription();
+		} else {
+			if (exception.getCause() != null)
+				feedback += ": " + exception.getCause().getMessage();
+			else
+				feedback += ": " + exception.getMessage();
+		}
+
+		fail(feedback, true);
+	}
+
+	private boolean handleBlockedByKeyshareServer(KeyshareErrorMessage msg) {
+		if (msg == null || msg.getError() == null)
+			return false;
+
+		KeyshareError error = msg.getError();
+		String feedback = null;
+
+		if (error == KeyshareError.USER_BLOCKED)
+			feedback = resources.getString(R.string.keyshare_blocked);
+		if (error == KeyshareError.USER_NOT_REGISTERED)
+			feedback = resources.getString(R.string.keyshare_notenrolled);
+
+		if (feedback != null) {
+			fail(feedback, true);
+			return true;
+		} else {
+			return false;
+		}
+	}
+
+	private abstract class KeyshareResultHandler<T> implements HttpResultHandler<T> {
+		@Override
+		public void onError(HttpClientException exception) {
+			handleKeyshareError(exception);
+		}
+	}
+
 	/**
 	 * Error messageHandler that deserializes a server API error, if present
 	 */
@@ -613,6 +680,68 @@ public class IrmaClient implements EnterPINDialogFragment.PINDialogListener {
 				fail(exception, null);
 			}
 		}
+	}
+
+	// KSS pin verification ------------------------------------------------------------------------
+
+	public static void verifyPin(final KeyshareServer kss,
+	                       final Activity activity,
+	                       final PINDialogListener handler) {
+		verifyPin(kss, activity, handler, -1);
+	}
+
+	private static void verifyPin(final KeyshareServer kss,
+	                       final Activity activity,
+	                       final PINDialogListener pinhandler,
+	                       final int tries) {
+		EnterPINDialogFragment.getInstance(tries, new PINDialogListener() {
+			@Override public void onPinEntered(final String pincode) {
+				JsonHttpClient client = new JsonHttpClient(GsonUtil.getGson());
+				client.setExtraHeader(IRMAHeaders.USERNAME, kss.getUsername());
+				client.setExtraHeader(IRMAHeaders.AUTHORIZATION, kss.getToken());
+				String url = kss.getUrl() + "/users/verify/pin";
+
+				PinTokenMessage msg = new PinTokenMessage(kss.getUsername(), kss.getHashedPin(pincode));
+				client.post(KeyshareResult.class, url, msg, new HttpResultHandler<KeyshareResult>() {
+					@Override public void onSuccess(KeyshareResult result) {
+						if (result.getStatus().equals(KeyshareResult.STATUS_SUCCESS)) {
+							kss.setToken(result.getMessage());
+							pinhandler.onPinEntered(pincode);
+						} else if (result.getStatus().equals(KeyshareResult.STATUS_FAILURE)) {
+							String msg = result.getMessage();
+							if (msg != null) {
+								int remainingTries = Integer.valueOf(msg);
+								if (remainingTries > 0)
+									verifyPin(kss, activity, pinhandler, remainingTries);
+								else {
+									pinhandler.onPinBlocked();
+								}
+							}
+						} else {
+							pinhandler.onPinError(new HttpClientException(0, "Unrecognized pin status"));
+						}
+					}
+
+					@Override public void onError(HttpClientException exception) {
+						if(exception != null)
+							exception.printStackTrace();
+						pinhandler.onPinError(exception);
+					}
+				});
+			}
+
+			@Override public void onPinCancelled() {
+				pinhandler.onPinCancelled();
+			}
+
+			@Override public void onPinError(HttpClientException exception) {
+				pinhandler.onPinError(exception);
+			}
+
+			@Override public void onPinBlocked() {
+				pinhandler.onPinBlocked();
+			}
+		}).show(activity.getFragmentManager(), "irma-pin");
 	}
 }
 

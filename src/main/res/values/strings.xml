@@ -212,6 +212,9 @@
     <string name="keyshare_server">Keyshare server</string>
     <string name="none">(none)</string>
     <string name="scheme_manager_added_kss">Finish registration by clicking on the link that has been sent to your email address.</string>
+    <string name="keyshare_blocked">Your credentials are unusable because your account has been blocked at the keyshare server.</string>
+    <string name="keyshare_notenrolled">Your registration to the keyshare server is not yet complete. Have you clicked on the activation link sent to your email address?</string>
+    <string name="keyshare_connection_error">Could not connect to keyshare server.</string>
     <plurals name="error_tries_left">
         <item quantity="one">Pin Incorrect! You have one try left.</item>
         <item quantity="other">Pin Incorrect! You have %d tries left.</item>
