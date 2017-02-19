@@ -170,7 +170,7 @@ public class SessionDialogFragment extends DialogFragment {
 		else
 			question1 = activity.getResources().getQuantityString(R.plurals.disclose_question_named,
 					request.getContent().size(), requesterName);
-		((TextView) view.findViewById(R.id.disclosure_question_1)).setText(question1);
+		((TextView) view.findViewById(R.id.disclosure_question_1)).setText(Html.fromHtml(question1));
 	}
 
 	private void populateSharedPart(Activity activity, View view, final DisclosureProofRequest request) {
@@ -219,7 +219,7 @@ public class SessionDialogFragment extends DialogFragment {
 		String question1 = activity.getResources()
 				.getQuantityString(R.plurals.sign_question_1, request.getContent().size());
 
-		((TextView) view.findViewById(R.id.sign_question_0)).setText(question0);
+		((TextView) view.findViewById(R.id.sign_question_0)).setText(Html.fromHtml(question0));
 		((TextView) view.findViewById(R.id.sign_question_1)).setText(question1);
 	}
 
@@ -239,7 +239,8 @@ public class SessionDialogFragment extends DialogFragment {
 				throw new RuntimeException(e);
 			}
 
-			String credentialname = cred.getIssuerName() + " - " + cd.getShortName();
+			String issuer = cred.getIssuerDescription().getShortName();
+			String credentialname = issuer + " - " + cd.getName();
 			((TextView) credContainer.findViewById(R.id.disjunction_title)).setText(credentialname);
 			LinearLayout attrList = (LinearLayout) credContainer.findViewById(R.id.disjunction_content);
 
@@ -267,7 +268,7 @@ public class SessionDialogFragment extends DialogFragment {
 			question = getResources().getString(R.string.issuer_question);
 		else
 			question = getResources().getString(R.string.issuer_named_question, requesterName);
-		((TextView) view.findViewById(R.id.issuance_question)).setText(question);
+		((TextView) view.findViewById(R.id.issuance_question)).setText(Html.fromHtml(question));
 	}
 
 	@Override
