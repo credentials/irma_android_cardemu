@@ -196,8 +196,6 @@
     <string name="overwrite_credentials_question"><![CDATA[You already have instances of the following credentials: <br/><br/> %s <br/> You can have at most one of these credentials. Continuing will overwrite the ones you already have. <br/><br/> Proceed?]]></string>
     <string name="pinhint">PIN</string>
     <string name="pinmessage">Please enter your IRMA pincode</string>
-    <string name="linked_to_keyshare">Linked to keyshare server</string>
-    <string name="not_linked_to_keyshare">Not linked to keyshare server</string>
     <string name="scheme_manager_added_title">Added scheme manager</string>
     <string name="scheme_manager_added_text">The scheme manager "%s" has been successfully installed.</string>
     <string name="invalid_pin_error">Pin should be at least 5 digits</string>
@@ -205,16 +203,16 @@
     <string name="save">Save</string>
     <string name="keyshare_enroll_description"><![CDATA[
         To use credentials associated to the %s scheme manager,
-        you need to enter your email address and a PIN code to register with its keyshare server.<br/>
+        you need to enter your email address and a PIN code to register with its myIRMA website.<br/>
         <b>Important:</b> Carefully remember your PIN! You will need to enter it each time
         you use credentials from this scheme manager. If you forget it, your credentials become unusable.]]></string>
     <string name="email_address">Email address</string>
-    <string name="keyshare_server">Keyshare server</string>
+    <string name="keyshare_server">myIRMA:</string>
     <string name="none">(none)</string>
     <string name="scheme_manager_added_kss">Finish registration by clicking on the link that has been sent to your email address.</string>
-    <string name="keyshare_blocked">Your credentials are unusable because your account has been blocked at the keyshare server.</string>
-    <string name="keyshare_notenrolled">Your registration to the keyshare server is not yet complete. Have you clicked on the activation link sent to your email address?</string>
-    <string name="keyshare_connection_error">Could not connect to keyshare server.</string>
+    <string name="keyshare_blocked">Your credentials are unusable because your account has been blocked at your myIRMA account.</string>
+    <string name="keyshare_notenrolled">Your registration to myIRMA is not yet complete. Have you clicked on the activation link sent to your email address?</string>
+    <string name="keyshare_connection_error">Could not connect to the myIRMA server.</string>
     <plurals name="error_tries_left">
         <item quantity="one">Pin Incorrect! You have one try left.</item>
         <item quantity="other">Pin Incorrect! You have %d tries left.</item>
