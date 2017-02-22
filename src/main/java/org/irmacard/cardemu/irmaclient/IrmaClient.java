@@ -505,9 +505,9 @@ public class IrmaClient implements PINDialogListener {
 		handleKeyshareError(e);
 	}
 
-	@Override public void onPinBlocked() {
+	@Override public void onPinBlocked(int time) {
 		handleBlockedByKeyshareServer(new KeyshareErrorMessage(
-				new KeyshareException(KeyshareError.USER_BLOCKED)));
+				new KeyshareException(KeyshareError.USER_BLOCKED, "" + time)));
 	}
 
 	/**
@@ -647,8 +647,27 @@ public class IrmaClient implements PINDialogListener {
 		KeyshareError error = msg.getError();
 		String feedback = null;
 
-		if (error == KeyshareError.USER_BLOCKED)
-			feedback = resources.getString(R.string.keyshare_blocked);
+		if (error == KeyshareError.USER_BLOCKED) {
+			int time = 0;
+			try {
+				time = Integer.valueOf(msg.getMessage());
+			} catch (NumberFormatException e) { /* ignore */ }
+			if (time != 0) {
+				int min = time / 60;
+				int sec = time % 60;
+				feedback = resources.getString(R.string.keyshare_blocked_temporarily);
+				if (min != 0)
+					feedback += " " + resources.getQuantityString(R.plurals.x_minutes, min, min);
+				if (sec != 0) {
+					if (min != 0)
+						feedback += " " + resources.getString(R.string.and);
+					feedback += " " + resources.getQuantityString(R.plurals.and_x_seconds, sec, sec);
+				}
+				feedback += ".";
+			}
+			else
+				feedback = resources.getString(R.string.keyshare_blocked);
+		}
 		if (error == KeyshareError.USER_NOT_REGISTERED)
 			feedback = resources.getString(R.string.keyshare_notenrolled);
 
@@ -704,21 +723,21 @@ public class IrmaClient implements PINDialogListener {
 				PinTokenMessage msg = new PinTokenMessage(kss.getUsername(), kss.getHashedPin(pincode));
 				client.post(KeyshareResult.class, url, msg, new HttpResultHandler<KeyshareResult>() {
 					@Override public void onSuccess(KeyshareResult result) {
-						if (result.getStatus().equals(KeyshareResult.STATUS_SUCCESS)) {
-							kss.setToken(result.getMessage());
-							pinhandler.onPinEntered(pincode);
-						} else if (result.getStatus().equals(KeyshareResult.STATUS_FAILURE)) {
-							String msg = result.getMessage();
-							if (msg != null) {
-								int remainingTries = Integer.valueOf(msg);
-								if (remainingTries > 0)
-									verifyPin(kss, activity, pinhandler, remainingTries);
-								else {
-									pinhandler.onPinBlocked();
-								}
-							}
-						} else {
-							pinhandler.onPinError(new HttpClientException(0, "Unrecognized pin status"));
+						switch (result.getStatus()) {
+							case KeyshareResult.STATUS_SUCCESS:
+								kss.setToken(result.getMessage());
+								pinhandler.onPinEntered(pincode);
+								break;
+							case KeyshareResult.STATUS_FAILURE:
+								int remainingTries = Integer.valueOf(result.getMessage());
+								verifyPin(kss, activity, pinhandler, remainingTries);
+								break;
+							case KeyshareResult.STATUS_ERROR:
+								int blockTime = Integer.valueOf(result.getMessage());
+								pinhandler.onPinBlocked(blockTime);
+								break;
+							default:
+								pinhandler.onPinError(new HttpClientException(0, "Unrecognized pin status"));
 						}
 					}
 
@@ -738,8 +757,8 @@ public class IrmaClient implements PINDialogListener {
 				pinhandler.onPinError(exception);
 			}
 
-			@Override public void onPinBlocked() {
-				pinhandler.onPinBlocked();
+			@Override public void onPinBlocked(int time) {
+				pinhandler.onPinBlocked(time);
 			}
 		}).show(activity.getFragmentManager(), "irma-pin");
 	}

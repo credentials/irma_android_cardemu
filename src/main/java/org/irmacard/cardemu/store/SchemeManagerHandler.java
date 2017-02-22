@@ -260,7 +260,7 @@ public class SchemeManagerHandler {
                         }
                         @Override public void onPinCancelled() { /* ignore */ }
                         @Override public void onPinError(HttpClientException e) { /* ignore */ }
-                        @Override public void onPinBlocked() { /* ignore */ }
+                        @Override public void onPinBlocked(int time) { /* ignore */ }
                     }
             );
         }

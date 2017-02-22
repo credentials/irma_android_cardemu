@@ -55,7 +55,7 @@ public class EnterPINDialogFragment extends DialogFragment {
         void onPinEntered(String pincode);
         void onPinCancelled();
         void onPinError(HttpClientException exception);
-        void onPinBlocked();
+        void onPinBlocked(int blockTime);
     }
 
     private PINDialogListener mListener;

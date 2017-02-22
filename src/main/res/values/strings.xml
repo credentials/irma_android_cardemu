@@ -211,6 +211,7 @@
     <string name="none">(none)</string>
     <string name="scheme_manager_added_kss">Finish registration by clicking on the link that has been sent to your email address.</string>
     <string name="keyshare_blocked">Your credentials are unusable because your account has been blocked at your myIRMA account.</string>
+    <string name="keyshare_blocked_temporarily">Your credentials are temporarily unusable because your account has been blocked at your myIRMA account. You can try again in</string>
     <string name="keyshare_notenrolled">Your registration to myIRMA is not yet complete. Have you clicked on the activation link sent to your email address?</string>
     <string name="keyshare_connection_error">Could not connect to the myIRMA server.</string>
     <plurals name="error_tries_left">
@@ -218,5 +219,13 @@
         <item quantity="one">PIN Incorrect! You have one try left.</item>
         <item quantity="other">PIN Incorrect! You have %d tries left.</item>
         <item quantity="other">PIN Incorrect! You have %d tries left.</item>
+    </plurals>
+    <plurals name ="x_minutes">
+        <item quantity="one">1 minute</item>
+        <item quantity="other">%d minutes</item>
+    </plurals>
+    <plurals name ="and_x_seconds">
+        <item quantity="one">1 second</item>
+        <item quantity="other">%d seconds</item>
     </plurals>
 </resources>
