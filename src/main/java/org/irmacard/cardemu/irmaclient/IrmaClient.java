@@ -425,7 +425,7 @@ public class IrmaClient implements PINDialogListener {
 			}
 			@Override public void onError(Exception e) {
 				if (e instanceof InfoException)
-					fail(R.string.unknown_scheme_manager, true);
+					fail(resources.getString(R.string.unknown_scheme_manager, request.getSchemeManager()), true);
 				if (e instanceof IOException)
 					fail(R.string.downloading_info_failed, true);
 			}
