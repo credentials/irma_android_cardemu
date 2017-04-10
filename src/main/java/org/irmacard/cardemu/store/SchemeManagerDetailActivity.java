@@ -2,10 +2,10 @@ package org.irmacard.cardemu.store;
 
 import android.app.Activity;
 import android.os.Bundle;
-import android.text.Html;
 import android.text.method.LinkMovementMethod;
 import android.view.MenuItem;
 import android.view.View;
+import android.widget.RelativeLayout;
 import android.widget.TextView;
 
 import org.irmacard.cardemu.IRMApp;
@@ -39,6 +39,14 @@ public class SchemeManagerDetailActivity extends Activity {
 			v = (TextView) findViewById(R.id.manager_keyshare_value);
 			v.setText(manager.getKeyshareWebsite());
 			v.setMovementMethod(LinkMovementMethod.getInstance());
+		} else {
+			v = (TextView) findViewById(R.id.manager_contact);
+			((RelativeLayout.LayoutParams) v.getLayoutParams())
+					.addRule(RelativeLayout.BELOW, R.id.manager_description);
+			v = (TextView) findViewById(R.id.manager_keyshare_value);
+			v.setVisibility(View.GONE);
+			v = (TextView) findViewById(R.id.manager_keyshare);
+			v.setVisibility(View.GONE);
 		}
 
 		findViewById(R.id.trash_manager).setVisibility(
