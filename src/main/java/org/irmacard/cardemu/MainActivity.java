@@ -406,15 +406,10 @@ public class MainActivity extends Activity {
 		credentialListAdapter.updateData(credentials);
 
 		TextView noCredsText = (TextView) findViewById(R.id.no_credentials_text);
-		Button enrollButton = (Button) findViewById(R.id.enroll_button);
-		Button onlineEnrollButton = (Button) findViewById(R.id.online_enroll_button);
 		int visibility = credentials.isEmpty() ? View.VISIBLE : View.INVISIBLE;
 
-		if (noCredsText != null && enrollButton != null) {
+		if (noCredsText != null)
 			noCredsText.setVisibility(visibility);
-			enrollButton.setVisibility(visibility);
-			onlineEnrollButton.setVisibility(visibility);
-		}
 	}
 
 
@@ -501,12 +496,6 @@ public class MainActivity extends Activity {
 				}
 				break;
 		}
-	}
-
-	public void onEnrollButtonTouch(View v) {
-		Intent i = new Intent(this, EnrollSelectActivity.class);
-		CredentialManager.save();
-		startActivityForResult(i, EnrollSelectActivity.ACTIVITY_CODE);
 	}
 
 	public void onOnlineEnrollButtonTouch(View v) {
@@ -617,6 +606,7 @@ public class MainActivity extends Activity {
 	public boolean onPrepareOptionsMenu(Menu menu) {
 		menu.findItem(R.id.menu_manual_session).setVisible(BuildConfig.DEBUG);
 		menu.findItem(R.id.menu_delete_everything).setVisible(BuildConfig.DEBUG);
+		menu.findItem(R.id.online_enroll).setVisible(BuildConfig.DEBUG);
 		return true;
 	}
 
@@ -629,10 +619,6 @@ public class MainActivity extends Activity {
 				Intent intent = new Intent();
 				intent.setClassName(this, IRMAPreferenceActivity.class.getName());
 				startActivityForResult(intent, IRMAPreferenceActivity.ACTIVITY_CODE);
-				return true;
-			case R.id.enroll:
-				Log.d(TAG, "enroll menu item pressed");
-				onEnrollButtonTouch(null);
 				return true;
 			case R.id.online_enroll:
 				Log.d(TAG, "online enroll menu item pressed");
