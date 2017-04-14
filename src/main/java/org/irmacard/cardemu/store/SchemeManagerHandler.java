@@ -24,7 +24,6 @@ import org.irmacard.cardemu.httpclient.HttpClientException;
 import org.irmacard.cardemu.httpclient.HttpResultHandler;
 import org.irmacard.cardemu.httpclient.JsonHttpClient;
 import org.irmacard.cardemu.irmaclient.IrmaClient;
-import org.irmacard.cardemu.pindialog.EnterPINDialogFragment;
 import org.irmacard.credentials.info.DescriptionStore;
 import org.irmacard.credentials.info.InfoException;
 import org.irmacard.credentials.info.SchemeManager;

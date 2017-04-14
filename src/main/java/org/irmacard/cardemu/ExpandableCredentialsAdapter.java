@@ -32,6 +32,7 @@ package org.irmacard.cardemu;
 
 import android.annotation.SuppressLint;
 import android.content.Context;
+import android.graphics.Typeface;
 import android.support.v4.content.ContextCompat;
 import android.view.LayoutInflater;
 import android.view.View;
@@ -85,7 +86,7 @@ public class ExpandableCredentialsAdapter extends BaseExpandableListAdapter {
 
     @Override
     public int getChildrenCount(int i) {
-        return credentials.get(i).getIdentifier().getCredentialDescription().getAttributes().size() + 1;
+        return credentials.get(i).getIdentifier().getCredentialDescription().getAttributes().size() + 2;
     }
 
     @Override
@@ -98,10 +99,12 @@ public class ExpandableCredentialsAdapter extends BaseExpandableListAdapter {
         if (attribute_idx == 0)
             // We insert a fake attribute in the view at position 0 showing the validity
             return new AttributeDescription("Validity", "Valid until");
+        else if (attribute_idx == 1)
+            return new AttributeDescription("Issuer", "Issued by");
         else
             // Attribute i gets shown at position i + 1
             return credentials.get(credential_idx).getIdentifier()
-                    .getCredentialDescription().getAttributes().get(attribute_idx - 1);
+                    .getCredentialDescription().getAttributes().get(attribute_idx - 2);
     }
 
     @Override
@@ -164,6 +167,8 @@ public class ExpandableCredentialsAdapter extends BaseExpandableListAdapter {
             String validDate = DateFormat.getDateInstance().format(attrs.getExpiryDate());
             attribute_name_field.setText(R.string.validtill);
             attribute_value_field.setText(validDate);
+            attribute_name_field.setTypeface(null, Typeface.BOLD_ITALIC);
+            attribute_value_field.setTypeface(null, Typeface.ITALIC);
             if (!attrs.isExpired()) {
                 attribute_name_field.setTextColor(ContextCompat.getColor(context, R.color.irmadarkgrey));
                 attribute_value_field.setTextColor(ContextCompat.getColor(context, R.color.irmadarkgrey));
@@ -171,12 +176,24 @@ public class ExpandableCredentialsAdapter extends BaseExpandableListAdapter {
                 attribute_name_field.setTextColor(ContextCompat.getColor(context, R.color.irmared));
                 attribute_value_field.setTextColor(ContextCompat.getColor(context, R.color.irmared));
             }
+        }
+        else if (attribute_idx == 1) {
+            attribute_name_field.setText(R.string.issued_by);
+            attribute_value_field.setText(
+                    ici.getIdentifier().getIssuerIdentifier().getIssuerDescription().getName());
+            attribute_name_field.setTypeface(null, Typeface.BOLD_ITALIC);
+            attribute_value_field.setTypeface(null, Typeface.ITALIC);
+            // Since the convertView gets reused, the TextView might be red from a previous usage
+            attribute_name_field.setTextColor(ContextCompat.getColor(context, R.color.irmadarkgrey));
+            attribute_value_field.setTextColor(ContextCompat.getColor(context, R.color.irmadarkgrey));
         } else {
             String attribute_name = ici.getIdentifier()
-                    .getCredentialDescription().getAttributes().get(attribute_idx - 1).getName();
+                    .getCredentialDescription().getAttributes().get(attribute_idx - 2).getName();
             String attribute_value = new String(attrs.get(attribute_name));
             attribute_name_field.setText(attribute_name);
             attribute_value_field.setText(attribute_value);
+            attribute_name_field.setTypeface(null, Typeface.BOLD);
+            attribute_value_field.setTypeface(null, Typeface.NORMAL);
             // Since the convertView gets reused, the TextView might be red from a previous usage
             attribute_name_field.setTextColor(ContextCompat.getColor(context, R.color.irmadarkgrey));
             attribute_value_field.setTextColor(ContextCompat.getColor(context, R.color.irmadarkgrey));

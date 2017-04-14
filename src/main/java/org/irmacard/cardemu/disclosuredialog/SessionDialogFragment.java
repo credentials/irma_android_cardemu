@@ -239,9 +239,7 @@ public class SessionDialogFragment extends DialogFragment {
 				throw new RuntimeException(e);
 			}
 
-			String issuer = cred.getIssuerDescription().getShortName();
-			String credentialname = issuer + " - " + cd.getName();
-			((TextView) credContainer.findViewById(R.id.disjunction_title)).setText(credentialname);
+			((TextView) credContainer.findViewById(R.id.disjunction_title)).setText(cd.getName());
 			LinearLayout attrList = (LinearLayout) credContainer.findViewById(R.id.disjunction_content);
 
 			// We loop here over the attribute names as specified by the DescriptionStore, instead of
