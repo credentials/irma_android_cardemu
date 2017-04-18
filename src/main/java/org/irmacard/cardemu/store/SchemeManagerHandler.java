@@ -29,6 +29,8 @@ import org.irmacard.credentials.info.InfoException;
 import org.irmacard.credentials.info.SchemeManager;
 import org.irmacard.keyshare.common.UserLoginMessage;
 import org.irmacard.keyshare.common.UserMessage;
+import org.irmacard.keyshare.common.exceptions.KeyshareError;
+import org.irmacard.keyshare.common.exceptions.KeyshareErrorMessage;
 
 import java.io.IOException;
 
@@ -92,9 +94,16 @@ public class SchemeManagerHandler {
             }
 
             @Override public void onError(HttpClientException e) {
-                showError(activity,
-                        activity.getString(R.string.downloading_schememanager_failed_title),
-                        activity.getString(R.string.downloading_schememanager_failed_text, e.getMessage()));
+                if (GsonUtil.getGson().fromJson(e.getMessage(), KeyshareErrorMessage.class)
+                        .getError().equals(KeyshareError.USERNAME_UNAVAILABLE))
+                    showError( // TODO retry with different email address
+                            activity,
+                            activity.getString(R.string.emailaddress_in_use_title),
+                            activity.getString(R.string.emailaddress_in_use_text, email));
+                else
+                    showError(activity,
+                            activity.getString(R.string.downloading_schememanager_failed_title),
+                            activity.getString(R.string.downloading_schememanager_failed_text, e.getMessage()));
             }
         });
     }
