@@ -166,6 +166,7 @@
     <string name="hidden">hidden</string>
     <string name="removed">Removed</string>
     <string name="issued">Issued</string>
+    <string name="issued_by">Issued by</string>
     <string name="remove_schememanager_title">Remove scheme manager?</string>
     <string name="remove_schememanager_question">Are you certain you want to remove this scheme manager? This renders all credentials that you might have that fall under the authority of this scheme manager unusable.</string>
     <string name="schememanager_known_title">Scheme manager already known</string>

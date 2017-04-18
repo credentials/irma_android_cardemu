@@ -22,8 +22,6 @@ public class IdemixCredentialIdentifier extends IdemixIdentifier<CredentialIdent
 	}
 
 	public static String getBaseTitle(CredentialIdentifier identifier) {
-		return identifier.getIssuerIdentifier().getIssuerDescription().getShortName()
-				+ " - "
-				+ identifier.getCredentialDescription().getName();
+		return identifier.getCredentialDescription().getName();
 	}
 }
