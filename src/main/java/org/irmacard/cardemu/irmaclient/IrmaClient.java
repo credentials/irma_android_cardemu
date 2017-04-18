@@ -3,7 +3,7 @@ package org.irmacard.cardemu.irmaclient;
 import android.app.Activity;
 import android.content.res.Resources;
 import android.util.Log;
-import android.util.Patterns;
+import android.webkit.URLUtil;
 
 import com.google.gson.reflect.TypeToken;
 
@@ -150,7 +150,7 @@ public class IrmaClient implements PINDialogListener {
 
 		// Check URL validity
 		server = qr.getUrl();
-		if (!Patterns.WEB_URL.matcher(server).matches()) {
+		if (!URLUtil.isHttpsUrl(server) && !URLUtil.isHttpUrl(server)) {
 			handler.onFailure(Action.UNKNOWN, "Protocol not supported", null,
 					qr.getUrl() != null ? "URL: " + qr.getUrl() : "No URL specified.");
 			return;
@@ -763,4 +763,3 @@ public class IrmaClient implements PINDialogListener {
 		}).show(activity.getFragmentManager(), "irma-pin");
 	}
 }
-
