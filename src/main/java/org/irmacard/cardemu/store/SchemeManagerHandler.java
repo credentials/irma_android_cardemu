@@ -240,6 +240,7 @@ public class SchemeManagerHandler {
         }
     }
 
+
     /**
      * Get an email address and pin to enroll to a keyshare server (which is not done here).
      * If the user is already enrolled to a keyshare server, we reuse the emailaddress from that
@@ -266,51 +267,8 @@ public class SchemeManagerHandler {
         }
 
         else {
-            LayoutInflater inflater = activity.getLayoutInflater();
-            View view = inflater.inflate(R.layout.dialog_keyshare_enroll, null);
-
-            ((TextView) view.findViewById(R.id.keyshare_enroll_text)).setText(Html.fromHtml(
-                    activity.getString(R.string.keyshare_enroll_description, manager.getHumanReadableName())
-            ));
-            final EditText emailView = (EditText) view.findViewById(R.id.emailaddress);
-            final EditText pinView = (EditText) view.findViewById(R.id.pincode);
-
-            final AlertDialog dialog = new AlertDialog.Builder(activity)
-                    .setView(view)
-                    .setPositiveButton(R.string.save, null)
-                    .setNegativeButton(android.R.string.cancel, null)
-                    .setNeutralButton(R.string.more_information, null)
-                    .create();
-            dialog.setCanceledOnTouchOutside(false);
-            dialog.show();
-
-            // By setting the click handler here instead of above, we get to decide ourselves if we
-            // want to dismiss the dialog, so we can keep it if the input did not validate.
-            dialog.getButton(DialogInterface.BUTTON_POSITIVE).setOnClickListener(new View.OnClickListener() {
-                @Override public void onClick(View v) {
-                    String email = emailView.getText().toString();
-                    String pin = pinView.getText().toString();
-                    if (!BuildConfig.DEBUG && pin.length() < 5) { // Allow short pins when testing
-                        Toast.makeText(activity, R.string.invalid_pin_error, Toast.LENGTH_SHORT).show();
-                        return;
-                    }
-                    if (!BuildConfig.DEBUG && !android.util.Patterns.EMAIL_ADDRESS.matcher(email).matches()) {
-                        Toast.makeText(activity, R.string.invalid_email_error, Toast.LENGTH_SHORT).show();
-                        return;
-                    }
-
-                    dialog.dismiss();
-                    handler.done(email, pin);
-                }
-            });
-
-            dialog.getButton(DialogInterface.BUTTON_NEUTRAL).setOnClickListener(new View.OnClickListener() {
-                @Override public void onClick(View v) {
-                    Intent i = new Intent(Intent.ACTION_VIEW);
-                    i.setData(Uri.parse("https://privacybydesign.foundation/irma-begin/"));
-                    activity.startActivity(i);
-                }
-            });
+            SchemeManagerEnroll enrollDialog = new SchemeManagerEnroll(activity,handler);
+            enrollDialog.start();
         }
     }
 }

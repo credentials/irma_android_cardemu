@@ -206,6 +206,23 @@
         you need to enter your email address and a PIN code to register with its myIRMA website.<br/>
         <b>Important:</b> Carefully remember your PIN! You will need to enter it each time
         you use credentials from this scheme manager. If you forget it, your credentials become unusable.]]></string>
+    <string name="mijnIRMA_enroll_email_description"><![CDATA[
+        Please provide a personal e-mail address.<br/>
+        You will receive an e-mail with a link at the provided address. After clicking this link you will get this e-mail address as your first attribute. You can use this attribute to login to MijnIRMA]]></string>
+    <string name="mijnIRMA_enroll_pin_description"><![CDATA[
+        Chosen e-mail: <i>%s</i> <br/>
+        <br/>
+        Please choose a PIN.<br/>
+        <br/>
+        <b>Important:</b> Carefully remember your PIN! You will need to enter it each time you use the IRMA app.
+        If you forget it, all your credentials become unusable and you will have to redo this registration!]]></string>
+    <string name="mijnIRMA_enroll_email_confirm"><![CDATA[
+        A confirmation link has been sent to the address: <br/>
+        <br/>
+        <center> %s </center><br/>
+        <br/>
+        Click on the link in the email to continue registration.
+    ]]></string>
     <string name="email_address">Email address</string>
     <string name="keyshare_server">myIRMA:</string>
     <string name="none">(none)</string>
@@ -214,6 +231,9 @@
     <string name="keyshare_blocked_temporarily">Your credentials are temporarily unusable because your account has been blocked at your myIRMA account. You can try again in</string>
     <string name="keyshare_notenrolled">Your registration to myIRMA is not yet complete. Have you clicked on the activation link sent to your email address?</string>
     <string name="keyshare_connection_error">Could not connect to the myIRMA server.</string>
+    <string name="next">Next step</string>
+    <string name="gotit">Got it!</string>
+    <string name="MijnIRMA_register_title">Register for MijnIRMA</string>
     <plurals name="error_tries_left">
         <item quantity="one">PIN Incorrect! You have one try left.</item>
         <item quantity="other">PIN Incorrect! You have %d tries left.</item>
