@@ -239,6 +239,7 @@
     <string name="next">Next step</string>
     <string name="gotit">Got it!</string>
     <string name="MijnIRMA_register_title">Register for MyIRMA</string>
+    <string name="menu_reregister">Redo registration</string>
     <plurals name="error_tries_left">
         <item quantity="one">PIN Incorrect! You have one try left.</item>
         <item quantity="other">PIN Incorrect! You have %d tries left.</item>
