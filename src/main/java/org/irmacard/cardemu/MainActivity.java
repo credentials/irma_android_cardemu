@@ -604,6 +604,13 @@ public class MainActivity extends Activity {
 
 	@Override
 	public boolean onPrepareOptionsMenu(Menu menu) {
+		if (!getUnEnrolledKSSes().isEmpty()){
+			menu.findItem(R.id.menu_reregister).setVisible(true);
+			menu.findItem(R.id.menu_clear).setVisible(false);
+		} else {
+			menu.findItem(R.id.menu_reregister).setVisible(false);
+			menu.findItem(R.id.menu_clear).setVisible(true);
+		}
 		menu.findItem(R.id.menu_manual_session).setVisible(BuildConfig.DEBUG);
 		menu.findItem(R.id.menu_delete_everything).setVisible(BuildConfig.DEBUG);
 		menu.findItem(R.id.online_enroll).setVisible(BuildConfig.DEBUG);
@@ -645,8 +652,38 @@ public class MainActivity extends Activity {
 			case R.id.menu_manual_session:
 				startManualSession();
 				return true;
+			case R.id.menu_reregister:
+				initialRegistration();
+				return true;
 			default:
 				return super.onOptionsItemSelected(item);
+		}
+	}
+
+	protected ArrayList<SchemeManager> getUnEnrolledKSSes(){
+		ArrayList<SchemeManager> managers = new ArrayList<SchemeManager>();
+		for (SchemeManager manager : DescriptionStore.getInstance().getSchemeManagers()) {
+			if (manager.hasKeyshareServer()
+					&& !CredentialManager.isEnrolledToKeyshareServer(manager.getName()))
+			{
+				managers.add(manager);
+			}
+		}
+		return managers;
+	}
+
+	private void initialRegistration() {
+		ArrayList<SchemeManager> managers = getUnEnrolledKSSes();
+		if (managers!=null && !managers.isEmpty()) {
+			for (final SchemeManager m:managers) {
+				SchemeManagerHandler.getKeyserverEnrollInput(MainActivity.this, m, new SchemeManagerHandler.KeyserverInputHandler() {
+					@Override
+					public void done(String email, String pin) {
+						SchemeManagerHandler.enrollKeyshareServer(
+								m.getName(), m.getKeyshareServer(), email, pin, MainActivity.this, null);
+					}
+				});
+			}
 		}
 	}
 
@@ -834,19 +871,7 @@ public class MainActivity extends Activity {
 				setState(State.KEY_STORE_LOADED);
 
 
-			for (SchemeManager manager : DescriptionStore.getInstance().getSchemeManagers()) {
-				if (manager.hasKeyshareServer()
-						&& !CredentialManager.isEnrolledToKeyshareServer(manager.getName()))
-				{
-					final SchemeManager m = manager;
-					SchemeManagerHandler.getKeyserverEnrollInput(MainActivity.this, m, new SchemeManagerHandler.KeyserverInputHandler() {
-						@Override public void done(String email, String pin) {
-							SchemeManagerHandler.enrollKeyshareServer(
-									m.getName(), m.getKeyshareServer(), email, pin, MainActivity.this, null);
-						}
-					});
-				}
-			}
+			initialRegistration();
 		}
 	}
 }

@@ -16,6 +16,13 @@
         android:icon="@drawable/ic_action_history"/>
 
     <item
+        android:id="@+id/menu_reregister"
+        android:orderInCategory="103"
+        android:title="@string/menu_reregister"
+        android:showAsAction="never"
+        android:icon="@drawable/ic_action_history"/>
+
+    <item
         android:id="@+id/menu_clear"
         android:orderInCategory="104"
         android:showAsAction="never"
