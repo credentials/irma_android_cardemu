@@ -275,7 +275,7 @@ public class SchemeManagerHandler {
         }
 
         else {
-            SchemeManagerEnroll enrollDialog = new SchemeManagerEnroll(activity,handler);
+            SchemeManagerEnroll enrollDialog = new SchemeManagerEnroll(activity, manager, handler);
             enrollDialog.start();
         }
     }

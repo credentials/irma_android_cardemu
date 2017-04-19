@@ -14,8 +14,13 @@ import android.widget.EditText;
 import android.widget.TextView;
 import android.widget.Toast;
 
+import org.irmacard.api.common.util.GsonUtil;
 import org.irmacard.cardemu.BuildConfig;
 import org.irmacard.cardemu.R;
+import org.irmacard.cardemu.httpclient.HttpClientException;
+import org.irmacard.cardemu.httpclient.HttpResultHandler;
+import org.irmacard.cardemu.httpclient.JsonHttpClient;
+import org.irmacard.credentials.info.SchemeManager;
 
 public class SchemeManagerEnroll {
     private SchemeManagerHandler.KeyserverInputHandler handler;
@@ -23,12 +28,16 @@ public class SchemeManagerEnroll {
 
     private String email;
     private String pin;
+    private SchemeManager manager;
 
     private AlertDialog dialog;
 
-    public SchemeManagerEnroll (Activity act, SchemeManagerHandler.KeyserverInputHandler handler ){
+    public SchemeManagerEnroll (Activity act,
+                                SchemeManager manager,
+                                SchemeManagerHandler.KeyserverInputHandler handler ){
         this.activity = act;
         this.handler = handler;
+        this.manager = manager;
         dialog = new AlertDialog.Builder(act)
                 .setPositiveButton(R.string.next, null)
                 .setNeutralButton(R.string.more_information, null)
@@ -44,10 +53,12 @@ public class SchemeManagerEnroll {
 
     public void start (){
         dialog.show();
-        ((TextView) dialog.findViewById(R.id.keyshare_enroll_step)).setText(activity.getString(R.string.step_string)+" 1");
+        ((TextView) dialog.findViewById(R.id.keyshare_enroll_step)).setText(activity.getString(R.string.step_string, 1));
+        ((TextView) dialog.findViewById(R.id.keyshare_enroll_step)).setVisibility(View.VISIBLE);
         dialog.getButton(DialogInterface.BUTTON_NEGATIVE).setVisibility(View.INVISIBLE);
 
         final EditText emailView = (EditText) dialog.findViewById(R.id.keyshare_enroll_input);
+        emailView.setVisibility(View.VISIBLE);
 
         ((TextView) dialog.findViewById(R.id.keyshare_enroll_text)).setText(Html.fromHtml(activity.getString(R.string.mijnIRMA_enroll_email_description)));
 
@@ -69,6 +80,7 @@ public class SchemeManagerEnroll {
         });
         // By setting the click handler here instead of above, we get to decide ourselves if we
         // want to dismiss the dialog, so we can keep it if the input did not validate.
+        dialog.getButton(DialogInterface.BUTTON_POSITIVE).setText(R.string.next);
         dialog.getButton(DialogInterface.BUTTON_POSITIVE).setOnClickListener(new View.OnClickListener() {
             @Override public void onClick(View v) {
                 String emailInput = emailView.getText().toString();
@@ -77,17 +89,45 @@ public class SchemeManagerEnroll {
                     return;
                 }
                 email = emailInput;
-                //continue to the PIN entry screen
-                pinEntry();
+
+                final JsonHttpClient client = new JsonHttpClient(GsonUtil.getGson());
+                client.get(
+                        Boolean.class,
+                        manager.getKeyshareServer() + "/web/users/available/" + email,
+                        new HttpResultHandler<Boolean>() {
+                            @Override public void onSuccess(Boolean result) {
+                                if (result)
+                                    pinEntry();
+                                else
+                                    showError(activity.getString(R.string.emailaddress_in_use_text, email));
+                            }
+                            @Override public void onError(HttpClientException exception) {
+                                showError(activity.getString(R.string.keyshare_connection_error));
+                            }
+                        }
+                );
             }
         });
+    }
 
+    private void showError(String message) {
+        ((TextView) dialog.findViewById(R.id.keyshare_enroll_step)).setVisibility(View.GONE);
+        ((EditText) dialog.findViewById(R.id.keyshare_enroll_input)).setVisibility(View.GONE);
+        ((TextView) dialog.findViewById(R.id.keyshare_enroll_text)).setText(message);
 
+        dialog.getButton(DialogInterface.BUTTON_NEGATIVE).setVisibility(View.GONE);
+        dialog.getButton(DialogInterface.BUTTON_POSITIVE).setText(R.string.back);
+        dialog.getButton(DialogInterface.BUTTON_POSITIVE).setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                start();
+            }
+        });
     }
 
 
     private void pinEntry(){
-        ((TextView) dialog.findViewById(R.id.keyshare_enroll_step)).setText(activity.getString(R.string.step_string)+" 2");
+        ((TextView) dialog.findViewById(R.id.keyshare_enroll_step)).setText(activity.getString(R.string.step_string, 2));
         ((TextView) dialog.findViewById(R.id.keyshare_enroll_text)).setText(Html.fromHtml(activity.getString(R.string.mijnIRMA_enroll_pin_description,email)));
         final EditText pinView = (EditText) dialog.findViewById(R.id.keyshare_enroll_input);
         pinView.setText("");
@@ -116,7 +156,7 @@ public class SchemeManagerEnroll {
     }
 
     private void confirmation(){
-        ((TextView) dialog.findViewById(R.id.keyshare_enroll_step)).setText(activity.getString(R.string.step_string)+" 3");
+        ((TextView) dialog.findViewById(R.id.keyshare_enroll_step)).setText(activity.getString(R.string.step_string, 3));
         ((TextView) dialog.findViewById(R.id.keyshare_enroll_text)).setText(Html.fromHtml(
                           activity.getString(R.string.mijnIRMA_enroll_email_confirm, email)));
         dialog.findViewById(R.id.keyshare_enroll_input).setVisibility(View.INVISIBLE);

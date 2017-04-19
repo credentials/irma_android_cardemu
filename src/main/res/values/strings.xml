@@ -36,7 +36,7 @@
     <string name="feedback_issueing">Issuing credentials…</string>
     <string name="done">Done.</string>
     <string name="clear_card">Delete all attributes</string>
-    <string name="step_string">Step</string>
+    <string name="step_string">Step %d</string>
     <string name="enroll_error_label">Self enrollment failed</string>
     <string name="error_nfc_notsupported">This phone does not support NFC.</string>
     <string name="error_nfc_disabled">NFC is disabled. Please enable NFC in the phone settings before using this
@@ -204,7 +204,7 @@
     <string name="save">Save</string>
     <string name="keyshare_enroll_description"><![CDATA[
         To use credentials associated to the %s scheme manager,
-        you need to enter your email address and a PIN code to register with its myIRMA website.<br/>
+        you need to enter your email address and a PIN code to register with its MyIRMA website.<br/>
         <b>Important:</b> Carefully remember your PIN! You will need to enter it each time
         you use credentials from this scheme manager. If you forget it, your credentials become unusable.]]></string>
     <string name="mijnIRMA_enroll_email_description"><![CDATA[
@@ -227,18 +227,18 @@
         Click on the link in the email to continue registration.
     ]]></string>
     <string name="email_address">Email address</string>
-    <string name="keyshare_server">myIRMA:</string>
+    <string name="keyshare_server">MyIRMA:</string>
     <string name="none">(none)</string>
     <string name="scheme_manager_added_kss">Finish registration by clicking on the link that has been sent to your email address.</string>
-    <string name="keyshare_blocked">Your credentials are unusable because your account has been blocked at your myIRMA account.</string>
-    <string name="keyshare_blocked_temporarily">Your credentials are temporarily unusable because your account has been blocked at your myIRMA account. You can try again in</string>
-    <string name="keyshare_notenrolled">Your registration to myIRMA is not yet complete. Have you clicked on the activation link sent to your email address?</string>
-    <string name="keyshare_connection_error">Could not connect to the myIRMA server.</string>
+    <string name="keyshare_blocked">Your credentials are unusable because your account has been blocked at your MyIRMA account.</string>
+    <string name="keyshare_blocked_temporarily">Your credentials are temporarily unusable because your account has been blocked at your MyIRMA account. You can try again in</string>
+    <string name="keyshare_notenrolled">Your registration to MyIRMA is not yet complete. Have you clicked on the activation link sent to your email address?</string>
+    <string name="keyshare_connection_error">Could not connect to the MyIRMA server.</string>
     <string name="emailaddress_in_use_title">Email address in use</string>
-    <string name="emailaddress_in_use_text">The email address %s is already in use. Please retry by restarting the app.</string>
+    <string name="emailaddress_in_use_text">The email address %s is already in use. Please choose another one.</string>
     <string name="next">Next step</string>
     <string name="gotit">Got it!</string>
-    <string name="MijnIRMA_register_title">Register for MijnIRMA</string>
+    <string name="MijnIRMA_register_title">Register for MyIRMA</string>
     <plurals name="error_tries_left">
         <item quantity="one">PIN Incorrect! You have one try left.</item>
         <item quantity="other">PIN Incorrect! You have %d tries left.</item>
