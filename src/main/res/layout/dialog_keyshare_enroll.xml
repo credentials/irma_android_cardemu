@@ -11,25 +11,29 @@
                   android:id="@+id/dialog_keyshare_enroll"
         android:weightSum="1">
 
-        <TextView
-            android:text="@string/MijnIRMA_register_title"
-            android:layout_width="wrap_content"
+        <LinearLayout
             android:layout_height="wrap_content"
-            android:id="@+id/keyshare_enroll_title"
-            android:textAppearance="@style/TextAppearance.AppCompat.Title"
-            android:layout_marginBottom="10sp" />
+            android:layout_width="match_parent"
+            android:orientation="horizontal">
 
+            <TextView
+                android:text="@string/MijnIRMA_register_title"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:id="@+id/keyshare_enroll_title"
+                android:textAppearance="@style/TextAppearance.AppCompat.Title"
+                android:layout_marginBottom="10sp" />
 
-        <TextView
-            android:id="@+id/keyshare_enroll_step"
-            android:layout_gravity="right"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:layout_marginBottom="10sp"
-            android:text="@string/step_string"
-            android:textAppearance="@style/TextAppearance.AppCompat.Title"
-            android:textColor="@color/secondary_text"/>
-
+            <TextView
+                android:id="@+id/keyshare_enroll_step"
+                android:gravity="end"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginBottom="10sp"
+                android:text="@string/step_string"
+                android:textAppearance="@style/TextAppearance.AppCompat.Title"
+                android:textColor="@color/secondary_text"/>
+        </LinearLayout>
 
         <TextView
             android:layout_width="wrap_content"

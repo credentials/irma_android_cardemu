@@ -209,18 +209,20 @@
         you use credentials from this scheme manager. If you forget it, your credentials become unusable.]]></string>
     <string name="mijnIRMA_enroll_email_description"><![CDATA[
         Please provide a personal e-mail address.<br/>
-        You will receive an e-mail with a link at the provided address. After clicking this link you will get this e-mail address as your first attribute. You can use this attribute to login to MijnIRMA]]></string>
+        You will receive an e-mail with a link at the provided address.
+        After clicking on this link you will get this e-mail address as your first attribute.
+        You can use this attribute to login to MijnIRMA.]]></string>
     <string name="mijnIRMA_enroll_pin_description"><![CDATA[
         Chosen e-mail: <i>%s</i> <br/>
         <br/>
         Please choose a PIN.<br/>
         <br/>
         <b>Important:</b> Carefully remember your PIN! You will need to enter it each time you use the IRMA app.
-        If you forget it, all your credentials become unusable and you will have to redo this registration!]]></string>
+        If you forget it, all your credentials become unusable and you will have to redo this registration.]]></string>
     <string name="mijnIRMA_enroll_email_confirm"><![CDATA[
         A confirmation link has been sent to the address: <br/>
         <br/>
-        <center> %s </center><br/>
+        <i>%s</i><br/>
         <br/>
         Click on the link in the email to continue registration.
     ]]></string>
