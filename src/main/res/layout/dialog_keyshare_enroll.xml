@@ -17,7 +17,7 @@
             android:orientation="horizontal">
 
             <TextView
-                android:text="@string/MijnIRMA_register_title"
+                android:text="@string/keyshare_register_title"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:id="@+id/keyshare_enroll_title"
@@ -39,7 +39,7 @@
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:textColor="#000"
-            android:text="@string/mijnIRMA_enroll_email_description"
+            android:text="@string/keyshare_enroll_email_description"
             android:id="@+id/keyshare_enroll_text"
             android:paddingBottom="@dimen/detail_small_vspace"/>
 

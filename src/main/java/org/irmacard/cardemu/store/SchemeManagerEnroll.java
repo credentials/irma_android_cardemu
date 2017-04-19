@@ -60,7 +60,7 @@ public class SchemeManagerEnroll {
         final EditText emailView = (EditText) dialog.findViewById(R.id.keyshare_enroll_input);
         emailView.setVisibility(View.VISIBLE);
 
-        ((TextView) dialog.findViewById(R.id.keyshare_enroll_text)).setText(Html.fromHtml(activity.getString(R.string.mijnIRMA_enroll_email_description)));
+        ((TextView) dialog.findViewById(R.id.keyshare_enroll_text)).setText(Html.fromHtml(activity.getString(R.string.keyshare_enroll_email_description)));
 
         //some code in case you come to this screen via the back button on the PIN entry screen.
         emailView.setInputType(InputType.TYPE_TEXT_VARIATION_EMAIL_ADDRESS);
@@ -128,7 +128,7 @@ public class SchemeManagerEnroll {
 
     private void pinEntry(){
         ((TextView) dialog.findViewById(R.id.keyshare_enroll_step)).setText(activity.getString(R.string.step_string, 2));
-        ((TextView) dialog.findViewById(R.id.keyshare_enroll_text)).setText(Html.fromHtml(activity.getString(R.string.mijnIRMA_enroll_pin_description,email)));
+        ((TextView) dialog.findViewById(R.id.keyshare_enroll_text)).setText(Html.fromHtml(activity.getString(R.string.keyshare_enroll_pin_description,email)));
         final EditText pinView = (EditText) dialog.findViewById(R.id.keyshare_enroll_input);
         pinView.setText("");
         pinView.setInputType(InputType.TYPE_CLASS_NUMBER|InputType.TYPE_NUMBER_VARIATION_PASSWORD);
@@ -158,7 +158,7 @@ public class SchemeManagerEnroll {
     private void confirmation(){
         ((TextView) dialog.findViewById(R.id.keyshare_enroll_step)).setText(activity.getString(R.string.step_string, 3));
         ((TextView) dialog.findViewById(R.id.keyshare_enroll_text)).setText(Html.fromHtml(
-                          activity.getString(R.string.mijnIRMA_enroll_email_confirm, email)));
+                          activity.getString(R.string.keyshare_enroll_email_confirm, email)));
         dialog.findViewById(R.id.keyshare_enroll_input).setVisibility(View.INVISIBLE);
         dialog.getButton(DialogInterface.BUTTON_NEGATIVE).setVisibility(View.INVISIBLE);
         dialog.getButton(DialogInterface.BUTTON_POSITIVE).setText(R.string.gotit);

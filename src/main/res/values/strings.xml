@@ -207,19 +207,19 @@
         you need to enter your email address and a PIN code to register with its MyIRMA website.<br/>
         <b>Important:</b> Carefully remember your PIN! You will need to enter it each time
         you use credentials from this scheme manager. If you forget it, your credentials become unusable.]]></string>
-    <string name="mijnIRMA_enroll_email_description"><![CDATA[
+    <string name="keyshare_enroll_email_description"><![CDATA[
         Please provide a personal e-mail address.<br/>
         You will receive an e-mail with a link at the provided address.
         After clicking on this link you will get this e-mail address as your first attribute.
-        You can use this attribute to login to MijnIRMA.]]></string>
-    <string name="mijnIRMA_enroll_pin_description"><![CDATA[
+        You can use this attribute to login to MyIRMA.]]></string>
+    <string name="keyshare_enroll_pin_description"><![CDATA[
         Chosen e-mail: <i>%s</i> <br/>
         <br/>
         Please choose a PIN.<br/>
         <br/>
         <b>Important:</b> Carefully remember your PIN! You will need to enter it each time you use the IRMA app.
         If you forget it, all your credentials become unusable and you will have to redo this registration.]]></string>
-    <string name="mijnIRMA_enroll_email_confirm"><![CDATA[
+    <string name="keyshare_enroll_email_confirm"><![CDATA[
         A confirmation link has been sent to the address: <br/>
         <br/>
         <i>%s</i><br/>
@@ -238,7 +238,7 @@
     <string name="emailaddress_in_use_text">The email address %s is already in use. Please choose another one.</string>
     <string name="next">Next step</string>
     <string name="gotit">Got it!</string>
-    <string name="MijnIRMA_register_title">Register for MyIRMA</string>
+    <string name="keyshare_register_title">Register for MyIRMA</string>
     <string name="menu_reregister">Redo registration</string>
     <plurals name="error_tries_left">
         <item quantity="one">PIN Incorrect! You have one try left.</item>

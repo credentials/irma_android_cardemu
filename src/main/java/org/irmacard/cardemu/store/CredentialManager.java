@@ -767,4 +767,16 @@ public class CredentialManager {
 		generateKeyshareKeypairs();
 		return kp;
 	}
+
+	public static ArrayList<SchemeManager> getUnEnrolledKSSes() {
+		ArrayList<SchemeManager> managers = new ArrayList<SchemeManager>();
+		for (SchemeManager manager : DescriptionStore.getInstance().getSchemeManagers()) {
+			if (manager.hasKeyshareServer()
+					&& !isEnrolledToKeyshareServer(manager.getName()))
+			{
+				managers.add(manager);
+			}
+		}
+		return managers;
+	}
 }

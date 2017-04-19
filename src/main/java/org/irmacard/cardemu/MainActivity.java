@@ -54,7 +54,6 @@ import android.view.MenuItem;
 import android.view.View;
 import android.view.WindowManager;
 import android.widget.AdapterView;
-import android.widget.Button;
 import android.widget.EditText;
 import android.widget.ExpandableListView;
 import android.widget.ImageView;
@@ -604,7 +603,7 @@ public class MainActivity extends Activity {
 
 	@Override
 	public boolean onPrepareOptionsMenu(Menu menu) {
-		if (!getUnEnrolledKSSes().isEmpty()){
+		if (!CredentialManager.getUnEnrolledKSSes().isEmpty()){
 			menu.findItem(R.id.menu_reregister).setVisible(true);
 			menu.findItem(R.id.menu_clear).setVisible(false);
 		} else {
@@ -660,20 +659,8 @@ public class MainActivity extends Activity {
 		}
 	}
 
-	protected ArrayList<SchemeManager> getUnEnrolledKSSes(){
-		ArrayList<SchemeManager> managers = new ArrayList<SchemeManager>();
-		for (SchemeManager manager : DescriptionStore.getInstance().getSchemeManagers()) {
-			if (manager.hasKeyshareServer()
-					&& !CredentialManager.isEnrolledToKeyshareServer(manager.getName()))
-			{
-				managers.add(manager);
-			}
-		}
-		return managers;
-	}
-
-	private void initialRegistration() {
-		ArrayList<SchemeManager> managers = getUnEnrolledKSSes();
+	public void initialRegistration() {
+		ArrayList<SchemeManager> managers = CredentialManager.getUnEnrolledKSSes();
 		if (managers!=null && !managers.isEmpty()) {
 			for (final SchemeManager m:managers) {
 				SchemeManagerHandler.getKeyserverEnrollInput(MainActivity.this, m, new SchemeManagerHandler.KeyserverInputHandler() {
