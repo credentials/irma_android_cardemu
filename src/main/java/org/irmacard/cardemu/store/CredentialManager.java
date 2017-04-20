@@ -151,8 +151,8 @@ public class CredentialManager {
 		Gson gson = GsonUtil.getGson();
 		String credentialsJson = gson.toJson(credentials, credentialsType);
 		String logsJson = gson.toJson(logs, logsType);
-		String keyshareServersJson = GsonUtil.getGson().toJson(keyshareServers);
-		String keysJson = GsonUtil.getGson().toJson(keyshareKeypairs);
+		String keyshareServersJson = gson.toJson(keyshareServers);
+		String keysJson = gson.toJson(keyshareKeypairs);
 
 		settings.edit()
 				.putString(CREDENTIAL_STORAGE, credentialsJson)
