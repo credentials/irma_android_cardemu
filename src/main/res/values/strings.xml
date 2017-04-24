@@ -199,7 +199,9 @@
     <string name="pinmessage">Please enter your IRMA PIN</string>
     <string name="scheme_manager_added_title">Added scheme manager</string>
     <string name="scheme_manager_added_text">The scheme manager "%s" has been successfully installed.</string>
-    <string name="invalid_pin_error">PIN should be at least 5 digits</string>
+    <string name="pin_again">PIN (again)</string>
+    <string name="pins_dont_match_error">PIN codes do not match</string>
+    <string name="invalid_pin_error">PIN must be at least 5 digits</string>
     <string name="invalid_email_error">Invalid email address</string>
     <string name="save">Save</string>
     <string name="keyshare_enroll_description"><![CDATA[

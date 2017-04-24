@@ -5,16 +5,8 @@ import android.app.Activity;
 import android.app.AlertDialog;
 import android.content.Context;
 import android.content.DialogInterface;
-import android.content.Intent;
-import android.net.Uri;
 import android.os.AsyncTask;
-import android.text.Html;
 import android.util.Log;
-import android.view.LayoutInflater;
-import android.view.View;
-import android.widget.EditText;
-import android.widget.TextView;
-import android.widget.Toast;
 
 import org.irmacard.api.common.util.GsonUtil;
 import org.irmacard.cardemu.BuildConfig;
@@ -94,16 +86,19 @@ public class SchemeManagerHandler {
             }
 
             @Override public void onError(HttpClientException e) {
-                if (GsonUtil.getGson().fromJson(e.getMessage(), KeyshareErrorMessage.class)
-                        .getError().equals(KeyshareError.USERNAME_UNAVAILABLE))
-                    showError( // TODO retry with different email address
-                            activity,
-                            activity.getString(R.string.emailaddress_in_use_title),
-                            activity.getString(R.string.emailaddress_in_use_text, email));
-                else
-                    showError(activity,
-                            activity.getString(R.string.downloading_schememanager_failed_title),
-                            activity.getString(R.string.downloading_schememanager_failed_text, e.getMessage()));
+                try {
+                    if (GsonUtil.getGson().fromJson(e.getMessage(), KeyshareErrorMessage.class)
+                            .getError().equals(KeyshareError.USERNAME_UNAVAILABLE)) {
+                        showError( // TODO retry with different email address
+                                activity,
+                                activity.getString(R.string.emailaddress_in_use_title),
+                                activity.getString(R.string.emailaddress_in_use_text, email));
+                        return;
+                    }
+                } catch (Exception ex) { /* ignore, we just show a generic error below */ }
+                showError(activity,
+                        activity.getString(R.string.downloading_schememanager_failed_title),
+                        activity.getString(R.string.downloading_schememanager_failed_text, e.getMessage()));
             }
         });
     }

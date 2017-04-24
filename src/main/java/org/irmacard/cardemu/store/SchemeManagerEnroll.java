@@ -6,8 +6,10 @@ import android.app.AlertDialog;
 import android.content.DialogInterface;
 import android.content.Intent;
 import android.net.Uri;
+import android.text.Editable;
 import android.text.Html;
 import android.text.InputType;
+import android.text.TextWatcher;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.widget.EditText;
@@ -55,7 +57,8 @@ public class SchemeManagerEnroll {
         dialog.show();
         ((TextView) dialog.findViewById(R.id.keyshare_enroll_step)).setText(activity.getString(R.string.step_string, 1));
         ((TextView) dialog.findViewById(R.id.keyshare_enroll_step)).setVisibility(View.VISIBLE);
-        dialog.getButton(DialogInterface.BUTTON_NEGATIVE).setVisibility(View.INVISIBLE);
+        dialog.getButton(DialogInterface.BUTTON_NEGATIVE).setVisibility(View.GONE);
+        dialog.findViewById(R.id.keyshare_pin_input).setVisibility(View.GONE);
 
         final EditText emailView = (EditText) dialog.findViewById(R.id.keyshare_enroll_input);
         emailView.setVisibility(View.VISIBLE);
@@ -134,6 +137,35 @@ public class SchemeManagerEnroll {
         pinView.setInputType(InputType.TYPE_CLASS_NUMBER|InputType.TYPE_NUMBER_VARIATION_PASSWORD);
         pinView.setHint(R.string.pinhint);
 
+        final EditText pinAgainView = (EditText) dialog.findViewById(R.id.keyshare_pin_input);
+        pinAgainView.setVisibility(View.VISIBLE);
+        pinAgainView.setText("");
+
+        final View okButton = dialog.getButton(DialogInterface.BUTTON_POSITIVE);
+        okButton.setEnabled(false);
+
+        final TextWatcher pinValidator = new TextWatcher() {
+            @Override public void beforeTextChanged(CharSequence s, int start, int count, int after) {}
+            @Override public void onTextChanged(CharSequence s, int start, int before, int count) {}
+            @Override public void afterTextChanged(Editable s) {
+                boolean pinMatch = pinView.getText().toString().equals(pinAgainView.getText().toString());
+                boolean longEnough = pinView.getText().length() > 4;
+
+                okButton.setEnabled(pinMatch && (longEnough));
+
+                if (!longEnough && pinView.getText().length() > 0)
+                    pinView.setError(activity.getString(R.string.invalid_pin_error));
+                else
+                    pinView.setError(null);
+                if (!pinMatch && pinAgainView.getText().length() > 0)
+                    pinAgainView.setError(activity.getString(R.string.pins_dont_match_error));
+                else
+                    pinAgainView.setError(null);
+            }
+        };
+        pinView.addTextChangedListener(pinValidator);
+        pinAgainView.addTextChangedListener(pinValidator);
+
         dialog.getButton(DialogInterface.BUTTON_NEGATIVE).setVisibility(View.VISIBLE);
         dialog.getButton(DialogInterface.BUTTON_NEGATIVE).setOnClickListener(new View.OnClickListener() {
             @Override public void onClick(View v) {
@@ -142,12 +174,7 @@ public class SchemeManagerEnroll {
         });
         dialog.getButton(DialogInterface.BUTTON_POSITIVE).setOnClickListener(new View.OnClickListener() {
             @Override public void onClick(View v) {
-                String pinInput = pinView.getText().toString();
-                if (!BuildConfig.DEBUG && pinInput.length() < 5) { // Allow short pins when testing
-                    Toast.makeText(activity, R.string.invalid_pin_error, Toast.LENGTH_SHORT).show();
-                    return;
-                }
-                pin = pinInput;
+                pin = pinView.getText().toString();
                 handler.done(email, pin);
                 confirmation();
             }
@@ -159,8 +186,10 @@ public class SchemeManagerEnroll {
         ((TextView) dialog.findViewById(R.id.keyshare_enroll_step)).setText(activity.getString(R.string.step_string, 3));
         ((TextView) dialog.findViewById(R.id.keyshare_enroll_text)).setText(Html.fromHtml(
                           activity.getString(R.string.keyshare_enroll_email_confirm, email)));
-        dialog.findViewById(R.id.keyshare_enroll_input).setVisibility(View.INVISIBLE);
-        dialog.getButton(DialogInterface.BUTTON_NEGATIVE).setVisibility(View.INVISIBLE);
+        dialog.findViewById(R.id.keyshare_enroll_input).setVisibility(View.GONE);
+        ((EditText) dialog.findViewById(R.id.keyshare_pin_input)).setVisibility(View.GONE);
+
+        dialog.getButton(DialogInterface.BUTTON_NEGATIVE).setVisibility(View.GONE);
         dialog.getButton(DialogInterface.BUTTON_POSITIVE).setText(R.string.gotit);
         dialog.getButton(DialogInterface.BUTTON_POSITIVE).setOnClickListener(new View.OnClickListener() {
             @Override public void onClick(View v) {
