@@ -16,15 +16,21 @@
         android:icon="@drawable/ic_action_history"/>
 
     <item
-        android:id="@+id/menu_reregister"
+        android:id="@+id/get_attributes"
         android:orderInCategory="103"
-        android:title="@string/menu_reregister"
         android:showAsAction="never"
-        android:icon="@drawable/ic_action_history"/>
+        android:title="@string/get_more_attributes"
+        />
+
+    <item
+        android:id="@+id/menu_reregister"
+        android:orderInCategory="104"
+        android:title="@string/menu_reregister"
+        android:showAsAction="never"/>
 
     <item
         android:id="@+id/menu_clear"
-        android:orderInCategory="104"
+        android:orderInCategory="105"
         android:showAsAction="never"
         android:title="@string/clear_card"/>
 

@@ -654,6 +654,11 @@ public class MainActivity extends Activity {
 			case R.id.menu_reregister:
 				initialRegistration();
 				return true;
+			case R.id.get_attributes:
+				Intent i = new Intent(Intent.ACTION_VIEW);
+				i.setData(Uri.parse("https://privacybydesign.foundation/uitgifte/"));
+				startActivity(i);
+				return true;
 			default:
 				return super.onOptionsItemSelected(item);
 		}

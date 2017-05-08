@@ -242,6 +242,7 @@
     <string name="gotit">Got it!</string>
     <string name="keyshare_register_title">Register for MyIRMA</string>
     <string name="menu_reregister">Redo registration</string>
+    <string name="get_more_attributes">Get more attributes</string>
     <plurals name="error_tries_left">
         <item quantity="one">PIN Incorrect! You have one try left.</item>
         <item quantity="other">PIN Incorrect! You have %d tries left.</item>
