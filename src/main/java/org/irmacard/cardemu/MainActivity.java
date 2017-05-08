@@ -659,9 +659,34 @@ public class MainActivity extends Activity {
 				i.setData(Uri.parse("https://privacybydesign.foundation/uitgifte/"));
 				startActivity(i);
 				return true;
+			case R.id.about_app:
+				showAboutDialog();
+				return true;
 			default:
 				return super.onOptionsItemSelected(item);
 		}
+	}
+
+	private void showAboutDialog() {
+		String version = null;
+		try {
+			version = getPackageManager().getPackageInfo(getPackageName(), 0).versionName;
+		} catch (PackageManager.NameNotFoundException e) {
+			e.printStackTrace();
+		}
+
+		new AlertDialog.Builder(this)
+				.setTitle(R.string.about_app_title)
+				.setMessage(getString(R.string.about_app_text, version))
+				.setPositiveButton(R.string.dismiss, null)
+				.setNeutralButton(R.string.more_information, new DialogInterface.OnClickListener() {
+					@Override public void onClick(DialogInterface dialog, int which) {
+						Intent i = new Intent(Intent.ACTION_VIEW);
+						i.setData(Uri.parse("https://privacybydesign.foundation/irma/"));
+						startActivity(i);
+					}
+				})
+				.show();
 	}
 
 	public void initialRegistration() {

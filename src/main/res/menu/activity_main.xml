@@ -52,5 +52,11 @@
         android:showAsAction="never"
         android:title="@string/online_enroll"/>
 
+    <item
+        android:id="@+id/about_app"
+        android:orderInCategory="1000"
+        android:showAsAction="never"
+        android:title="About IRMA"/>
+
 </menu>
 

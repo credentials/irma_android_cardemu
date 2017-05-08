@@ -243,6 +243,8 @@
     <string name="keyshare_register_title">Register for MyIRMA</string>
     <string name="menu_reregister">Redo registration</string>
     <string name="get_more_attributes">Get more attributes</string>
+    <string name="about_app_text">With the IRMA Android app you can receive, manage and disclose your personal attributes.\n\nVersion %s</string>
+    <string name="about_app_title">About IRMA</string>
     <plurals name="error_tries_left">
         <item quantity="one">PIN Incorrect! You have one try left.</item>
         <item quantity="other">PIN Incorrect! You have %d tries left.</item>
