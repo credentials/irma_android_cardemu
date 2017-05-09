@@ -208,7 +208,7 @@
         To use credentials associated to the %s scheme manager,
         you need to enter your email address and a PIN code to register with its MyIRMA website.<br/>
         <b>Important:</b> Carefully remember your PIN! You will need to enter it each time
-        you use credentials from this scheme manager. If you forget it, your credentials become unusable.]]></string>
+        you use attributes from this scheme manager. If you forget it, your attributes become unusable.]]></string>
     <string name="keyshare_enroll_email_description"><![CDATA[
         Please provide a personal e-mail address.<br/>
         You will receive an e-mail with a link at the provided address.
@@ -220,7 +220,7 @@
         Please choose a PIN.<br/>
         <br/>
         <b>Important:</b> Carefully remember your PIN! You will need to enter it each time you use the IRMA app.
-        If you forget it, all your credentials become unusable and you will have to redo this registration.]]></string>
+        If you forget it, all your attributes become unusable and you will have to redo this registration.]]></string>
     <string name="keyshare_enroll_email_confirm"><![CDATA[
         A confirmation link has been sent to the address: <br/>
         <br/>
