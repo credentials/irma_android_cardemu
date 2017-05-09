@@ -668,12 +668,9 @@ public class MainActivity extends Activity {
 	}
 
 	private void showAboutDialog() {
-		String version = null;
-		try {
-			version = getPackageManager().getPackageInfo(getPackageName(), 0).versionName;
-		} catch (PackageManager.NameNotFoundException e) {
-			e.printStackTrace();
-		}
+		String version = BuildConfig.VERSION_NAME;
+		if (BuildConfig.DEBUG)
+			version += " (debug build)";
 
 		new AlertDialog.Builder(this)
 				.setTitle(R.string.about_app_title)
