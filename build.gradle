@@ -96,6 +96,9 @@ dependencies {
     compile('org.irmacard.mno:irma_mno_common:0.3.1') {
         exclude group: 'org.apache.httpcomponents', module: 'httpclient'
     }
+    compile('org.irmacard.credentials:credentials_api:0.17.3') {
+        exclude group: 'org.apache.httpcomponents', module: 'httpclient'
+    }
     compile('org.irmacard.api:irma_api_common:0.7.3') {
         exclude group: 'org.apache.httpcomponents', module: 'httpclient'
     }

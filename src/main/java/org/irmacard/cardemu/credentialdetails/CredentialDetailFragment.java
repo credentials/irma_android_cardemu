@@ -49,8 +49,11 @@ import android.widget.TextView;
 import org.irmacard.cardemu.R;
 import org.irmacard.cardemu.store.AndroidFileReader;
 import org.irmacard.credentials.Attributes;
+import org.irmacard.credentials.info.AttributeIdentifier;
 import org.irmacard.credentials.info.CredentialDescription;
+import org.irmacard.credentials.info.DescriptionStore;
 import org.irmacard.credentials.info.IssuerDescription;
+import org.irmacard.credentials.info.SchemeManager;
 
 import java.text.DateFormat;
 import java.text.SimpleDateFormat;
@@ -192,18 +195,43 @@ public class CredentialDetailFragment extends Fragment {
 		mCallbacks = (Callbacks) context;
 	}
 
+	private boolean credentialContainsKSSAttribute() {
+		for (SchemeManager manager : DescriptionStore.getInstance().getSchemeManagers()) {
+			AttributeIdentifier ai = manager.getKeyshareAttribute();
+
+			if (ai == null) // Scheme manager doesn't have a KSS or a special KSS attribute
+				continue;
+
+			for (String attr : cd.getAttributeNames())
+				if (new AttributeIdentifier(cd.getIdentifier(), attr).equals(ai))
+					return true;
+		}
+
+		return false;
+	}
+
 	private void clickedDeleteButton() {
 		Log.i("blaat", "Delete button clicked");
 
-		new AlertDialog.Builder(this.getActivity())
-				.setTitle(R.string.confirm_delete_title)
-				.setMessage(R.string.confirm_delete_question)
-				.setPositiveButton(R.string.delete, new DialogInterface.OnClickListener() {
-					@Override public void onClick(DialogInterface dialog, int id) {
-						mCallbacks.onDeleteCredential(hashCode);
-					}
-				})
-				.setNegativeButton(R.string.cancel, null)
-				.show();
+		if (credentialContainsKSSAttribute()) {
+			new AlertDialog.Builder(this.getActivity())
+					.setTitle(R.string.cannot_delete_kss_attribute_title)
+					.setMessage(R.string.cannot_delete_kss_attribute_message)
+					.setIcon(android.R.drawable.ic_dialog_alert)
+					.setPositiveButton(R.string.dismiss, null)
+					.show();
+		} else {
+			new AlertDialog.Builder(this.getActivity())
+					.setTitle(R.string.confirm_delete_title)
+					.setMessage(R.string.confirm_delete_question)
+					.setPositiveButton(R.string.delete, new DialogInterface.OnClickListener() {
+						@Override
+						public void onClick(DialogInterface dialog, int id) {
+							mCallbacks.onDeleteCredential(hashCode);
+						}
+					})
+					.setNegativeButton(R.string.cancel, null)
+					.show();
+		}
 	}
 }

@@ -339,7 +339,9 @@ public class CredentialManager {
 				logs.add(0, new RemoveLogEntry(Calendar.getInstance().getTime(), cd));
 		}
 
-		credentials = new HashMap<>();
+		credentials.clear();
+		keyshareServers.clear();
+		keyshareUsername = "";
 
 		save();
 	}

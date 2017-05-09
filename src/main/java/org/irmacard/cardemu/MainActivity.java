@@ -333,28 +333,29 @@ public class MainActivity extends Activity {
 	}
 
 	protected void deleteAllCredentials() {
-		if (getState() == State.IDLE) {
-			AlertDialog.Builder builder = new AlertDialog.Builder(this);
-			builder.setTitle(R.string.confirm_delete_all_title)
-					.setMessage(R.string.confirm_delete_all_question)
-					.setPositiveButton(R.string.delete, new DialogInterface.OnClickListener() {
-						public void onClick(DialogInterface dialog, int id) {
-							Log.i(TAG, "We're idle, attempting removal of all credentials");
+		if (getState() != State.IDLE)
+			return;
 
-							CredentialManager.deleteAll();
+		AlertDialog.Builder builder = new AlertDialog.Builder(this);
+		builder.setTitle(R.string.confirm_delete_all_title)
+				.setIcon(android.R.drawable.ic_dialog_alert)
+				.setNegativeButton(R.string.cancel, null)
+				.setPositiveButton(R.string.delete, new DialogInterface.OnClickListener() {
+					public void onClick(DialogInterface dialog, int id) {
+						Log.i(TAG, "We're idle, attempting removal of all credentials");
+						CredentialManager.deleteAll();
+						updateCredentialList();
+					}
+				});
 
-							updateCredentialList();
-						}
-					})
-					.setNegativeButton(R.string.cancel, new DialogInterface.OnClickListener() {
-						public void onClick(DialogInterface dialog, int id) {
-							// Cancelled
-						}
-					});
-			AlertDialog dialog = builder.create();
-			dialog.show();
+		if (CredentialManager.getAnyKeyshareServer() == null) {
+			builder.setMessage(R.string.confirm_delete_all_question);
+		} else {
+			builder.setMessage(getString(R.string.confirm_delete_all_question)
+					+ " " + getString(R.string.confirm_delete_all_kss));
 		}
 
+		builder.show();
 	}
 
 	protected void tryDeleteCredential(int hashCode) {

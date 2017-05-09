@@ -146,7 +146,10 @@
     <string name="issuing_failed">Issuing failed</string>
     <string name="failed">Failed</string>
     <string name="confirm_delete_all_title">Delete all credentials?</string>
-    <string name="confirm_delete_all_question">Are you sure you want to delete ALL attributes?</string>
+    <string name="confirm_delete_all_question">Are you sure you want to delete all attributes?</string>
+    <string name="confirm_delete_all_kss">This will also unregister you from MyIRMA.\n\nNote:
+        if you would like to re-register using the same email address,
+        you will need to delete your MyIRMA account at the MyIRMA website.</string>
     <string name="downloading_credential_info_failed">Downloading credential info failed</string>
     <string name="scan_qr">Scan the QR image.</string>
     <string name="qr_code_contents">QR code contents</string>
@@ -245,6 +248,12 @@
     <string name="get_more_attributes">Get more attributes</string>
     <string name="about_app_text">With the IRMA Android app you can receive, manage and disclose your personal attributes.\n\nVersion %s</string>
     <string name="about_app_title">About IRMA</string>
+    <string name="cannot_delete_kss_attribute_title">Cannot delete this credential</string>
+    <string name="cannot_delete_kss_attribute_message">This credential contains your MyIRMA login attribute,
+        and cannot be deleted on its own.\n\nIf you really want to,
+        you can instead delete all attributes using the menu in the main screen.
+        This will also unregister you from MyIRMA.
+    </string>
     <plurals name="error_tries_left">
         <item quantity="one">PIN Incorrect! You have one try left.</item>
         <item quantity="other">PIN Incorrect! You have %d tries left.</item>
