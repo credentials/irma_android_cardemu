@@ -745,7 +745,7 @@ public class MainActivity extends Activity {
 				case DISCLOSING:
 					setFeedback(getString(R.string.disclosure_successful), "success"); break;
 				case SIGNING:
-					setFeedback("Successfully signed message", "success"); break;
+					setFeedback(getString(R.string.signing_successful), "success"); break;
 				case ISSUING:
 					setFeedback(getString(R.string.issuing_succesful), "success"); break;
 			}
@@ -757,7 +757,7 @@ public class MainActivity extends Activity {
 				case DISCLOSING:
 					setFeedback(getString(R.string.disclosure_cancelled), "warning"); break;
 				case SIGNING:
-					setFeedback("Cancelled signing", "warning"); break;
+					setFeedback(getString(R.string.signing_cancelled), "warning"); break;
 				case ISSUING:
 					setFeedback(getString(R.string.issuing_cancelled), "warning"); break;
 			}
@@ -770,7 +770,7 @@ public class MainActivity extends Activity {
 				case DISCLOSING:
 					title = getString(R.string.disclosure_failed); break;
 				case SIGNING:
-					title = "Signing failed: "; break;
+					title = getString(R.string.signing_failed); break;
 				case ISSUING:
 					title = getString(R.string.issuing_failed); break;
 				case UNKNOWN:

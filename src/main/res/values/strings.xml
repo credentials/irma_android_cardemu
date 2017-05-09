@@ -254,6 +254,9 @@
         you can instead delete all attributes using the menu in the main screen.
         This will also unregister you from MyIRMA.
     </string>
+    <string name="signing_successful">Successfully signed message</string>
+    <string name="signing_cancelled">Cancelled signing</string>
+    <string name="signing_failed">"Signing failed: "</string>
     <plurals name="error_tries_left">
         <item quantity="one">PIN Incorrect! You have one try left.</item>
         <item quantity="other">PIN Incorrect! You have %d tries left.</item>
