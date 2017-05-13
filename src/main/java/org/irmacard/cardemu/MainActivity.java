@@ -74,7 +74,6 @@ import org.irmacard.cardemu.irmaclient.IrmaClientHandler;
 import org.irmacard.cardemu.log.LogActivity;
 import org.irmacard.cardemu.log.LogFragment;
 import org.irmacard.cardemu.preferences.IRMAPreferenceActivity;
-import org.irmacard.cardemu.selfenrol.EnrollSelectActivity;
 import org.irmacard.cardemu.store.AndroidFileReader;
 import org.irmacard.cardemu.store.CredentialManager;
 import org.irmacard.cardemu.store.SchemeManagerHandler;
@@ -509,11 +508,7 @@ public class MainActivity extends Activity {
 	protected void onActivityResult(int requestCode, int resultCode, Intent data) {
 		super.onActivityResult(requestCode, resultCode, data);
 
-		if (requestCode == EnrollSelectActivity.ACTIVITY_CODE && resultCode == RESULT_OK) {
-			updateCredentialList();
-		}
-
-		else if (requestCode == CredentialDetailActivity.ACTIVITY_CODE && resultCode == CredentialDetailActivity.RESULT_DELETE) {
+		if (requestCode == CredentialDetailActivity.ACTIVITY_CODE && resultCode == CredentialDetailActivity.RESULT_DELETE) {
 			int hashCode = data.getIntExtra(CredentialDetailActivity.ARG_RESULT_DELETE, 0);
 			if (hashCode != 0)
 				tryDeleteCredential(hashCode);

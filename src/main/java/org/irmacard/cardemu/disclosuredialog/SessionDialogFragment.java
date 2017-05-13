@@ -62,7 +62,7 @@ import org.irmacard.cardemu.irmaclient.IrmaClient;
 import org.irmacard.credentials.info.CredentialDescription;
 import org.irmacard.credentials.info.CredentialIdentifier;
 import org.irmacard.credentials.info.InfoException;
-import org.irmacard.mno.common.util.GsonUtil;
+import org.irmacard.api.common.util.GsonUtil;
 
 import java.util.ArrayList;
 

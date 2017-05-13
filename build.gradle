@@ -45,9 +45,6 @@ android {
         type.buildConfigField "org.acra.ReportingInteractionMode", "acraMode",
                 "org.acra.ReportingInteractionMode.SILENT"
         type.resValue "string", "crash_toast_text", ""
-
-        // Self enroll server
-        type.buildConfigField "String", "enrollServer", '"https://demo.irmacard.org/tomcat/irma_mno_server/api"'
     }
 
     // Enable metrics only in release builds
@@ -66,7 +63,6 @@ android {
 }
 
 if (project.file('acra.gradle').exists()) { apply from: 'acra.gradle' }
-if (project.file('enroll.gradle').exists()) { apply from: 'enroll.gradle' }
 if (project.file('signingkeys.gradle').exists()) { apply from: 'signingkeys.gradle' }
 
 
@@ -88,14 +84,8 @@ dependencies {
     compile 'com.noveogroup.android:android-logger:1.3.5'
     compile 'com.github.nicolasjafelle:paginglistview:1.2'
 
-    // Android-Scuba bridge. Scuba itself is loaded by JMRTD, which is loaded by irma_mno_common.
-    compile 'net.sf.scuba:scuba-sc-android:0.0.10'
-
     // Our stuff
     compile 'org.irmacard.metrics:irma_metrics_common:0.1.1'
-    compile('org.irmacard.mno:irma_mno_common:0.3.1') {
-        exclude group: 'org.apache.httpcomponents', module: 'httpclient'
-    }
     compile('org.irmacard.credentials:credentials_api:0.17.3') {
         exclude group: 'org.apache.httpcomponents', module: 'httpclient'
     }
