@@ -1,61 +1,22 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <string name="app_name">IRMA</string>
-    <string name="app_name_enroll">IRMA Document Enrollment</string>
     <string name="irmalogo">IRMA logo</string>
 	<string name="credential_info">IRMA app</string>
-    <string name="feedback_waiting_for_passport">Waiting for Document</string>
-    <string name="feedback_communicating_passport">Communicating with Passport…</string>
 
     <string name="title_credential_detail">Credential Detail</string>
     <string name="title_log">Log</string>
 
 	<string name="status_idle">Tap to scan QR</string>
-	<string name="status_connecting">Connecting…</string>
-	<string name="status_connected">Connected to server</string>
+    <string name="status_connected">Connected to server</string>
 	<string name="status_ready">Ready</string>
 	<string name="status_communicating">Communicating…</string>
-	<string name="status_waitingforpin">Waiting for PIN</string>
-    <string name="se_welcome">IRMA self enrollment</string>
-    <string name="se_connect_mno"><![CDATA[
-    This process consists of the following three steps: <br/><br/>
-    &nbsp;&nbsp;1.&nbsp;&nbsp;Entering some data from your document; <br/>
-    &nbsp;&nbsp;2.&nbsp;&nbsp;Reading data from your document; <br/>
-    &nbsp;&nbsp;3.&nbsp;&nbsp;Issuing the credential. <br/><br/>
-    During the final process, your name, date and place of birth will be transmitted to the enrollment server, but these will not be stored by the server.
-    <br/><br/>
-    Proceed?
-    ]]></string>
     <string name="se_continue">Continue</string> <!-- calling this string "continue" is not allowed -->
     <string name="back">Back</string>
-    <string name="abort">Abort</string>
-    <string name="retry">Retry</string>
-    <string name="se_connected_mno">Connected to server</string>
-    <string name="se_connecting_mno">Connecting to server…</string>
-    <string name="se_connected_mijnoverheid">Connected to server</string>
-    <string name="feedback_issueing">Issuing credentials…</string>
-    <string name="done">Done.</string>
     <string name="clear_card">Delete all attributes</string>
     <string name="step_string">Step %d</string>
-    <string name="enroll_error_label">Self enrollment failed</string>
-    <string name="error_nfc_notsupported">This phone does not support NFC.</string>
-    <string name="error_nfc_disabled">NFC is disabled. Please enable NFC in the phone settings before using this
-        feature.</string>
-    <string name="error_enroll_issuing_failed">The issuing of the credential failed.</string>
-    <string name="error_enroll_cantconnect">Could not connect to the enrollment server.</string>
-    <string name="error_enroll_serverdied">The server encountered a problem and aborted.</string>
-    <string name="error_enroll_invalidresponse">The enrollment server returned an invalid response.</string>
-    <string name="error_enroll_passporterror">Failed to establish contact with the passport.</string>
-    <string name="error_enroll_edlerror">Failed to establish contact with the driving license.</string>
-    <string name="error_enroll_bacfailed">The document data you supplied seems to be wrong.</string>
-    <string name="error_enroll_passportrejected">Could not establish passport validity.</string>
-    <string name="error_enroll_passport_expired">You cannot enroll with an expired identity document.</string>
-    <string name="unknown_error">The following error occurred: %1$s</string>
-    <string name="enroll_enter_bac_title">Document data</string>
-    <string name="enroll_enter_bac_desc">Please select the identity document you wish to use, and provide the requested data to allow the app to communicate with the document.</string>
     <string name="menu_show_log">Show log</string>
     <string name="no_credentials">You don\'t have any credentials yet.</string>
-    <string name="enroll">Document Enroll</string>
     <string name="online_enroll">Demo Enroll</string>
 
     <plurals name="disclose_question_1">
@@ -77,9 +38,6 @@
     </plurals>
     <string name="sign_question_2">Are you sure you want to sign this message with these attributes?</string>
 
-    <string name="or">or enter</string>
-    <string name="feedback_communicating_driverslicense">Communicating with drivers license</string>
-    <string name="error_enroll_driverslicense_error">Failed to establish contact with drivers license</string>
     <string name="preferences">Preferences</string>
     <string name="delete_scheme_manager">Delete scheme manager</string>
     <string name="scheme_managers">Scheme Managers</string>
@@ -87,10 +45,6 @@
     <string name="add_new">Add new</string>
     <string name="add_new_scheme_manager">Add new scheme manager</string>
     <string name="enter_scheme_manager_url">Enter the URL of the scheme manager</string>
-    <string-array name="document_list">
-        <item>Passport / ID card</item>
-        <item>Drivers License</item>
-    </string-array>
     <string name="title_activity_scheme_manager_detail">Scheme Manager Details</string>
 
     <string name="name">Name:</string>
@@ -177,21 +131,14 @@
     <string name="add_schememanager_title">Add scheme manager?</string>
     <string name="add_schememanager_question">Are you certain that you want to add the scheme manager "%s"?</string>
     <string name="add_schememanager_question_kss">You will need to register to it with your email address and your PIN.</string>
-    <string name="downloading">Downloading…</string>
     <string name="downloading_schememanager_failed_title">Downloading scheme manager failed</string>
     <string name="downloading_schememanager_failed_text">Downloading of the scheme manager failed. Error: %s</string>
-    <string name="read_passport_failed">Failed to communicate with passport (could not read AA public key)</string>
-    <string name="scan_qr_dl">Scan the QR image on your Driver\'s License.</string>
-    <string name="server_reported">Server reported: %s</string>
     <string name="missing_attributes_text">The verifier requires attributes of the following kind: %s but you do not have the appropriate attributes.</string>
     <string name="missing_attributes_title">Missing attributes</string>
     <string name="and">and</string>
     <string name="server_returned">server returned: %s</string>
     <string name="could_not_connect">could not connect to server</string>
     <string name="server_returned_status">server returned status %d</string>
-    <string name="wrong_credential_type">wrong credential type</string>
-    <string name="missing_required_attributes">missing required attributes</string>
-    <string name="missing_pk">missing public key</string>
     <string name="malformed_disclosure_request">Got malformed disclosure request</string>
     <string name="unknown_scheme_manager">The request cannot be processed because the scheme manager \"%s\" is not installed.</string>
     <string name="downloading_info_failed">Could not download credential or issuer information</string>
@@ -206,12 +153,6 @@
     <string name="pins_dont_match_error">PIN codes do not match</string>
     <string name="invalid_pin_error">PIN must be at least 5 digits</string>
     <string name="invalid_email_error">Invalid email address</string>
-    <string name="save">Save</string>
-    <string name="keyshare_enroll_description"><![CDATA[
-        To use credentials associated to the %s scheme manager,
-        you need to enter your email address and a PIN code to register with its MyIRMA website.<br/>
-        <b>Important:</b> Carefully remember your PIN! You will need to enter it each time
-        you use attributes from this scheme manager. If you forget it, your attributes become unusable.]]></string>
     <string name="keyshare_enroll_email_description"><![CDATA[
         Please provide a personal e-mail address.<br/>
         You will receive an e-mail with a link at the provided address.
