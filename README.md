@@ -13,13 +13,10 @@ External dependencies:
  * [Google GSON](https://code.google.com/p/google-gson/), for serializing to and from JSON
  * [ACRA](https://github.com/ACRA/acra/), the Application Crash Reports for Android
  * [ZXing](https://github.com/zxing/zxing), for scanning QR codes
- * [Spongycastle](https://rtyley.github.io/spongycastle/), a repackage of BouncyCastle for Android
 
 Internal dependencies:
 
  * [irma_api_common](https://github.com/credentials/irma_api_common/), The common classes for the verification and issuance protocol
- * [Scuba](https://github.com/credentials/scuba), The smartcard abstraction layer, uses `scuba_sc_android` and `scuba_smartcard`
- * [jmrtd](http://jmrtd.org/), A library for easy reading of ICAO documents.
 
 The build system depends on gradle version at least 2.1, which is why we've included the gradle wrapper, so you always have the right version.
 
