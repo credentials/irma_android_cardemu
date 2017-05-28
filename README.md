@@ -1,4 +1,4 @@
-# irma_android_cardemu
+# IRMA Android app
 
 An IRMA credential manager for Android. Credentials can be issued to it, after which it can disclose the attributes contained in those credentials. New credentials can be tied to other existing credentials, or to other trusted data using self-enrollment processes.
 
