@@ -134,8 +134,6 @@ public class MainActivity extends Activity {
 	private static final int FEEDBACK_SHOW_DELAY = 10000;
 	private boolean showingFeedback = false;
 
-	private long qrScanStartTime;
-
 	// Keep track of last verification url to ensure we handle it only once
 	private String currentSessionUrl = "()";
 	private boolean launchedFromBrowser;
@@ -523,8 +521,6 @@ public class MainActivity extends Activity {
 		}
 
 		else { // Must be from the QR scanner
-			MetricsReporter.getInstance().reportAggregrateMeasurement("qr_scan_time", System.currentTimeMillis() - qrScanStartTime);
-
 			IntentResult scanResult = IntentIntegrator
 					.parseActivityResult(requestCode, resultCode, data);
 
@@ -576,7 +572,6 @@ public class MainActivity extends Activity {
 	}
 
 	public void startQRScanner(String message) {
-		qrScanStartTime = System.currentTimeMillis();
 		IntentIntegrator integrator = new IntentIntegrator(this);
 		integrator.setPrompt(message);
 		integrator.initiateScan();

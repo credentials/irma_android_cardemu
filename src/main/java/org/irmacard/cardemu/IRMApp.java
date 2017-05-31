@@ -38,7 +38,6 @@ import org.acra.ReportField;
 import org.acra.annotation.ReportsCrashes;
 import org.irmacard.api.common.util.GsonUtil;
 import org.irmacard.cardemu.store.StoreManager;
-import org.irmacard.credentials.CredentialsException;
 import org.irmacard.credentials.util.log.LogEntry;
 
 @ReportsCrashes(
@@ -68,7 +67,6 @@ import org.irmacard.credentials.util.log.LogEntry;
                 ReportField.USER_CRASH_DATE},
         resToastText = R.string.crash_toast_text)
 public class IRMApp extends Application {
-    private final static long reportTimeInterval = 1000*60*60*24; // 1 day in milliseconds
     private static StoreManager storeManager;
 
     @Override
@@ -91,7 +89,6 @@ public class IRMApp extends Application {
 
         storeManager = new StoreManager(this);
         GsonUtil.addTypeAdapter(LogEntry.class, new LogEntrySerializer());
-        MetricsReporter.init(this, BuildConfig.metricServer, reportTimeInterval);
     }
 
     public static StoreManager getStoreManager() {

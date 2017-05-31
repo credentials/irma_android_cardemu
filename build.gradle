@@ -47,16 +47,6 @@ android {
         type.resValue "string", "crash_toast_text", ""
     }
 
-    // Enable metrics only in release builds
-    buildTypes {
-        release {
-            buildConfigField "String", "metricServer", '"https://demo.irmacard.org/tomcat/irma_metrics_server/api/v1"'
-        }
-        debug {
-            buildConfigField "String", "metricServer", '""'
-        }
-    }
-
     packagingOptions {
         pickFirst  'META-INF/LICENSE'
     }
@@ -85,7 +75,6 @@ dependencies {
     compile 'com.github.nicolasjafelle:paginglistview:1.2'
 
     // Our stuff
-    compile 'org.irmacard.metrics:irma_metrics_common:0.1.1'
     compile('org.irmacard.credentials:credentials_api:0.17.3') {
         exclude group: 'org.apache.httpcomponents', module: 'httpclient'
     }
