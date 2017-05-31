@@ -290,7 +290,7 @@ public class IrmaClient implements PINDialogListener {
 	/**
 	 * Given a {@link DisclosureProofRequest} with selected attributes, perform the disclosure.
 	 */
-	public void disclose(final DisclosureProofRequest request, DisclosureChoice disclosureChoice) {
+	public void disclose(DisclosureChoice disclosureChoice) {
 		proofSession(disclosureChoice);
 	}
 
@@ -348,7 +348,7 @@ public class IrmaClient implements PINDialogListener {
 	/**
 	 * Given a {@link SignatureProofRequest} with selected attributes, create an IRMA signature.
 	 */
-	public void sign(final SignatureProofRequest request, DisclosureChoice disclosureChoice) {
+	public void sign(DisclosureChoice disclosureChoice) {
 		proofSession(disclosureChoice);
 	}
 

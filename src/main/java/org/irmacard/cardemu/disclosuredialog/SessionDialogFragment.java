@@ -37,7 +37,6 @@ import android.app.Dialog;
 import android.app.DialogFragment;
 import android.content.DialogInterface;
 import android.content.Intent;
-import android.content.res.Resources;
 import android.os.Bundle;
 import android.text.Html;
 import android.view.LayoutInflater;
@@ -175,7 +174,6 @@ public class SessionDialogFragment extends DialogFragment {
 
 	private void populateSharedPart(Activity activity, View view, final DisclosureProofRequest request) {
 		LayoutInflater inflater = activity.getLayoutInflater();
-		Resources resources = activity.getResources();
 		LinearLayout list = (LinearLayout) view.findViewById(R.id.attributes_container);
 
 		final ArrayList<Spinner> spinners = new ArrayList<>(request.getContent().size());
@@ -321,9 +319,9 @@ public class SessionDialogFragment extends DialogFragment {
 					@Override
 					public void onClick(DialogInterface dialog, int which) {
 						if (signing) {
-							irmaClient.sign(signRequest, choice);
+							irmaClient.sign(choice);
 						} else if (!issuing)
-							irmaClient.disclose(proofRequest, choice);
+							irmaClient.disclose(choice);
 						else
 							showOverwriteCredentialDialog();
 					}
