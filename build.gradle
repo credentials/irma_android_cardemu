@@ -78,7 +78,10 @@ dependencies {
     compile('org.irmacard.credentials:credentials_api:0.17.3') {
         exclude group: 'org.apache.httpcomponents', module: 'httpclient'
     }
-    compile('org.irmacard.api:irma_api_common:0.7.3') {
+    compile('org.irmacard.credentials:credentials_idemix:0.17.3') {
+        exclude group: 'org.apache.httpcomponents', module: 'httpclient'
+    }
+    compile('org.irmacard.api:irma_api_common:0.7.8') {
         exclude group: 'org.apache.httpcomponents', module: 'httpclient'
     }
     compile('org.irmacard.keyshare:irma_keyshare_common:0.0.4') {
