@@ -615,7 +615,8 @@ public class CredentialManager {
 
 		for (CredentialRequest cred : request.getCredentials()) {
 			CredentialBuilder cb;
-			if(isDistributed(request.getSchemeManager()))
+
+			if(isDistributed(cred.getIdentifier().getSchemeManagerName()))
 				cb = new DistributedCredentialBuilder(
 						cred.getPublicKey(), cred.convertToBigIntegers(), request.getContext(), nonce2);
 			else

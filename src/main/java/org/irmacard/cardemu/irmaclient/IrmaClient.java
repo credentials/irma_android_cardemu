@@ -517,7 +517,10 @@ public class IrmaClient implements PINDialogListener {
 	 */
 	private void continueProtocolWithAuthorization() {
 		builder.generateRandomizers();
-		List<PublicKeyIdentifier> pkids = builder.getPublicKeyIdentifiers();
+		List<PublicKeyIdentifier> pkids = new ArrayList<>();
+		for (PublicKeyIdentifier id : builder.getPublicKeyIdentifiers())
+			if (id.getIssuer().getSchemeManager().hasKeyshareServer())
+				pkids.add(id);
 		Log.i(TAG, "Trying to obtain commitments from keyshare server now!");
 		obtainKeyshareProofPCommitments(pkids);
 	}
