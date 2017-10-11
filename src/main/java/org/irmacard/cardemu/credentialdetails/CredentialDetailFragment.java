@@ -136,11 +136,11 @@ public class CredentialDetailFragment extends Fragment {
 		Button deleteButton = (Button) view.findViewById(R.id.detail_delete_button);
 
 		IssuerDescription issuer = cd.getIssuerDescription();
-		issuerName.setText(issuer.getName());
+		issuerName.setText(issuer.getName().getTranslation("en"));
 		issuerAddress.setText(issuer.getContactAddress());
 		issuerEMail.setText(issuer.getContactEMail());
 
-		schemeManagerName.setText(issuer.getIdentifier().getSchemeManager().getHumanReadableName());
+		schemeManagerName.setText(issuer.getIdentifier().getSchemeManager().getHumanReadableName().getTranslation("en"));
 
 		// Add the attributes
 		AttributesRenderer renderer = new AttributesRenderer(getActivity().getBaseContext(), inflater);
@@ -165,7 +165,7 @@ public class CredentialDetailFragment extends Fragment {
 			validityRemaining.setText("");
 		}
 		
-		credentialDescription.setText(cd.getDescription());
+		credentialDescription.setText(cd.getDescription().getTranslation("en"));
 		
 		// Setting logo of issuer
 		Bitmap logo = fileReader.getIssuerLogo(cd.getIssuerDescription());

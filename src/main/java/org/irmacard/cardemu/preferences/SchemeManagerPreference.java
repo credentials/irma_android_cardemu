@@ -23,8 +23,8 @@ public class SchemeManagerPreference extends Preference {
 
 		String name = manager.getName();
 		setKey("scheme-" + name);
-		setTitle(manager.getHumanReadableName());
-		setSummary(manager.getDescription());
+		setTitle(manager.getHumanReadableName().getTranslation("en"));
+		setSummary(manager.getDescription().getTranslation("en"));
 
 		if (IRMApp.getStoreManager().canRemoveSchemeManager(name))
 			setWidgetLayoutResource(R.layout.preference_delete_widget);

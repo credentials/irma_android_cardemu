@@ -237,7 +237,7 @@ public class SessionDialogFragment extends DialogFragment {
 				throw new RuntimeException(e);
 			}
 
-			((TextView) credContainer.findViewById(R.id.disjunction_title)).setText(cd.getName());
+			((TextView) credContainer.findViewById(R.id.disjunction_title)).setText(cd.getName().getTranslation("en"));
 			LinearLayout attrList = (LinearLayout) credContainer.findViewById(R.id.disjunction_content);
 
 			// We loop here over the attribute names as specified by the DescriptionStore, instead of

@@ -45,6 +45,7 @@ import org.irmacard.cardemu.identifiers.IdemixIdentifier;
 import org.irmacard.credentials.Attributes;
 import org.irmacard.credentials.info.AttributeDescription;
 import org.irmacard.credentials.info.CredentialIdentifier;
+import org.irmacard.credentials.info.TranslatedString;
 
 import java.text.DateFormat;
 import java.util.ArrayList;
@@ -96,12 +97,20 @@ public class ExpandableCredentialsAdapter extends BaseExpandableListAdapter {
 
     @Override
     public Object getChild(int credential_idx, int attribute_idx) {
-        if (attribute_idx == 0)
+        if (attribute_idx == 0) {
             // We insert a fake attribute in the view at position 0 showing the validity
-            return new AttributeDescription("Validity", "Valid until");
-        else if (attribute_idx == 1)
-            return new AttributeDescription("Issuer", "Issued by");
-        else
+            LinkedHashMap<String,String> name = new LinkedHashMap<String,String>(2);
+            LinkedHashMap<String,String> desc = new LinkedHashMap<String,String>(2);
+            name.put("en", "Validity");
+            desc.put("en", "Valid until");
+            return new AttributeDescription("validity", new TranslatedString(name), new TranslatedString(desc));
+        } else if (attribute_idx == 1) {
+            LinkedHashMap<String,String> name = new LinkedHashMap<String,String>(2);
+            LinkedHashMap<String,String> desc = new LinkedHashMap<String,String>(2);
+            name.put("en", "Issuer");
+            desc.put("en", "Issued by");
+            return new AttributeDescription("issuer", new TranslatedString(name), new TranslatedString(desc));
+        } else
             // Attribute i gets shown at position i + 1
             return credentials.get(credential_idx).getIdentifier()
                     .getCredentialDescription().getAttributes().get(attribute_idx - 2);
@@ -180,7 +189,7 @@ public class ExpandableCredentialsAdapter extends BaseExpandableListAdapter {
         else if (attribute_idx == 1) {
             attribute_name_field.setText(R.string.issued_by);
             attribute_value_field.setText(
-                    ici.getIdentifier().getIssuerIdentifier().getIssuerDescription().getName());
+                    ici.getIdentifier().getIssuerIdentifier().getIssuerDescription().getName().getTranslation("en"));
             attribute_name_field.setTypeface(null, Typeface.BOLD_ITALIC);
             attribute_value_field.setTypeface(null, Typeface.ITALIC);
             // Since the convertView gets reused, the TextView might be red from a previous usage

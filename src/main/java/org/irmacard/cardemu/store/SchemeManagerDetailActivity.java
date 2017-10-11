@@ -25,11 +25,11 @@ public class SchemeManagerDetailActivity extends Activity {
 		String managerName = getIntent().getStringExtra("manager");
 		manager = DescriptionStore.getInstance().getSchemeManager(managerName);
 
-		setTitle(manager.getHumanReadableName());
+		setTitle(manager.getHumanReadableName().getTranslation("en"));
 
 		((TextView) findViewById(R.id.manager_name_value)).setText(manager.getName());
 		((TextView) findViewById(R.id.manager_url_value)).setText(manager.getUrl());
-		((TextView) findViewById(R.id.manager_description_value)).setText(manager.getDescription());
+		((TextView) findViewById(R.id.manager_description_value)).setText(manager.getDescription().getTranslation("en"));
 
 		TextView v;
 		v = (TextView) findViewById(R.id.manager_contact_value);

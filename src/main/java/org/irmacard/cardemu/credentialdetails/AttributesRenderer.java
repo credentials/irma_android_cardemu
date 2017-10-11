@@ -78,7 +78,7 @@ public class AttributesRenderer {
 		if (includeTitle) {
 			TextView attrName = new TextView(context);
 			TextViewCompat.setTextAppearance(attrName, R.style.DetailHeading);
-			attrName.setText(cd.getName());
+			attrName.setText(cd.getName().getTranslation("en"));
 			attrName.setTextColor(Color.BLACK);
 			list.addView(attrName);
 		}
