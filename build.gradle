@@ -75,7 +75,7 @@ dependencies {
     compile 'com.github.nicolasjafelle:paginglistview:1.2'
 
     // Our stuff
-    compile('org.irmacard.credentials:credentials_api:0.18.0') {
+    compile('org.irmacard.credentials:credentials_api:0.18.1') {
         exclude group: 'org.apache.httpcomponents', module: 'httpclient'
     }
     compile('org.irmacard.credentials:credentials_idemix:0.17.3') {
