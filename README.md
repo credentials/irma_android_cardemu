@@ -20,11 +20,15 @@ Internal dependencies:
 
 The build system depends on gradle version at least 2.1, which is why we've included the gradle wrapper, so you always have the right version.
 
-## irma_configure
+## irma_configuration
 
-Make sure to link a version of `irma_configuration` into `src/main/assets`. For example, if `irma_android_cardemu` and `irma_configuration` are checked out in the same directory, you can do
+The credential definitions, issuer information and public keys must be compiled into the app in a folder called `irma_configuration` within the `assets` folder. For example, in order to install the [`irma-demo`](https://github.com/credentials/irma-demo-schememanager) and [`pbdf`](https://github.com/credentials/pbdf-schememanager) scheme managers:
 
-    ln -s ../../../../irma_configuration
+    cd src/main/assets
+    mkdir irma_configuration
+    cd irma_configuration
+    git clone https://github.com/credentials/irma-demo-schememanager irma-demo
+    git clone https://github.com/credentials/pbdf-schememanager pbdf
 
 ## Building
 
