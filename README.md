@@ -39,3 +39,8 @@ this will create the required `.apk`s and place them in `build/outputs/apk`.
 You can install the application to you own device by running
 
     ./gradlew installDebug
+
+
+## Explore bluetooth
+
+You can now use the bluetooth icon in the menu bar to start an IRMA disclosure proof request. The prover only has to scan the QR code that is generated and the rest will be done by the bluetooth code.
