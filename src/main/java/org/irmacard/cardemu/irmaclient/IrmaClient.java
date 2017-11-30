@@ -2,6 +2,7 @@ package org.irmacard.cardemu.irmaclient;
 
 import android.app.Activity;
 import android.content.res.Resources;
+import android.util.Base64;
 import android.util.Log;
 import android.webkit.URLUtil;
 
@@ -60,6 +61,9 @@ import java.util.List;
 import java.util.TreeSet;
 import java.util.regex.Pattern;
 
+import javax.crypto.SecretKey;
+import javax.crypto.spec.SecretKeySpec;
+
 import static org.irmacard.cardemu.pindialog.EnterPINDialogFragment.PINDialogListener;
 
 public class IrmaClient implements PINDialogListener {
@@ -74,7 +78,7 @@ public class IrmaClient implements PINDialogListener {
 	}
 
 	private static final String[] supportedVersions = {"2.0", "2.1", "2.2"};
-	private static final int maxJwtAge = 10 * 60 * 1000; // 10 minutes in milliseconds
+	public static final int maxJwtAge = 10 * 60 * 1000; // 10 minutes in milliseconds
 	private final static String TAG = "IrmaClient";
 
 	private String server;
@@ -147,22 +151,34 @@ public class IrmaClient implements PINDialogListener {
 			handler.onFailure(Action.UNKNOWN, "Invalid QR", null, e.getMessage());
 			return;
 		}
-
-		// Check URL validity
 		server = qr.getUrl();
-		if (!URLUtil.isHttpsUrl(server) && !URLUtil.isHttpUrl(server)) {
-			handler.onFailure(Action.UNKNOWN, "Protocol not supported", null,
-					qr.getUrl() != null ? "URL: " + qr.getUrl() : "No URL specified.");
-			return;
+
+		// SET TRANSPORT
+		if(server.startsWith("irma-bluetooth://")) {
+			// TODO: validate URL string as MAC and the rest of bytes as a valid AES key...
+			String[] values = server.substring(17).split("/", 2);
+			String mac = values[0];
+			// Extract KEY
+			byte[] encodedKey   = Base64.decode(values[1], Base64.DEFAULT);
+			SecretKey secretKey = new SecretKeySpec(encodedKey, 0, encodedKey.length, "AES");
+			// Set Transport to Bluetooth
+			transport = IrmaBluetoothTransportClient.getClient(secretKey, mac);
+		} else {
+			// Check URL validity
+			if (!URLUtil.isHttpsUrl(server) && !URLUtil.isHttpUrl(server)) {
+				handler.onFailure(Action.UNKNOWN, "Protocol not supported", null,
+						qr.getUrl() != null ? "URL: " + qr.getUrl() : "No URL specified.");
+				return;
+			}
+			if (!server.endsWith("/"))
+				server += "/";
+			this.transport = new IrmaHttpTransport(server);
 		}
-		if (!server.endsWith("/"))
-			server += "/";
 
 		// We have a valid URL: let's go!
 		this.handler = handler;
 		this.handler.setIrmaClient(this);
 		this.resources = handler.getActivity().getResources();
-		this.transport = new IrmaHttpTransport(server);
 
 		if (Pattern.matches(".*/verification/[^/]+/?$", server)) {
 			action = Action.DISCLOSING;
@@ -175,6 +191,10 @@ public class IrmaClient implements PINDialogListener {
 		else if (Pattern.matches(".*/signature/[^/]+/?$", server)) {
 			action = Action.SIGNING;
 			startSession(SignatureProofRequest.class, SignatureClientRequest.class);
+		}
+		else if (transport instanceof IrmaBluetoothTransportClient) {
+			action = Action.DISCLOSING;
+			startSession(DisclosureProofRequest.class, ServiceProviderRequest.class);
 		}
 	}
 

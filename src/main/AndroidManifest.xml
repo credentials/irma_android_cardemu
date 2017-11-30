@@ -12,6 +12,10 @@
     <uses-permission android:name="android.permission.CAMERA"/>
     <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
 
+    <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION"/>
+    <uses-permission android:name="android.permission.BLUETOOTH_ADMIN"/>
+    <uses-permission android:name="android.permission.BLUETOOTH"/>
+
     <uses-feature android:name="android.hardware.camera" android:required="true"/>
     <uses-feature android:name="android.hardware.camera.front" android:required="false"/>
     <uses-feature android:name="android.hardware.camera.autofocus" android:required="false"/>
@@ -29,9 +33,9 @@
             android:screenOrientation="portrait"
             android:launchMode="singleTask">
             <!-- The singleTask launchmode means that in the recept app list (i.e., this:
-                 https://developer.android.com/guide/components/recents.html), the MainActivity
+                 https://developer.android.com/guide/components/recents.html), MainActivity
                  always has its own dedicated entry to which intents are routed - as opposed to
-                 the MainActivity appearing "on top of" the browser when the browser sends an
+                 MainActivity appearing "on top of" the browser when the browser sends an
                  intent to us. See also
                  https://developer.android.com/guide/topics/manifest/activity-element.html#lmode
             -->

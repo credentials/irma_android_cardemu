@@ -62,10 +62,16 @@ import android.widget.TextView;
 import com.google.zxing.integration.android.IntentIntegrator;
 import com.google.zxing.integration.android.IntentResult;
 
+import org.irmacard.api.common.AttributeDisjunction;
+import org.irmacard.api.common.AttributeDisjunctionList;
 import org.irmacard.api.common.IrmaQr;
+import org.irmacard.api.common.JwtParser;
 import org.irmacard.api.common.SchemeManagerQr;
+import org.irmacard.api.common.disclosure.DisclosureProofRequest;
+import org.irmacard.api.common.disclosure.ServiceProviderRequest;
 import org.irmacard.api.common.exceptions.ApiErrorMessage;
 import org.irmacard.api.common.util.GsonUtil;
+import org.irmacard.cardemu.bluetooth.BluetoothRequestDialog;
 import org.irmacard.cardemu.credentialdetails.CredentialDetailActivity;
 import org.irmacard.cardemu.credentialdetails.CredentialDetailFragment;
 import org.irmacard.cardemu.identifiers.IdemixCredentialIdentifier;
@@ -82,6 +88,7 @@ import org.irmacard.credentials.Attributes;
 import org.irmacard.credentials.CredentialsException;
 import org.irmacard.credentials.idemix.info.IdemixKeyStore;
 import org.irmacard.credentials.idemix.info.IdemixKeyStoreDeserializer;
+import org.irmacard.credentials.info.AttributeIdentifier;
 import org.irmacard.credentials.info.DescriptionStore;
 import org.irmacard.credentials.info.DescriptionStoreDeserializer;
 import org.irmacard.credentials.info.FileReader;
@@ -89,10 +96,17 @@ import org.irmacard.credentials.info.InfoException;
 import org.irmacard.credentials.info.SchemeManager;
 import org.irmacard.credentials.util.log.LogEntry;
 
+import java.math.BigInteger;
 import java.util.ArrayList;
+import java.util.Date;
 import java.util.LinkedHashMap;
 
 import javax.net.ssl.SSLSocketFactory;
+
+import io.jsonwebtoken.Claims;
+import io.jsonwebtoken.JwtBuilder;
+import io.jsonwebtoken.Jwts;
+import io.jsonwebtoken.impl.DefaultClaims;
 
 public class MainActivity extends Activity {
 	private static final String TAG = "CardEmuMainActivity";
@@ -612,6 +626,9 @@ public class MainActivity extends Activity {
 		Log.d(TAG, "menu press registered");
 		// Handle item selection
 		switch (item.getItemId()) {
+			case R.id.request_bluetooth:
+				new BluetoothRequestDialog(this).show();
+				return true;
 			case R.id.preferences:
 				Intent intent = new Intent();
 				intent.setClassName(this, IRMAPreferenceActivity.class.getName());

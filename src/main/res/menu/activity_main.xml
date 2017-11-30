@@ -53,6 +53,13 @@
         android:title="@string/online_enroll"/>
 
     <item
+        android:id="@+id/request_bluetooth"
+        android:orderInCategory="111"
+        android:showAsAction="always"
+        android:title="REQ"
+        android:icon="@android:drawable/stat_sys_data_bluetooth"/>
+
+    <item
         android:id="@+id/about_app"
         android:orderInCategory="1000"
         android:showAsAction="never"

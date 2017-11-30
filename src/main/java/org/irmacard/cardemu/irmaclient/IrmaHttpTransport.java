@@ -1,5 +1,7 @@
 package org.irmacard.cardemu.irmaclient;
 
+import android.util.Log;
+
 import org.irmacard.api.common.util.GsonUtil;
 import org.irmacard.cardemu.httpclient.HttpClientException;
 import org.irmacard.cardemu.httpclient.HttpResultHandler;
