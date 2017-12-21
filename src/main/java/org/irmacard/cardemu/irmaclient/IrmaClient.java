@@ -162,7 +162,7 @@ public class IrmaClient implements PINDialogListener {
 			byte[] encodedKey   = Base64.decode(values[1], Base64.DEFAULT);
 			SecretKey secretKey = new SecretKeySpec(encodedKey, 0, encodedKey.length, "AES");
 			// Set Transport to Bluetooth
-			transport = IrmaBluetoothTransportClient.getClient(secretKey, mac);
+			transport = new IrmaBluetoothTransportClient(secretKey, mac);
 		} else {
 			// Check URL validity
 			if (!URLUtil.isHttpsUrl(server) && !URLUtil.isHttpUrl(server)) {

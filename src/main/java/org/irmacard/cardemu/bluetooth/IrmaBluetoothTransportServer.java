@@ -23,6 +23,7 @@ import org.irmacard.credentials.info.KeyException;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
+import java.net.URL;
 import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
@@ -37,12 +38,10 @@ import io.jsonwebtoken.Jwts;
  */
 
 public class IrmaBluetoothTransportServer extends Handler implements Runnable{
-    BluetoothServerSocket serverSocket;
-    BluetoothSocket socket;
-    SecretKey key;
-    IrmaBluetoothHandler handler;
-    private InputStream is;
-    private OutputStream os;
+    private static final int CONNECTION_WAIT = 20000;              // wait 20 seconds for the connection to start
+    private static final int CONNECTION_TIMEOUT = 20000;
+    private SecretKey key;
+    private IrmaBluetoothHandler handler;
     static IrmaBluetoothTransportServer instance;
     private IrmaBluetoothTransportCommon common;
     private Gson gson;
@@ -65,7 +64,6 @@ public class IrmaBluetoothTransportServer extends Handler implements Runnable{
             instance = new IrmaBluetoothTransportServer(key, handler);
             new Thread(instance).start();
         }
-        throw new UnsupportedOperationException("IrmaBluetoothTransportServer already started.");
     }
 
     @Override
@@ -75,8 +73,9 @@ public class IrmaBluetoothTransportServer extends Handler implements Runnable{
     }
 
     private void receiveConnection() {
-        // Create ServerSocket listener
-        Log.d("TAG", "Receiving connection");
+        // Create the listening server socket
+        BluetoothServerSocket serverSocket;
+        BluetoothSocket socket;
         try {
             serverSocket = BluetoothAdapter.getDefaultAdapter()
                     .listenUsingInsecureRfcommWithServiceRecord("Irma", IrmaBluetoothTransportCommon.IRMA_UUID);
@@ -85,119 +84,58 @@ public class IrmaBluetoothTransportServer extends Handler implements Runnable{
             return;
         }
 
-        // Wait 20 seconds for connection
+        // Serve any client connecting.
         try {
             Log.d("TAG", "Accepting connection");
-            socket = serverSocket.accept(20000);
+            socket = serverSocket.accept(CONNECTION_WAIT);
             common = new IrmaBluetoothTransportCommon(key, socket);
-            sendEmptyMessage(1);
-            is = socket.getInputStream();
-            os = socket.getOutputStream();
-            Log.d("TAG", "Socket connected");
-            int nr_bytes;
-            byte[] read_buffer = new byte[4096];
-            byte[] request_buffer = new byte[1024];
-            byte[] response_buffer = new byte[1024];
 
-            //
-            DisclosureProofRequest drp = handler.getDisclosureProofRequest();
-            String label = drp.getContent().get(0).getLabel();
-            //TODO : GsonUtil.getGson().toJson(drp);
-            JwtBuilder builder = Jwts.builder();
-            // TODO: generate JWT dynamically from DisclosureProofRequest
-            String jwt = builder.setPayload(
-                    "{\"sub\": \"verification_request\"," +
-                            "\"iss\": \"bluetooth\"," +
-                            "\"iat\": "+ new Date().getTime() + "," +
-                            "\"sprequest\": {"+
-                            "\"validity\": 60, " +
-                            "\"request\": {" +
-                            "\"content\": [" +
-                            "{" +
-                            "\"label\": \""+ label +"\", " +
-                            "\"attributes\": [ " +
-                            "\"irma-demo.MijnOverheid.ageLower." + label +"\"" +
-                            "]" +
-                            "}" +
-                            "]" +
-                            "}" +
-                            "}" +
-                            "}").compact();
-            Log.d("TAG", "Requesting: " + label + " :: irma-demo.MijnOverheid.ageLower." + label);
+            sendEmptyMessage(IrmaBluetoothHandler.State.CONNECTED.ordinal());
 
-            JwtSessionRequest jsr = new JwtSessionRequest(jwt, drp.getNonce(), drp.getContext());
-            String rq = new Gson().toJson(jsr);
-            byte[] jwt_buffer = rq.getBytes();
+            long timeout = System.currentTimeMillis() + CONNECTION_TIMEOUT;
 
-            // Act as a HTTP REST web server for as long as the connection is alive (or timeout)
-            try {
-                while(socket.isConnected()) {
-                    // Get Decrypted data.
-                    String request;
-                    nr_bytes = is.read(read_buffer);
-                    request_buffer = common.decrypt(read_buffer, nr_bytes);
-                    request = new String(request_buffer, 0, nr_bytes);
-                    Log.d("TAG", "RECV(" + nr_bytes +"): " + request);
-                    if(request.startsWith("proofs")) {
-                        Log.d("TAG", "Responding to POST");
-                        request = request.substring(6);
-                        /**
-                         * ReConstruct packet.
-                         */
-                        while(!request.endsWith("]")) {
-                            nr_bytes = is.read(read_buffer);
-                            request_buffer = common.decrypt(read_buffer, nr_bytes);
-                            request = request.concat(new String(request_buffer, 0, nr_bytes));
-                            Log.d("TAG", "RECV(" + nr_bytes +"): " + request);
+            DisclosureProofRequest disclosureProofRequest = handler.getDisclosureProofRequest();
+            // TODO: Refactor the transportserver? Does it need to verify?
+
+            boolean done = false;
+            while(common.connected() && System.currentTimeMillis() < timeout && !done) {
+                // Get object
+                Object obj = common.read();
+
+                if(obj instanceof ProofList) {
+                    ProofList proofList = (ProofList) obj;
+                    try {
+                        proofList.populatePublicKeyArray();
+                        DisclosureProofResult result = disclosureProofRequest.verify(proofList);
+                        done = true;
+                        if(result.getStatus() == DisclosureProofResult.Status.VALID) {
+                            sendEmptyMessage(IrmaBluetoothHandler.State.SUCCESS.ordinal());
+                        } else {
+                            sendEmptyMessage(IrmaBluetoothHandler.State.FAIL.ordinal());
                         }
-                        /**
-                         * Verify Proof and Send Answer.
-                         */
-                        try {
-                            List<ProofD> proofDS = gson.fromJson(request, new TypeToken<ArrayList<ProofD>>(){}.getType());
-                            ProofList proofList = new ProofList();
-                            proofList.addAll(proofDS);
-                            proofList.populatePublicKeyArray();
-                            Log.d("TAG", "ProofList: " + proofList);
-                            DisclosureProofResult result = drp.verify(proofList);
-                            response_buffer = result.getStatus().toString().getBytes();
-                            Log.d("TAG", "ProofResult: " + result.getStatus().toString());
-                            if(result.getStatus() == DisclosureProofResult.Status.VALID &&
-                                    result.getAttributes().get(new AttributeIdentifier("irma-demo.MijnOverheid.ageLower." + label)).equals("yes")) {
-                                sendEmptyMessage(IrmaBluetoothHandler.State.SUCCESS.ordinal());
-                            } else {
-                                sendEmptyMessage(IrmaBluetoothHandler.State.FAIL.ordinal());
-                            }
-                            os.write(common.encrypt(response_buffer, response_buffer.length));
-                        } catch (InfoException | KeyException | RuntimeException e) {
-                            Log.e("TAG", "Proof exception", e);
-                            response_buffer = "INVALID".getBytes();
-                            sendEmptyMessage(4);
-                            os.write(common.encrypt(response_buffer, response_buffer.length));
-                        }
+                        common.write(result.getStatus());
+                    } catch (InfoException | KeyException | RuntimeException e) {
+                        Log.e("TAG", "Proof exception", e);
+                        sendEmptyMessage(IrmaBluetoothHandler.State.FAIL.ordinal());
+                        common.write(DisclosureProofResult.Status.INVALID);
                     }
-                    else if (request.startsWith("jwt")) {
-                        response_buffer = jwt_buffer;
-                        Log.d("TAG", "Responding to GETS");
-                        os.write(common.encrypt(response_buffer, response_buffer.length));
-                    }
+                } else if(obj instanceof RequestJwtSession) {
+                    common.write(disclosureProofRequest);
+                } else {
+                    Log.d("TAG", "Unrecognized object: " + obj);
                 }
-            } catch(IOException e) {
-                Log.d("TAG", "Bluetooth Read/Write error, or socket is closed.");
             }
         } catch (IOException e) {
             Log.e("TAG", "Connection failed.", e);
             sendEmptyMessage(2);
         }
 
-        // Close ServerSocket listener
-        instance = null; // New Server can be created.
-        Log.d("TAG", "Closing ServerSocket");
+        instance = null;  // This server is a Singleton.
+        common.close();
         try {
             serverSocket.close();
         } catch(IOException e) {
-            Log.e("TAG", "server close failed");
+            Log.e("TAG", "Server close failed", e);
         }
-        common.close();
     }
 }

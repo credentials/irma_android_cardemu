@@ -44,7 +44,6 @@ import static android.graphics.Color.WHITE;
 public class BluetoothRequestDialog extends Dialog implements IrmaBluetoothHandler {
     private BluetoothAdapter mBluetoothAdapter;
     private static final int REQUEST_COARSE_LOCATION = 3;
-    public static final UUID IRMA_UUID = UUID.fromString("c7986f0a-3154-4dc9-b19c-a5e713bb1737");
     private ImageView qrImageView;
     private DisclosureProofRequest request;
 
@@ -79,6 +78,7 @@ public class BluetoothRequestDialog extends Dialog implements IrmaBluetoothHandl
         qrImageView = (ImageView) findViewById(R.id.qrImageView);
         // TODO: Let the user construct DisclosureProofRequest
         // TODO: Keep a list of last used DisclosureProofRequest's for ease of use.
+        // TODO: Random nonce/context BigInteger generation
 
         requestAttributeBtn.setOnClickListener(new View.OnClickListener() {
             @Override
@@ -110,23 +110,10 @@ public class BluetoothRequestDialog extends Dialog implements IrmaBluetoothHandl
         requestPermission();
     }
 
-    private SecretKey generateSessionKey() {
-        SecretKey secretKey = null;
-        try {
-            KeyGenerator keyGen = KeyGenerator.getInstance("AES");
-            keyGen.init(128); // for example
-            secretKey = keyGen.generateKey();
-            secretKey.getEncoded();
-        } catch(NoSuchAlgorithmException e) {
-            Log.e("TAG", "NoSuchAlgorithm", e);
-        }
-        return secretKey;
-    }
-
     private void startRequest(String sessiontype, DisclosureProofRequest request) {
         // Generate AES session key
         SecretKey secretKey;
-        if((secretKey = generateSessionKey()) == null) {
+        if((secretKey = IrmaBluetoothTransportCommon.generateSessionKey()) == null) {
             return;
         }
         String session_key = Base64.encodeToString(secretKey.getEncoded(), Base64.DEFAULT);

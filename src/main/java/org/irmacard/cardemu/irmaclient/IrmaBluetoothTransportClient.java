@@ -6,7 +6,11 @@ import android.bluetooth.BluetoothSocket;
 import android.util.Log;
 
 import com.google.gson.Gson;
+import com.google.gson.internal.Primitives;
 
+import org.irmacard.api.common.JwtSessionRequest;
+import org.irmacard.api.common.disclosure.DisclosureProofRequest;
+import org.irmacard.api.common.disclosure.DisclosureProofResult;
 import org.irmacard.api.common.util.GsonUtil;
 import org.irmacard.cardemu.bluetooth.IrmaBluetoothTransportCommon;
 import org.irmacard.cardemu.httpclient.HttpClientException;
@@ -16,6 +20,7 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
 import java.lang.reflect.Type;
+import java.math.BigInteger;
 
 import javax.crypto.SecretKey;
 
@@ -26,18 +31,16 @@ import javax.crypto.SecretKey;
 public class IrmaBluetoothTransportClient implements IrmaTransport {
     private BluetoothDevice device;
     private BluetoothSocket socket;
-    private InputStream is;
-    private OutputStream os;
     private IrmaBluetoothTransportCommon common;
     private Gson gson;
 
     public IrmaBluetoothTransportClient(SecretKey key, String mac) {
+        Log.d("TAG", "IrmaBluetoothTransportClient - Prover");
+        this.gson = GsonUtil.getGson();
         this.device = BluetoothAdapter.getDefaultAdapter().getRemoteDevice(mac);
         if(connect()) {
             this.common = new IrmaBluetoothTransportCommon(key, socket);
         }
-        this.gson = GsonUtil.getGson();
-        Log.d("TAG", "IrmaBluetoothTransportClient - Prover");
     }
 
     private boolean connect() {
@@ -50,14 +53,13 @@ public class IrmaBluetoothTransportClient implements IrmaTransport {
             Log.e("TAG", "Socket creation failed", e);
             return false;
         }
+
         // Connect to the device
         try {
             socket.connect();
-            is = socket.getInputStream();
-            os = socket.getOutputStream();
             Log.d("TAG", "Socket Connected");
             return true;
-        } catch (IOException e) {
+        } catch (Exception e) {
             Log.e("TAG", "Socket could not connect", e);
             return false;
         }
@@ -66,17 +68,14 @@ public class IrmaBluetoothTransportClient implements IrmaTransport {
     @Override
     public <T> void post(Type type, String url, Object object, HttpResultHandler<T> handler) {
         Log.d("TAG", "POST::" + type + ":" + url +":"+object+":"+handler);
-        byte[] buffer = new byte[2048];
-        int nr_bytes;
         try {
-            byte[] payload = (url + gson.toJson(object)).getBytes();
-            os.write(common.encrypt(payload, 0));
-            nr_bytes = is.read(buffer);
-            String temp = new String(buffer, 0, nr_bytes);
-            Log.d("TAG", "RECV: " + temp);
-            T result = gson.fromJson(temp, type);
-            common.close();
-            handler.onSuccess(result);
+            common.write(gson.toJson(object), IrmaBluetoothTransportCommon.Type.POST_PROOFLIST);
+            T result = Primitives.wrap((Class<T>) type).cast(common.read());
+            if(result != null) {
+                handler.onSuccess(result );
+            } else {
+                throw new IOException("Object is not correctly received.");
+            }
         } catch (IOException e) {
             handler.onError(new HttpClientException(0, "Bluetooth Error"));
             common.close();
@@ -86,15 +85,14 @@ public class IrmaBluetoothTransportClient implements IrmaTransport {
     @Override
     public <T> void get(Type type, String url, HttpResultHandler<T> handler) {
         Log.d("TAG", "GET::" + type + ":" + url +":"+handler);
-        byte[] buffer = new byte[2048];
-        int nr_bytes;
         try {
-            os.write(common.encrypt(url.getBytes(), 0));
-            nr_bytes = is.read(buffer);
-            String temp = new String(buffer, 0, nr_bytes);
-            Log.d("TAG", "RECV: " + temp);
-            T result = gson.fromJson(temp, type);
-            handler.onSuccess(result);
+            common.write("", IrmaBluetoothTransportCommon.Type.GET_JWT);
+            T result = Primitives.wrap((Class<T>) type).cast(common.read());
+            if(result != null) {
+                handler.onSuccess(result );
+            } else {
+                throw new IOException("Object is not correctly received.");
+            }
         } catch (IOException e) {
             handler.onError(new HttpClientException(0, "Bluetooth Error"));
             common.close();
