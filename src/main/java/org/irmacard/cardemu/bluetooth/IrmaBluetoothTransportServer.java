@@ -5,6 +5,7 @@ import android.bluetooth.BluetoothServerSocket;
 import android.bluetooth.BluetoothSocket;
 import android.os.Handler;
 import android.os.Message;
+import android.support.annotation.NonNull;
 import android.util.Log;
 
 import com.google.gson.Gson;
@@ -38,13 +39,12 @@ import io.jsonwebtoken.Jwts;
  */
 
 public class IrmaBluetoothTransportServer extends Handler implements Runnable{
-    private static final int CONNECTION_WAIT = 20000;              // wait 20 seconds for the connection to start
-    private static final int CONNECTION_TIMEOUT = 20000;
+    private static final int CONNECTION_WAIT = 20000;              // Milliseconds to wait for the client to connect
+    private static final int CONNECTION_TIMEOUT = 20000;           // Milliseconds after being connected; to drop the connection.
     private SecretKey key;
     private IrmaBluetoothHandler handler;
-    static IrmaBluetoothTransportServer instance;
+    private static IrmaBluetoothTransportServer instance;
     private IrmaBluetoothTransportCommon common;
-    private Gson gson;
 
     @Override
     public void handleMessage(Message msg) {
@@ -56,10 +56,9 @@ public class IrmaBluetoothTransportServer extends Handler implements Runnable{
     private IrmaBluetoothTransportServer(SecretKey key, IrmaBluetoothHandler handler) {
         this.key = key;
         this.handler = handler;
-        this.gson = GsonUtil.getGson();
     }
 
-    public static void start(SecretKey key, IrmaBluetoothHandler handler) {
+    public static void start(@NonNull SecretKey key, @NonNull IrmaBluetoothHandler handler) {
         if(instance == null) {
             instance = new IrmaBluetoothTransportServer(key, handler);
             new Thread(instance).start();
@@ -95,19 +94,17 @@ public class IrmaBluetoothTransportServer extends Handler implements Runnable{
             long timeout = System.currentTimeMillis() + CONNECTION_TIMEOUT;
 
             DisclosureProofRequest disclosureProofRequest = handler.getDisclosureProofRequest();
-            // TODO: Refactor the transportserver? Does it need to verify?
+            // TODO: Refactor the transportserver/handler? Does it need to verify?
 
             boolean done = false;
             while(common.connected() && System.currentTimeMillis() < timeout && !done) {
-                // Get object
                 Object obj = common.read();
 
                 if(obj instanceof ProofList) {
-                    ProofList proofList = (ProofList) obj;
+                    ProofList proofList = (ProofList) obj; done = true;
                     try {
                         proofList.populatePublicKeyArray();
                         DisclosureProofResult result = disclosureProofRequest.verify(proofList);
-                        done = true;
                         if(result.getStatus() == DisclosureProofResult.Status.VALID) {
                             sendEmptyMessage(IrmaBluetoothHandler.State.SUCCESS.ordinal());
                         } else {

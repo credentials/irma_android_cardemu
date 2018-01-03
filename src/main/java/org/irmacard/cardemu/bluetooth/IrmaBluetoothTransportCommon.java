@@ -3,7 +3,6 @@ package org.irmacard.cardemu.bluetooth;
 import android.bluetooth.BluetoothDevice;
 import android.bluetooth.BluetoothSocket;
 import android.support.annotation.NonNull;
-import android.util.Base64;
 import android.util.Log;
 
 import com.google.gson.Gson;
@@ -20,9 +19,7 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
 import java.lang.reflect.Method;
-import java.lang.reflect.Type;
 import java.nio.BufferOverflowException;
-import java.nio.ByteBuffer;
 import java.security.NoSuchAlgorithmException;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -43,9 +40,9 @@ import io.jsonwebtoken.Jwts;
 
 public class IrmaBluetoothTransportCommon {
     public static final UUID IRMA_UUID = UUID.fromString("c7986f0a-3154-4dc9-b19c-a5e713bb1737"); //TODO: choose UUID (this is random generated)
-    public static final long TIMEOUT = 3000;                      // network I/O timeout in milliseconds.
-    public static final int BUFFER_SIZE = 1024;                   // nr bytes the buffer should hold
-    public static final int PACKET_SIZE = 4096;                   // maximum size of the received object
+    private static final long TIMEOUT = 3000;                      // network I/O timeout in milliseconds.
+    private static final int BUFFER_SIZE = 1024;                   // nr bytes the buffer should hold
+    private static final int PACKET_SIZE = 4096;                   // maximum size of the received object
     private BluetoothSocket socket;
     private InputStream is;
     private OutputStream os;
@@ -90,15 +87,15 @@ public class IrmaBluetoothTransportCommon {
         return secretKey;
     }
 
-    public void encrypt(byte[] bytes, int start, int nr_bytes) {
+    private void encrypt(byte[] bytes, int start, int nr_bytes) {
 
     }
 
-    public void decrypt(byte[] bytes, int start,  int nr_bytes) {
+    private void decrypt(byte[] bytes, int start,  int nr_bytes) {
 
     }
 
-    private boolean unpair(BluetoothDevice device) {
+    private boolean unbond(BluetoothDevice device) {
         try {
             Method m = device.getClass().getMethod("removeBond", (Class[]) null);
             m.invoke(device, (Object[]) null);
@@ -108,6 +105,9 @@ public class IrmaBluetoothTransportCommon {
         return true;
     }
 
+    /**
+     * Close the socket, and UNBOND IT!
+     */
     public void close() {
         BluetoothDevice tmp = null;
         try {
@@ -117,14 +117,17 @@ public class IrmaBluetoothTransportCommon {
             Log.d("TAG", "Connection closed failed, socket already closed?");
         }
         Log.d("TAG", "Closed");
-        if(unpair(tmp)) Log.d("TAG", "closing and unpairing succesfull");
+        if(unbond(tmp)) Log.d("TAG", "closing and unbonding succesfull");
     }
 
-    //        8        16        24        32
-    //  payload size ---     | irma-type --------- <- length of payload expressed in 32 bits
-    //  payload                                    <- payload is arbitrary size? should be fixed size, maybe.
-    // TODO: fixed size payload
-
+    /**
+     * Keep Busy-Waiting on the stream for it to show up with data, then take that data.
+     * Return it to be processed.
+     * @param buffer the buffer in which to place the data.
+     * @return the number of bytes that have been read.
+     * @throws IOException in case the InputStream is unavailable, or broken.
+     * @throws TimeoutException in case it took too long.
+     */
     private int readPacket(byte[] buffer) throws IOException, TimeoutException{
         long time = System.currentTimeMillis() + TIMEOUT;
         while(System.currentTimeMillis() < time && is.available() < 1) ;
@@ -134,6 +137,13 @@ public class IrmaBluetoothTransportCommon {
         throw new TimeoutException("The reading failed");
     }
 
+    /**
+     * Keep reading packets until you can reconstruct it to an object.
+     * The first two bytes received contain the length of the data.
+     * @return the byte array containing the decrypted object
+     * @throws TimeoutException in case it took to long to read the object
+     * @throws IOException in case the channel is broken.
+     */
     private byte[] readObject() throws TimeoutException, IOException{
         byte[] buffer = new byte[BUFFER_SIZE]; byte[] result = new byte[PACKET_SIZE];
         int nr_bytes = readPacket(buffer);
@@ -162,6 +172,15 @@ public class IrmaBluetoothTransportCommon {
         return Arrays.copyOfRange(result, 0, payload_length + 2);
     }
 
+    /**
+     * The IRMA object is to be returned:
+     *  - DisclosureProofRequest
+     *  - JwtSessionRequest
+     *  - ProofList
+     *  - DisclosureProofResult.Status
+     *  etc. etc. etc.
+     * @return an object that could be any of the above class.
+     */
     public Object read() {
         try {
             byte[] bytes = null;
@@ -203,6 +222,9 @@ public class IrmaBluetoothTransportCommon {
         } catch (TimeoutException | IOException e) {
             Log.e("TAG", "Timeout readObject socket", e);
             return null;
+        } catch (Exception e) {
+            Log.e("TAG", "Unknown object mismatch?", e);
+            return null;
         }
     }
 
@@ -228,6 +250,15 @@ public class IrmaBluetoothTransportCommon {
         return jwt;
     }
 
+    /**
+     * Public functions to write the objects to the other end.
+     * As a developer you may want to transfer the object 'MyObject'
+     * 1. implement 'public boolean write(MyObject object)'
+     * 2. implement 'case ??' in the 'read' function above.
+     *
+     * @param dpr the DisclosureProofRequest
+     * @return it succeeded.
+     */
     public boolean write(DisclosureProofRequest dpr) {
         return write(gson.toJson(dpr), Type.PROOFREQUEST);
     }
@@ -244,6 +275,14 @@ public class IrmaBluetoothTransportCommon {
         return write(url.getBytes(), type);
     }
 
+
+    /**
+     * The bare level write, it writes the bytes, adds a 'size' header field, and serialises the irma type.
+     * @param object the bytes representing the object to send.
+     * @param irma_type the 'type' of the IRMA packet, indicates to the receiver what it is receiving.
+     *                   look into the enum Type at the top of this class declaration.
+     * @return it succeeded.
+     */
     private boolean write(byte[] object, Type irma_type) {
         // Attach header
         int length = object.length;
