@@ -57,6 +57,9 @@ if (project.file('signingkeys.gradle').exists()) { apply from: 'signingkeys.grad
 
 
 dependencies {
+    // Required -- JUnit 4 framework
+    testCompile 'junit:junit:4.12'
+
     // Google stuff
     compile 'com.android.support:appcompat-v7:23+'
     compile 'com.android.support:support-annotations:23+'

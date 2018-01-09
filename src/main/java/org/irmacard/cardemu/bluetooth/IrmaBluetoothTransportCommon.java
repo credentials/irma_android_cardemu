@@ -28,8 +28,11 @@ import java.util.List;
 import java.util.UUID;
 import java.util.concurrent.TimeoutException;
 
+import javax.crypto.Cipher;
 import javax.crypto.KeyGenerator;
 import javax.crypto.SecretKey;
+import javax.crypto.spec.IvParameterSpec;
+import javax.crypto.spec.SecretKeySpec;
 
 import io.jsonwebtoken.JwtBuilder;
 import io.jsonwebtoken.Jwts;
@@ -64,7 +67,7 @@ public class IrmaBluetoothTransportCommon {
         try {
             this.is = socket.getInputStream();
             this.os = socket.getOutputStream();
-        } catch(IOException e) {
+        } catch(IOException | NullPointerException e) {
             Log.e("TAG", "I/O could not be opened", e);
         }
         this.gson = GsonUtil.getGson();
@@ -74,7 +77,6 @@ public class IrmaBluetoothTransportCommon {
         return this.socket.isConnected();
     }
 
-    // TODO: possibly a One Time Pad? how to initialise AES?
     static public SecretKey generateSessionKey() {
         SecretKey secretKey = null;
         try {
@@ -87,12 +89,42 @@ public class IrmaBluetoothTransportCommon {
         return secretKey;
     }
 
-    private void encrypt(byte[] bytes, int start, int nr_bytes) {
-
+    public void setInputOutputStreams(@NonNull InputStream is, @NonNull OutputStream os) {
+        this.is = is;
+        this.os = os;
     }
 
-    private void decrypt(byte[] bytes, int start,  int nr_bytes) {
+    public byte[] encrypt(byte[] bytes) {
+        try {
+            SecretKeySpec secretKey = new SecretKeySpec(key.getEncoded(), "AES");
+            Cipher cipher = Cipher.getInstance("AES/CBC/PKCS5Padding");
+            IvParameterSpec ivParams = new IvParameterSpec(new byte[cipher.getBlockSize()]);
+            cipher.init(Cipher.ENCRYPT_MODE, secretKey, ivParams);
+            return cipher.doFinal(bytes);
+        } catch (Exception e) {
+            // Reset the byte array to zero on failure
+            Log.e("TAG", "Encryption failed", e);
+            for(int i = 0; i < bytes.length; i++) {
+                bytes[i] = 0;
+            }
+            return bytes;
+        }
+    }
 
+    public byte[] decrypt(byte[] bytes) {
+        try {
+            SecretKeySpec secretKey = new SecretKeySpec(key.getEncoded(), "AES");
+            Cipher cipher = Cipher.getInstance("AES/CBC/PKCS5Padding");
+            IvParameterSpec ivParams = new IvParameterSpec(new byte[cipher.getBlockSize()]);
+            cipher.init(Cipher.DECRYPT_MODE, secretKey, ivParams);
+            return cipher.doFinal(bytes);
+        } catch (Exception e) {
+            Log.e("TAG", "Decryption failed", e);
+            for(int i = 0; i < bytes.length; i++) {
+                bytes[i] = 0;
+            }
+            return bytes;
+        }
     }
 
     private boolean unbond(BluetoothDevice device) {
@@ -106,7 +138,7 @@ public class IrmaBluetoothTransportCommon {
     }
 
     /**
-     * Close the socket, and UNBOND IT!
+     * Close the socket, and UNBOND it!
      */
     public void close() {
         BluetoothDevice tmp = null;
@@ -151,10 +183,10 @@ public class IrmaBluetoothTransportCommon {
 
         // Parse packet size field
         final int payload_length = ((buffer[0] & 0xff) << 8) | (buffer[1] & 0xff);
-        int payload_size = nr_bytes - 4;
+        int payload_size = nr_bytes - 2;
 
         // Start processing.
-        System.arraycopy(buffer, 2, result, 0, nr_bytes - 2);
+        System.arraycopy(buffer, 2, result, 0, payload_size);
         boolean done = payload_size == payload_length;
 
         // Continue to readObject if packet is not yet complete.
@@ -168,8 +200,8 @@ public class IrmaBluetoothTransportCommon {
             payload_size += nr_bytes;
             done = payload_size == payload_length;
         }
-        decrypt(result, 2, payload_length);
-        return Arrays.copyOfRange(result, 0, payload_length + 2);
+
+        return decrypt(Arrays.copyOfRange(result, 0, payload_length));
     }
 
     /**
@@ -284,26 +316,33 @@ public class IrmaBluetoothTransportCommon {
      * @return it succeeded.
      */
     private boolean write(byte[] object, Type irma_type) {
-        // Attach header
-        int length = object.length;
+        // Build Enchilada to be encrypted
         int irma_int = irma_type.ordinal();
-        byte[] packet = new byte[4 + length];
+        byte[] enchilada = new byte[2 + object.length];
+        enchilada[0] = (byte) (irma_int >>> 8);
+        enchilada[1] = (byte) (irma_int);
+
+        // Set Payload
+        System.arraycopy(object, 0, enchilada, 2, object.length);
+
+        // Encrypt the enchilada
+        byte[] encrypted = encrypt(enchilada);
+
+        // Attach header
+        int length = encrypted.length;
+        byte[] packet = new byte[2 + length];
         packet[0] = (byte) (length >>> 8);
         packet[1] = (byte) (length);
-        packet[2] = (byte) (irma_int >>> 8);
-        packet[3] = (byte) (irma_int);
-
-        System.arraycopy(object, 0, packet, 4, length);          // set payload
-        encrypt(packet, 2, packet.length - 2);
+        System.arraycopy(encrypted, 0, packet, 2, length);
 
         // Send it
-        Log.d("TAG", "SEND: " + new String(object));
+        Log.d("TAG", "SEND: " + new String(packet) + "(" + packet.length +")");
         try {
             this.os.write(packet);
+            return true;
         } catch(IOException e) {
             Log.e("TAG", "Write failed", e);
             return false;
         }
-        return true;
     }
 }
