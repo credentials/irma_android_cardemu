@@ -24,9 +24,8 @@ The build system depends on gradle version at least 2.1, which is why we've incl
 
 The credential definitions, issuer information and public keys must be compiled into the app in a folder called `irma_configuration` within the `assets` folder. For example, in order to install the [`irma-demo`](https://github.com/credentials/irma-demo-schememanager) and [`pbdf`](https://github.com/credentials/pbdf-schememanager) scheme managers:
 
-    cd src/main/assets
-    mkdir irma_configuration
-    cd irma_configuration
+    mkdir -p src/main/assets/irma_configuration
+    cd src/main/assets/irma_configuration
     git clone https://github.com/credentials/irma-demo-schememanager irma-demo
     git clone https://github.com/credentials/pbdf-schememanager pbdf
 
